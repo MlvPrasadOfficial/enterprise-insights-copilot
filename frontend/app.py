@@ -5,41 +5,59 @@ import os
 import altair as alt
 import json
 
+st.set_page_config(
+    page_title="Enterprise Insights Copilot",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+st.markdown("""
+<style>
+.big-title {
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: #4e8cff;
+    margin-bottom: 0.5rem;
+}
+.subtitle {
+    font-size: 1.2rem;
+    color: #777;
+    margin-bottom: 2rem;
+}
+</style>
+<div class="big-title">Enterprise Insights Copilot</div>
+<div class="subtitle">Conversational GenAI for Instant BI</div>
+""", unsafe_allow_html=True)
+
 # Use Streamlit secrets for backend URL if available, else fallback to env or default
 BACKEND_URL = st.secrets.get("BACKEND_URL", os.getenv("BACKEND_URL", "http://localhost:8000"))
 
-# Streamlit entry point
-st.set_page_config(page_title="Enterprise Insights Copilot", layout="wide")
+with st.container():
+    st.markdown("### 📂 Upload Your CSV File")
+    uploaded_file = st.file_uploader("Drop your CSV here", type=["csv"])
+    df = None
+    if uploaded_file:
+        df = pd.read_csv(uploaded_file)
+        st.success("File uploaded successfully!")
+        st.dataframe(df.head(5))
+        if st.button("Index this dataset"):
+            response = requests.post(
+                f"{BACKEND_URL}/index",
+                files={"file": uploaded_file}
+            )
+            st.write("✅ Dataset indexed." if response.status_code == 200 else "❌ Failed to index")
 
-st.title("📊 Enterprise Insights Copilot")
-st.markdown("Ask questions about your data. Upload a CSV and start chatting.")
+st.markdown("### 💡 Ask a question about your data")
+user_query = st.text_input("e.g. Compare revenue by region", "")
 
-# Upload section
-uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
-df = None
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-    st.success("File uploaded successfully!")
-    st.dataframe(df.head(5))
-
-    # Optionally send the data to backend to embed chunks
-    if st.button("Index this dataset"):
-        response = requests.post(
-            f"{BACKEND_URL}/index",
-            files={"file": uploaded_file}
-        )
-        st.write("✅ Dataset indexed." if response.status_code == 200 else "❌ Failed to index")
-
-# Chat section
-if df is not None:
-    st.markdown("### 💬 Ask Your Question")
-    query = st.text_input("Type your question here")
-
-    if query:
+if st.button("🚀 Run Query", use_container_width=True):
+    if user_query and uploaded_file:
+        # call backend
         with st.spinner("Thinking..."):
             response = requests.post(
                 f"{BACKEND_URL}/query",
-                json={"query": query}
+                json={"query": user_query}
             )
             if response.ok:
                 answer = response.json().get("answer", "")
@@ -47,6 +65,16 @@ if df is not None:
                 st.markdown(answer)
             else:
                 st.error("Failed to get answer from server.")
+
+if uploaded_file is not None and df is not None:
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.markdown("### 🔍 Insight")
+        st.success("Insight text here...")
+    with col2:
+        st.markdown("### 📊 Chart")
+        # Placeholder for chart object, replace 'chart' with actual chart variable if available
+        # st.altair_chart(chart, use_container_width=True)
 
     # Chart generator UI
     st.markdown("### 📈 Generate a Chart")
