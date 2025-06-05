@@ -3,7 +3,7 @@
 import sys
 import os
 
-# 🔧 Add project root to path
+# ✅ Add project root to PYTHONPATH so core/, config/, etc. are accessible
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PROJECT_ROOT)
 
@@ -11,6 +11,7 @@ from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from core.llm_rag import upsert_document, run_rag
+from config.settings import load_prompt
 from backend.agents.chart_agent import ChartAgent
 from backend.agents.sql_agent import SQLAgent
 from backend.agents.insight_agent import InsightAgent
