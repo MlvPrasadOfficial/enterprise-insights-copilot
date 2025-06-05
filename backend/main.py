@@ -3,11 +3,10 @@
 import sys
 import os
 
-# ✅ This line ensures 'core', 'agents', etc. are importable
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# 🔧 Add project root to path
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(PROJECT_ROOT)
 
-
-import pandas as pd
 from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
