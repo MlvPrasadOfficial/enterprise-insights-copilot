@@ -1,6 +1,6 @@
 import os
 import openai
-import pinecone
+from pinecone import Pinecone
 from dotenv import load_dotenv
 from typing import List
 from config.settings import load_prompt
@@ -8,16 +8,13 @@ from config.settings import load_prompt
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Initialize Pinecone
-pinecone.init(
-    api_key=os.getenv("PINECONE_API_KEY"),
-    environment=os.getenv("PINECONE_ENV")
-)
+# Initialize Pinecone v3.x
+pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"), environment=os.getenv("PINECONE_ENV"))
 INDEX_NAME = "enterprise-insights"
 
-if INDEX_NAME not in pinecone.list_indexes():
-    pinecone.create_index(name=INDEX_NAME, dimension=1536, metric="cosine")
-index = pinecone.Index(INDEX_NAME)
+if INDEX_NAME not in pc.list_indexes():
+    pc.create_index(name=INDEX_NAME, dimension=1536, metric="cosine")
+index = pc.Index(INDEX_NAME)
 
 
 def embed_text(text: str) -> List[float]:
@@ -30,7 +27,7 @@ def embed_text(text: str) -> List[float]:
 
 def upsert_document(doc_id: str, text: str):
     vector = embed_text(text)
-    index.upsert([(doc_id, vector, {"text": text})])
+    index.upsert(vectors=[{"id": doc_id, "values": vector, "metadata": {"text": text}}])
 
 
 def retrieve_relevant_chunks(query: str, top_k: int = 5):

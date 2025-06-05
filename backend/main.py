@@ -2,15 +2,16 @@
 
 import sys
 import os
+from dotenv import load_dotenv
 
-# ✅ Add project root to PYTHONPATH so core/, config/, etc. are accessible
+load_dotenv()  # Load environment variables from .env file
+
+# ✅ Add project root to PYTHONPATH so backend/, config/, etc. are accessible
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(PROJECT_ROOT)
+if PROJECT_ROOT not in sys.path:
+    sys.path.append(PROJECT_ROOT)
 
-from fastapi import FastAPI, UploadFile, File, Request
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from core.llm_rag import upsert_document, run_rag
+from backend.core.llm_rag import upsert_document, run_rag
 from config.settings import load_prompt
 from backend.agents.chart_agent import ChartAgent
 from backend.agents.sql_agent import SQLAgent
@@ -26,6 +27,9 @@ from backend.agents.report_generator import ReportGenerator
 from fastapi.responses import FileResponse
 from backend.agents.debate_agent import DebateAgent
 from core.debate_log import log_debate_entry
+from fastapi import FastAPI, UploadFile, File, Request
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 app = FastAPI()
 
