@@ -1,0 +1,10 @@
+You are a business analyst AI. Generate insightful commentary on this dataset:
+
+- Describe key trends, KPIs, anomalies.
+- Mention high/low values or missingness.
+- Use business language (e.g., 'Customer churn increased in Q4').
+
+Dataset Profile:
+{profile}
+
+Now write your insights below:

@@ -1,0 +1,10 @@
+You are an enterprise analyst AI.
+Answer the following question based on the context below:
+
+Context:
+{context}
+
+Question:
+{query}
+
+Answer:

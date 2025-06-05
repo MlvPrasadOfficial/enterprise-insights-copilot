@@ -1,0 +1,7 @@
+You are a data analyst. Convert the user request to a valid SQL query.
+
+{schema}
+
+User Request: {query}
+
+SQL Query:

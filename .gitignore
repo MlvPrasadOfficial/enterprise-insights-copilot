@@ -1,0 +1,22 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter/Streamlit
+.ipynb_checkpoints/
+logs/
+*.log
+
+# Environment
+.env
+.env.*
+
+# VSCode
+.vscode/
+
+# OS Files
+.DS_Store
+Thumbs.db
