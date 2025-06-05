@@ -1,7 +1,12 @@
 import streamlit as st
 import pandas as pd
 import requests
+import os
 import altair as alt
+import json
+
+# Use Streamlit secrets for backend URL if available, else fallback to env or default
+BACKEND_URL = st.secrets.get("BACKEND_URL", os.getenv("BACKEND_URL", "http://localhost:8000"))
 
 # Streamlit entry point
 st.set_page_config(page_title="Enterprise Insights Copilot", layout="wide")
@@ -20,7 +25,7 @@ if uploaded_file:
     # Optionally send the data to backend to embed chunks
     if st.button("Index this dataset"):
         response = requests.post(
-            "http://localhost:8000/index",
+            f"{BACKEND_URL}/index",
             files={"file": uploaded_file}
         )
         st.write("✅ Dataset indexed." if response.status_code == 200 else "❌ Failed to index")
@@ -33,7 +38,7 @@ if df is not None:
     if query:
         with st.spinner("Thinking..."):
             response = requests.post(
-                "http://localhost:8000/query",
+                f"{BACKEND_URL}/query",
                 json={"query": query}
             )
             if response.ok:
@@ -60,11 +65,16 @@ if df is not None:
             "data": df.to_dict(orient="records")
         }
 
-        res = requests.post("http://localhost:8000/chart", json=payload)
+        res = requests.post(f"{BACKEND_URL}/chart", json=payload)
 
         if res.ok:
             chart_json = res.json()["chart"]
-            st.altair_chart(alt.Chart.from_json(chart_json), use_container_width=True)
+            chart = alt.Chart.from_json(chart_json)
+            st.altair_chart(chart, use_container_width=True)
+            # Save chart as PNG for report generation
+            import os
+            os.makedirs("logs", exist_ok=True)
+            chart.save("logs/last_chart.png")
         else:
             st.error("Chart generation failed.")
 
@@ -77,7 +87,7 @@ if df is not None:
             "query": sql_query,
             "data": df.to_dict(orient="records")
         }
-        res = requests.post("http://localhost:8000/sql", json=payload)
+        res = requests.post(f"{BACKEND_URL}/sql", json=payload)
 
         if res.ok:
             data = res.json()
@@ -96,7 +106,7 @@ if df is not None:
     st.markdown("### 📌 Get Automatic Insights")
     if st.button("Generate Business Insights"):
         payload = {"data": df.to_dict(orient="records")}
-        res = requests.post("http://localhost:8000/insights", json=payload)
+        res = requests.post(f"{BACKEND_URL}/insights", json=payload)
 
         if res.ok:
             st.markdown("**🧠 Insights:**")
@@ -109,7 +119,7 @@ if df is not None:
     auto_query = st.text_input("Ask a chartable question", key="auto_chart_query")
 
     if st.button("Generate Auto Chart"):
-        res = requests.post("http://localhost:8000/auto-chart", json={"query": auto_query})
+        res = requests.post(f"{BACKEND_URL}/auto-chart", json={"query": auto_query})
 
         if res.ok:
             data = res.json()
@@ -117,3 +127,45 @@ if df is not None:
             st.altair_chart(alt.Chart.from_json(data["chart"]), use_container_width=True)
         else:
             st.error("Chart generation failed.")
+
+# Evaluation Dashboard
+st.markdown("## 🧪 Evaluation Dashboard")
+
+eval_file = "logs/eval_results.csv"
+
+if not os.path.exists(eval_file):
+    st.warning("No evaluation results found.")
+else:
+    df_eval = pd.read_csv(eval_file)
+    st.dataframe(df_eval[["query", "winner", "score"]])
+
+    st.markdown("### 📊 Pass Rate")
+    total = len(df_eval)
+    passed = (df_eval["score"] == "pass").sum()
+    st.metric("Total Evaluated", total)
+    st.metric("Passed", passed)
+    st.metric("Pass Rate", f"{round(passed / total * 100, 2)}%")
+
+    selected = st.selectbox("Review a test case", df_eval["query"].unique())
+
+    if selected:
+        row = df_eval[df_eval["query"] == selected].iloc[0]
+        st.markdown(f"**Query:** {row['query']}")
+        st.markdown(f"**Winner:** {row['winner']}")
+        st.markdown(f"**Score:** {row['score']}")
+        st.markdown(f"**Reason:** {row.get('reason', 'N/A')}")
+
+        # Optionally show full responses
+        log_file = "logs/debate_log.json"
+        if os.path.exists(log_file):
+            with open(log_file) as f:
+                logs = json.load(f)
+                log_match = next((log for log in logs if log["query"] == selected), None)
+                if log_match:
+                    st.markdown("### 🧠 Agent Responses")
+                    for agent, response in log_match["responses"].items():
+                        st.markdown(f"**{agent}**")
+                        st.code(response, language="markdown")
+
+                    st.markdown("### 🔍 Evaluations")
+                    st.json(log_match["evaluations"])

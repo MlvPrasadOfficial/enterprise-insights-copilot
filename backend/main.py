@@ -15,6 +15,11 @@ from backend.agentic.graph_runner import build_graph
 import altair as alt
 import json
 from core.session_memory import memory
+from backend.agents.critique_agent import CritiqueAgent
+from backend.agents.report_generator import ReportGenerator
+from fastapi.responses import FileResponse
+from backend.agents.debate_agent import DebateAgent
+from core.debate_log import log_debate_entry
 
 app = FastAPI()
 
@@ -68,7 +73,9 @@ async def query_rag(data: QueryInput):
 
         raise HTTPException(status_code=400, detail="No data uploaded in session.")
     answer = run_rag(data.query)
-    return {"answer": answer}
+    critique = CritiqueAgent(df.columns.tolist())
+    eval_report = critique.evaluate(data.query, answer)
+    return {"answer": answer, "evaluation": eval_report}
 
 
 @app.post("/chart")
@@ -94,9 +101,13 @@ def sql_endpoint(req: SQLQuery):
     sql = agent.generate_sql(req.query)
     try:
         result = agent.run_sql(sql)
+        result_string = result.to_markdown()
+        critique = CritiqueAgent(df.columns.tolist())
+        eval_report = critique.evaluate(req.query, result_string)
         return {
             "sql": sql,
             "result": result.to_dict(orient="records"),
+            "evaluation": eval_report,
         }
     except Exception as e:
         return {"error": str(e), "sql": sql}
@@ -111,7 +122,9 @@ def generate_insights(req: InsightRequest):
         raise HTTPException(status_code=400, detail="No data uploaded in session.")
     agent = InsightAgent(df)
     result = agent.generate_summary()
-    return {"insights": result}
+    critique = CritiqueAgent(df.columns.tolist())
+    eval_report = critique.evaluate("insights", result)
+    return {"insights": result, "evaluation": eval_report}
 
 
 @app.post("/auto-chart")
@@ -145,8 +158,70 @@ def agentic_chain(req: QueryInput):
     return {"response": result}
 
 
+session_memory = {}
+
+
 @app.post("/langgraph")
 def run_graph(req: QueryInput):
+    user_id = "default"  # You can sessionize this later
+    if user_id not in session_memory:
+        session_memory[user_id] = []
+
+    # Load memory from previous session
     graph = build_graph()
-    state = graph.invoke({"query": req.query, "result": "", "steps": []})
+    state = graph.invoke(
+        {
+            "query": req.query,
+            "result": "",
+            "steps": [],
+            "history": session_memory[user_id],
+        }
+    )
+
+    # Update memory for next turn
+    session_memory[user_id] = state["history"]
     return {"steps": state["steps"], "output": state["result"]}
+
+
+@app.post("/report")
+def generate_report():
+    df = memory.df
+    if df is None:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=400, detail="No data uploaded")
+
+    # Get insights
+    insight = InsightAgent(df).generate_summary()
+
+    # Generate report
+    report = ReportGenerator()
+    report.add_title()
+    report.add_insight_section(insight)
+
+    # Optional: attach last chart image (save from Streamlit or backend)
+    chart_path = "logs/last_chart.png"
+    if os.path.exists(chart_path):
+        report.add_chart(chart_path)
+
+    report_path = "logs/report.pdf"
+    report.save(report_path)
+    return FileResponse(
+        report_path, media_type="application/pdf", filename="insight_report.pdf"
+    )
+
+
+@app.post("/debate")
+def debate_mode(req: QueryInput):
+    df = memory.df
+    agent = DebateAgent(df)
+    result = agent.run_debate(req.query)
+
+    log_debate_entry(
+        req.query,
+        result["responses"],
+        result["evaluations"],
+        result["decision"],
+    )
+
+    return result

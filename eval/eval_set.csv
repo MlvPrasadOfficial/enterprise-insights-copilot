@@ -1,0 +1,6 @@
+query,expected_type,expected_keywords
+"Summarize the top trends in revenue",insight,revenue
+"Compare sales across regions using a chart",chart,sales,region
+"What is the average delivery time per product?",sql,average,delivery,product
+"Highlight any outliers in profit margins",insight,outlier,profit
+"Generate a bar chart of revenue by department",chart,revenue,bar,department
