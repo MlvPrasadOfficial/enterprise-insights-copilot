@@ -3,6 +3,7 @@ from backend.agents.sql_agent import SQLAgent
 from backend.agents.chart_agent import ChartAgent
 from backend.agents.critique_agent import CritiqueAgent
 from backend.core.session_memory import memory
+from backend.core.logging import logger
 from openai import OpenAI
 import os
 import json

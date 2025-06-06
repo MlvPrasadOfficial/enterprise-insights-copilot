@@ -34,6 +34,10 @@ from backend.core.debate_log import log_debate_entry
 from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from backend.core.loader import load_and_split
+from backend.core.models import get_openai_client, get_tokenizer
+from backend.core.prompts import RAG_PROMPT, INSIGHT_PROMPT, SQL_PROMPT
+from backend.core.utils import clean_string_for_storing
 
 app = FastAPI()
 
@@ -72,17 +76,21 @@ async def index_csv(file: UploadFile = File(...)):
     try:
         contents = await file.read()
         print(f"[DEBUG] Received file: {file.filename}, size: {len(contents)} bytes")
-        # Defensive: check if file is empty
         if not contents:
             raise ValueError("Uploaded file is empty.")
-        try:
-            df = pd.read_csv(StringIO(contents.decode("utf-8")))
-        except Exception as e:
-            print(f"[DEBUG] CSV decode error: {e}")
-            raise ValueError(f"Could not parse CSV: {e}")
-        print("[DEBUG] DataFrame shape: {}".format(df.shape))
+        # Save uploaded file to a temp path
+        temp_path = f"/tmp/{file.filename}"
+        with open(temp_path, "wb") as f:
+            f.write(contents)
+        # Use modular loader abstraction
+        docs = load_and_split(temp_path)
+        # Convert docs to DataFrame (for CSV, each doc is a row)
+        import json
+
+        rows = [json.loads(doc.page_content) for doc in docs]
+        df = pd.DataFrame(rows)
         cleaner = DataCleanerAgent(df)
-        df = cleaner.clean()  # 🔧 Cleaned before embedding
+        df = cleaner.clean()
         memory.update(df, file.filename)
         print("[DEBUG] Starting batch upsert...")
         ids = [f"{file.filename}_{idx}" for idx in df.index]

@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import datetime
+from backend.core.logging import logger
 
 LOG_FILE = "logs/debate_log.json"
 

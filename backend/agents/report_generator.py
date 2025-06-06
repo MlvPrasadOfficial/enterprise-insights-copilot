@@ -1,6 +1,7 @@
 from fpdf import FPDF
 import datetime
 import os
+from backend.core.logging import logger
 
 class ReportGenerator:
     def __init__(self, title="Enterprise Insights Report"):

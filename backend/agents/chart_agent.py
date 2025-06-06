@@ -1,5 +1,6 @@
 import pandas as pd
 import altair as alt
+from backend.core.logging import logger
 
 class ChartAgent:
     def __init__(self, df: pd.DataFrame):

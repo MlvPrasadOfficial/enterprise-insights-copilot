@@ -1,4 +1,5 @@
 from langchain_core.tools import tool
+from backend.core.logging import logger
 
 @tool
 def ask_rag(query: str) -> str:

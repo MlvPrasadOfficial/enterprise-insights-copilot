@@ -1,5 +1,6 @@
 import pandas as pd
 import json
+from backend.core.logging import logger
 
 class DataAgent:
     def __init__(self, df: pd.DataFrame):

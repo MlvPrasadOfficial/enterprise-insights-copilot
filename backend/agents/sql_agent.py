@@ -3,6 +3,7 @@ import duckdb
 from openai import OpenAI
 import os
 from config.settings import load_prompt
+from backend.core.logging import logger
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
 

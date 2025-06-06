@@ -1,6 +1,7 @@
 from langgraph.graph import StateGraph, END
 # from langgraph.graph import State  # State does not exist in current langgraph
 from typing import TypedDict, List
+from backend.core.logging import logger
 
 # Define the shared state
 class AgentState(TypedDict):

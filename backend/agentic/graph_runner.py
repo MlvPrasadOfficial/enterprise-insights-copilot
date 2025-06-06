@@ -1,5 +1,6 @@
 from langgraph.graph import StateGraph
 from backend.agentic.nodes import planner, insight_node, chart_node, sql_node, AgentState
+from backend.core.logging import logger
 
 def build_graph():
     builder = StateGraph(AgentState)
@@ -19,4 +20,4 @@ def build_graph():
 
     return builder.compile()
 
-# 
+#

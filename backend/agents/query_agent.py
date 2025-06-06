@@ -1,4 +1,5 @@
 from backend.core.llm_rag import run_rag
+from backend.core.logging import logger
 
 class QueryAgent:
     def __init__(self):

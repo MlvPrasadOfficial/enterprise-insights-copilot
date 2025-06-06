@@ -1,5 +1,6 @@
 import os
 from openai import OpenAI
+from backend.core.logging import logger
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=openai_api_key)

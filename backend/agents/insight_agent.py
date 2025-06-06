@@ -4,6 +4,7 @@ import os
 from openai import OpenAI
 from config.settings import load_prompt
 from langsmith import traceable
+from backend.core.logging import logger
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
 

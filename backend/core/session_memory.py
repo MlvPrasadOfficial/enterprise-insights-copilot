@@ -1,4 +1,5 @@
 # core/session_memory.py
+from backend.core.logging import logger
 
 class SessionMemory:
     def __init__(self):

@@ -1,0 +1,44 @@
+from dataclasses import dataclass
+from typing import Any
+import os
+import tiktoken
+from openai import OpenAI
+from config.constants import OPENAI_EMBEDDING_MODEL
+from backend.core.logging import logger
+
+@dataclass
+class ModelConfig:
+    name: str
+    embedding: str
+    context: int
+
+class MODELS:
+    GPT4 = ModelConfig(
+        name="gpt-4",
+        embedding=OPENAI_EMBEDDING_MODEL,
+        context=8192,
+    )
+    GPT35TURBO = ModelConfig(
+        name="gpt-3.5-turbo",
+        embedding=OPENAI_EMBEDDING_MODEL,
+        context=4096,
+    )
+    # Add more models as needed
+
+class EMBEDDINGS:
+    OPENAI = OPENAI_EMBEDDING_MODEL
+    # Add HuggingFace or other embeddings as needed
+
+def get_openai_client(api_key=None):
+    api_key = api_key or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        logger.error("OPENAI_API_KEY not set!")
+        raise RuntimeError("OPENAI_API_KEY not set!")
+    return OpenAI(api_key=api_key)
+
+def get_tokenizer(model_name: str = OPENAI_EMBEDDING_MODEL):
+    try:
+        return tiktoken.encoding_for_model(model_name)
+    except Exception as e:
+        logger.error(f"Tokenizer for {model_name} not found: {e}")
+        raise

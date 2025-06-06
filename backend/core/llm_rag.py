@@ -1,9 +1,30 @@
 import os
-import openai
 from pinecone import Pinecone
 from dotenv import load_dotenv
 from typing import List
-from config.settings import load_prompt
+from backend.core.models import get_openai_client
+from backend.core.prompts import RAG_PROMPT
+from backend.core.utils import clean_string_for_storing
+from backend.core.logging import logger
+from config.constants import CHUNK_SIZE, MAX_TOKENS
+from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# Vector store abstraction for future extensibility
+class VectorStore:
+    def __init__(self, backend="pinecone", **kwargs):
+        if backend == "pinecone":
+            self.index = kwargs.get("index")
+        else:
+            raise NotImplementedError("Only Pinecone backend is currently supported.")
+
+    def upsert(self, vectors):
+        self.index.upsert(vectors=vectors)
+
+    def query(self, vector, top_k=5, include_metadata=True):
+        return self.index.query(vector=vector, top_k=top_k, include_metadata=include_metadata)
+
+
 try:
     import tiktoken
 except ImportError:
@@ -12,7 +33,6 @@ except ImportError:
 print("[DEBUG] Importing backend/core/llm_rag.py...")
 load_dotenv()
 print("[DEBUG] Loaded .env and set OpenAI key...")
-openai.api_key = os.getenv("OPENAI_API_KEY")
 
 if not os.getenv("PINECONE_API_KEY"):
     print("[DEBUG] Missing PINECONE_API_KEY!")
@@ -34,12 +54,13 @@ if INDEX_NAME not in index_names:
     )
 print("[DEBUG] Connecting to Pinecone index...")
 index = pc.Index(INDEX_NAME)
+vector_store = VectorStore(backend="pinecone", index=index)
 print("[DEBUG] Pinecone index connected.")
 
-
 def embed_text(text: str) -> List[float]:
-    response = openai.embeddings.create(
-        model="text-embedding-ada-002",  # Changed to match Pinecone index dimension 1536
+    client = get_openai_client()
+    response = client.embeddings.create(
+        model="text-embedding-ada-002",
         input=[text]
     )
     return response.data[0].embedding
@@ -47,34 +68,68 @@ def embed_text(text: str) -> List[float]:
 
 def upsert_document(doc_id: str, text: str):
     vector = embed_text(text)
-    index.upsert(vectors=[{"id": doc_id, "values": vector, "metadata": {"text": text}}])
+    vector_store.upsert([{"id": doc_id, "values": vector, "metadata": {"text": text}}])
 
 
 def retrieve_relevant_chunks(query: str, top_k: int = 5):
     vector = embed_text(query)
-    results = index.query(vector=vector, top_k=top_k, include_metadata=True)
+    results = vector_store.query(vector=vector, top_k=top_k, include_metadata=True)
     return [match["metadata"]["text"] for match in results["matches"]]
 
 
 def run_rag(query: str) -> str:
     chunks = retrieve_relevant_chunks(query)
     context = "\n".join(chunks)
-    template = load_prompt("config/prompts/rag_prompt.txt")
-    prompt = template.format(context=context, query=query)
-
-    completion = openai.ChatCompletion.create(
+    prompt = RAG_PROMPT.format(context=context, query=query)
+    client = get_openai_client()
+    completion = client.chat.completions.create(
         model="gpt-4",
         messages=[{"role": "user", "content": prompt}]
     )
     return completion.choices[0].message.content.strip()
 
 
-def embed_text_batch(texts: list) -> list:
-    response = openai.embeddings.create(
-        model="text-embedding-ada-002",
-        input=texts
-    )
-    return [item.embedding for item in response.data]
+def embed_text_batch(texts: list, batch_size: int = 500) -> list:
+    # Ensure all are non-empty, single-line strings and batch size <= batch_size
+    clean_texts = []
+    for t in texts:
+        if t is None:
+            continue
+        s = str(t).replace('\n', ' ').replace('\r', ' ').strip()
+        if s:
+            clean_texts.append(s)
+    if not clean_texts:
+        print("[DEBUG] No valid texts to embed.")
+        return []
+    # Limit batch size to batch_size for reliability
+    results = []
+    total = len(clean_texts)
+    client = get_openai_client()
+    for i in range(0, total, batch_size):
+        batch = clean_texts[i:i+batch_size]
+        print(f"[DEBUG] Sending batch {i//batch_size+1} ({i+1}-{min(i+batch_size, total)}) of {((total-1)//batch_size)+1} to OpenAI embeddings: batch size: {len(batch)}")
+        response = client.embeddings.create(
+            model="text-embedding-ada-002",
+            input=batch
+        )
+        results.extend([item.embedding for item in response.data])
+    return results
+
+
+def embed_text_batch_parallel(texts: list, batch_size: int = 500, max_workers: int = 4) -> list:
+    clean_texts = [str(t).replace('\n', ' ').replace('\r', ' ').strip() for t in texts if t and str(t).strip()]
+    batches = [clean_texts[i:i+batch_size] for i in range(0, len(clean_texts), batch_size)]
+    results = [None] * len(batches)
+    def embed_batch(idx, batch):
+        client = get_openai_client()
+        response = client.embeddings.create(model="text-embedding-ada-002", input=batch)
+        return idx, [item.embedding for item in response.data]
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(embed_batch, i, batch) for i, batch in enumerate(batches)]
+        for f in tqdm(as_completed(futures), total=len(futures), desc="Embedding batches"):
+            idx, embeddings = f.result()
+            results[idx] = embeddings
+    return [emb for batch in results if batch for emb in batch]
 
 
 def batch_by_token_limit(texts, max_tokens=100000):
@@ -106,5 +161,5 @@ def upsert_documents_batch(ids: list, texts: list):
         vectors = []
         for doc_id, text, vector in zip(batch_ids, batch, embeddings):
             vectors.append({"id": doc_id, "values": vector, "metadata": {"text": text}})
-        index.upsert(vectors=vectors)
+        vector_store.upsert(vectors=vectors)
         idx += len(batch)
