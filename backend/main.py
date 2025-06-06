@@ -22,12 +22,12 @@ from backend.agentic.agent_executor import get_agent_executor
 from backend.agentic.graph_runner import build_graph
 import altair as alt
 import json
-from core.session_memory import memory
+from backend.core.session_memory import memory
 from backend.agents.critique_agent import CritiqueAgent
 from backend.agents.report_generator import ReportGenerator
 from fastapi.responses import FileResponse
 from backend.agents.debate_agent import DebateAgent
-from core.debate_log import log_debate_entry
+from backend.core.debate_log import log_debate_entry
 from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel

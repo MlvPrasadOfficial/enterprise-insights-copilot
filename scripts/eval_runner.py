@@ -1,6 +1,6 @@
 import pandas as pd
 from backend.agents.debate_agent import DebateAgent
-from core.session_memory import memory
+from backend.core.session_memory import memory
 
 # Load your real test DataFrame here (replace with your actual data path)
 df = pd.read_csv("path_to_test_dataset.csv")
@@ -10,6 +10,8 @@ eval_set = pd.read_csv("eval/eval_set.csv")
 results = []
 
 agent = DebateAgent(df)
+
+# agent 
 
 for i, row in eval_set.iterrows():
     query = row["query"]

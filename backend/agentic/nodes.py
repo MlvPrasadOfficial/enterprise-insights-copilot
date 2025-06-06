@@ -23,7 +23,7 @@ def planner(state: AgentState) -> str:
 
 def insight_node(state: AgentState) -> AgentState:
     from backend.agents.insight_agent import InsightAgent
-    from core.session_memory import memory
+    from backend.core.session_memory import memory
     prompt = state["query"]
     past_insights = "\n".join([item["result"] for item in state["history"] if "insight" in item["steps"]])
     if past_insights:
@@ -38,7 +38,7 @@ def insight_node(state: AgentState) -> AgentState:
 
 def chart_node(state: AgentState) -> AgentState:
     from backend.agents.chart_agent import ChartAgent
-    from core.session_memory import memory
+    from backend.core.session_memory import memory
     agent = ChartAgent(memory.df)
     x, y = agent.guess_axes()
     chart = agent.render_chart(x, y, agent.guess_chart(state["query"]))
@@ -51,7 +51,7 @@ def chart_node(state: AgentState) -> AgentState:
 
 def sql_node(state: AgentState) -> AgentState:
     from backend.agents.sql_agent import SQLAgent
-    from core.session_memory import memory
+    from backend.core.session_memory import memory
     agent = SQLAgent(memory.df)
     sql = agent.generate_sql(state["query"])
     df = agent.run_sql(sql)

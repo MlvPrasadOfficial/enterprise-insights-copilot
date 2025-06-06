@@ -1,4 +1,4 @@
-from core.llm_rag import run_rag
+from backend.core.llm_rag import run_rag
 
 class QueryAgent:
     def __init__(self):

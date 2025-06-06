@@ -2,7 +2,7 @@ from backend.agents.insight_agent import InsightAgent
 from backend.agents.sql_agent import SQLAgent
 from backend.agents.chart_agent import ChartAgent
 from backend.agents.critique_agent import CritiqueAgent
-from core.session_memory import memory
+from backend.core.session_memory import memory
 from openai import OpenAI
 import os
 import json
