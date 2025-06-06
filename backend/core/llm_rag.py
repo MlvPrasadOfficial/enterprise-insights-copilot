@@ -27,7 +27,7 @@ index = pc.Index(INDEX_NAME)
 
 def embed_text(text: str) -> List[float]:
     response = openai.embeddings.create(
-        model="text-embedding-3-large",
+        model="text-embedding-ada-002",  # Changed to match Pinecone index dimension 1536
         input=[text]
     )
     return response.data[0].embedding
