@@ -111,3 +111,30 @@ MIT License
 ---
 
 ## 🎨 Let’s polish this into a portfolio centerpiece. 🚀
+
+---
+
+## Deploying to Render.com
+
+Make sure your start command uses the environment variable for the port:
+
+```sh
+uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+```
+
+If you use a render.yaml file, it should look like this:
+
+```yaml
+services:
+  - type: web
+    name: enterprise-insights-copilot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    envVars:
+      - key: PORT
+        value: 10000
+```
+
+This ensures Render will detect the open port and route traffic correctly.
