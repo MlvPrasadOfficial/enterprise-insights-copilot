@@ -3,15 +3,15 @@ from pathlib import Path
 import pandas as pd
 from typing import List, Any
 from tqdm import tqdm
-from enterprise_insights_copilot.config.constants import CHUNK_SIZE, CHUNK_OVERLAP_PCT
+from ..config.constants import CHUNK_SIZE, CHUNK_OVERLAP_PCT
 
 try:
     from langchain_community.document_loaders import (
         CSVLoader, TextLoader, PyPDFium2Loader, UnstructuredWordDocumentLoader,
         UnstructuredMarkdownLoader, UnstructuredHTMLLoader, UnstructuredPowerPointLoader, NotebookLoader
     )
-    from langchain.text_splitter import RecursiveCharacterTextSplitter
-    from langchain.schema import Document
+    from langchain_community.text_splitter import RecursiveCharacterTextSplitter
+    from langchain_community.schema import Document
 except ImportError:
     # Fallback: define a minimal Document for CSV/TXT
     class Document:

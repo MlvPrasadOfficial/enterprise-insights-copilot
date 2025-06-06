@@ -1,5 +1,5 @@
 from langchain.agents import initialize_agent, AgentType
-from langchain.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI
 from backend.agentic.tools import ask_rag, ask_sql, ask_insight
 from backend.core.logging import logger
 
