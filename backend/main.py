@@ -67,14 +67,22 @@ class InsightRequest(BaseModel):
 
 @app.post("/index")
 async def index_csv(file: UploadFile = File(...)):
-    contents = await file.read()
-    df = pd.read_csv(StringIO(contents.decode("utf-8")))
-    cleaner = DataCleanerAgent(df)
-    df = cleaner.clean()  # 🔧 Cleaned before embedding
-    memory.update(df, file.filename)
-    for idx, row in df.iterrows():
-        upsert_document(f"{file.filename}_{idx}", row.to_json())
-    return {"status": "success", "rows_indexed": len(df)}
+    try:
+        contents = await file.read()
+        print(f"[DEBUG] Received file: {file.filename}, size: {len(contents)} bytes")
+        df = pd.read_csv(StringIO(contents.decode("utf-8")))
+        print(f"[DEBUG] DataFrame shape: {df.shape}")
+        cleaner = DataCleanerAgent(df)
+        df = cleaner.clean()  # 🔧 Cleaned before embedding
+        memory.update(df, file.filename)
+        for idx, row in df.iterrows():
+            upsert_document(f"{file.filename}_{idx}", row.to_json())
+        return {"status": "success", "rows_indexed": len(df)}
+    except Exception as e:
+        print(f"❌ Error in /index: {str(e)}")
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
 
 
 @app.post("/query")
