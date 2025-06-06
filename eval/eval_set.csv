@@ -1,6 +1,11 @@
-query,expected_type,expected_keywords
-"Summarize the top trends in revenue",insight,revenue
-"Compare sales across regions using a chart",chart,sales,region
-"What is the average delivery time per product?",sql,average,delivery,product
-"Highlight any outliers in profit margins",insight,outlier,profit
-"Generate a bar chart of revenue by department",chart,revenue,bar,department
+ID,Name,Age,Gender,Department,Joining_Date,Salary,City,Performance_Score,Status
+1,Alice,29,F,HR,2020-01-15,50000,New York,85,Active
+2,Bob,35,M,Engineering,2019-03-22,85000,San Francisco,92,Active
+3,Charlie,28,M,Marketing,2021-06-10,60000,Los Angeles,78,Active
+4,Diana,32,F,Finance,2018-11-05,72000,Chicago,88,Active
+5,Ethan,45,M,Engineering,2015-09-17,95000,Seattle,95,Inactive
+6,Fiona,26,F,HR,2022-01-10,48000,Boston,82,Active
+7,George,39,M,Sales,2017-04-12,67000,Austin,75,Active
+8,Hannah,31,F,Marketing,2020-08-03,62000,Denver,80,Active
+9,Ian,27,M,Support,2021-02-25,52000,Phoenix,77,Active
+10,Jane,34,F,Engineering,2016-07-19,88000,San Diego,90,Inactive

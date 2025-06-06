@@ -7,6 +7,7 @@ import os
 import pandas as pd
 from dotenv import load_dotenv
 from io import StringIO
+import tempfile
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -138,8 +139,9 @@ async def index_csv(file: UploadFile = File(...)):
         print(f"[DEBUG] Received file: {file.filename}, size: {len(contents)} bytes")
         if not contents:
             raise ValueError("Uploaded file is empty.")
-        # Save uploaded file to a temp path
-        temp_path = f"/tmp/{file.filename}"
+        # Save uploaded file to a cross-platform temp path
+        temp_dir = tempfile.gettempdir()
+        temp_path = os.path.join(temp_dir, file.filename)
         with open(temp_path, "wb") as f:
             f.write(contents)
         # Use modular loader abstraction
@@ -151,8 +153,9 @@ async def index_csv(file: UploadFile = File(...)):
         df = pd.DataFrame(rows)
         cleaner = DataCleanerAgent(df)
         df = cleaner.clean()
+        print(f"[DEBUG] DataFrame shape after clean: {df.shape}")
         memory.update(df, file.filename)
-        print("[DEBUG] Starting batch upsert...")
+        print(f"[DEBUG] memory.df is set: {memory.df is not None}, filename: {memory.filename}")
         ids = [f"{file.filename}_{idx}" for idx in df.index]
         texts = [row.to_json() for _, row in df.iterrows()]
         from backend.core.llm_rag import upsert_documents_batch
@@ -219,15 +222,17 @@ def sql_endpoint(req: SQLQuery):
 
 @app.post("/insights")
 def generate_insights(req: InsightRequest):
+    print(f"[DEBUG] /insights called. memory.df is None? {memory.df is None}")
     df = memory.df
     if df is None:
         from fastapi import HTTPException
-
+        print("[DEBUG] No data uploaded in session for /insights.")
         raise HTTPException(status_code=400, detail="No data uploaded in session.")
     agent = InsightAgent(df)
     result = agent.generate_summary()
     critique = CritiqueAgent(df.columns.tolist())
     eval_report = critique.evaluate("insights", result)
+    print(f"[DEBUG] Insights generated: {result}")
     return {"insights": result, "evaluation": eval_report}
 
 

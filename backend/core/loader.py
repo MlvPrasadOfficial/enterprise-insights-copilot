@@ -39,17 +39,37 @@ def load_document(file_path: str, mapping: dict = FILE_LOADER_MAPPING) -> List[A
     ext = "." + file_path.rsplit(".", 1)[-1].lower()
     if ext in mapping:
         loader_class, loader_args = mapping[ext]
-        loader = loader_class(file_path, **loader_args)
-        return loader.load()
+        try:
+            loader = loader_class(file_path, **loader_args)
+            return loader.load()
+        except Exception as e:
+            print(f"[Loader] {ext} loader failed: {e}. Trying pandas fallback.")
+            if ext == ".csv":
+                with open(file_path, encoding="utf-8") as f:
+                    raw = f.read()
+                    print(f"[Loader DEBUG] Raw CSV content (first 200 chars): {raw[:200]}")
+                try:
+                    df = pd.read_csv(file_path)
+                    return [Document(row.to_json(), {"row": i}) for i, row in df.iterrows()]
+                except Exception as pandas_e:
+                    print(f"[Loader ERROR] pandas.read_csv failed: {pandas_e}")
+                    raise
     # Fallback: try pandas for CSV, TXT
     if ext == ".csv":
-        df = pd.read_csv(file_path)
-        return [Document(row.to_json(), {"row": i}) for i, row in df.iterrows()]
+        with open(file_path, encoding="utf-8") as f:
+            raw = f.read()
+            print(f"[Loader DEBUG] Raw CSV content (first 200 chars): {raw[:200]}")
+        try:
+            df = pd.read_csv(file_path)
+            return [Document(row.to_json(), {"row": i}) for i, row in df.iterrows()]
+        except Exception as pandas_e:
+            print(f"[Loader ERROR] pandas.read_csv failed: {pandas_e}")
+            raise
     elif ext == ".txt":
         with open(file_path, encoding="utf-8") as f:
-            return [Document(f.read(), {"file": file_path})]
+            content = f.read()
+            return [Document(content, {"file": file_path})]
     elif ext == ".pdf":
-        # Only use PyPDFium2Loader or langchain loader for PDF, do not fallback to PyPDF2
         raise ValueError(f"PDF loading failed for {file_path}. Please ensure PyPDFium2Loader is installed and working.")
     else:
         raise ValueError(f"Unsupported file type: {ext}")

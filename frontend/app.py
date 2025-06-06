@@ -3,6 +3,7 @@ import pandas as pd
 import requests
 import altair as alt
 import io
+import logging
 
 # Try to import FPDF, but set a flag if it fails
 try:
@@ -119,9 +120,13 @@ if 'metrics' in st.session_state:
     st.sidebar.markdown(f"**Cost:** ${st.session_state['metrics'].get('anonymous', {}).get('cost', 0):.4f}")
 
 # --- Insights Panel ---
-def fetch_auto_insights():
+def fetch_auto_insights(df=None):
     try:
-        response = requests.post(f"{BACKEND_URL}/api/v1/insights", json={"data": []})
+        data = []
+        if df is not None:
+            # Send a sample of the data to backend for insights
+            data = df.head(100).to_dict(orient="records")
+        response = requests.post(f"{BACKEND_URL}/api/v1/insights", json={"data": data})
         result = response.json()
         return result.get("insights", "No insights available."), result.get("evaluation", "")
     except Exception:
@@ -142,17 +147,18 @@ def download_insights_pdf(insights):
     return io.BytesIO(pdf_bytes)
 
 def download_insights_csv(insights):
+    import io
     buf = io.StringIO()
     buf.write('Insight\n')
     buf.write('"' + insights.replace('"', '""') + '"\n')
-    buf.seek(0)
-    return buf
+    csv_bytes = buf.getvalue().encode("utf-8")
+    return io.BytesIO(csv_bytes)
 
 # === Query Section Card (with Chat History & Insights) ===
 with st.container():
     st.markdown('---')
     st.markdown('### 💬 Ask a Question', unsafe_allow_html=True)
-    query = st.text_input('e.g., Compare revenue across product categories', value=st.session_state.get('example_query', ''))
+    query = st.text_input('GIVE SOME INSIGHTS', value=st.session_state.get('example_query', ''))
     if st.button('🚀 Run Query'):
         if not uploaded_file:
             st.warning('Please upload a CSV first.')
@@ -168,7 +174,7 @@ with st.container():
                         answer = 'No answer. Please try a different question or re-upload your data.'
                     st.session_state['chat_history'].append((query, answer))
                     # Fetch auto insights after query
-                    insights, evaluation = fetch_auto_insights()
+                    insights, evaluation = fetch_auto_insights(df if 'df' in locals() else None)
                     st.session_state['last_insights'] = insights
                     st.session_state['last_evaluation'] = evaluation
                     st.success('✅ Query complete!')
@@ -204,6 +210,26 @@ with st.container():
                 file_name="insights.csv",
                 mime="text/csv"
             )
+
+# === Streamlit logging setup ===
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+logger = logging.getLogger("streamlit_app")
+
+# Helper to show logs in Streamlit UI
+if 'log_messages' not in st.session_state:
+    st.session_state['log_messages'] = []
+
+def log_to_ui(message, level="info"):
+    st.session_state['log_messages'].append((level, message))
+    logger.log(getattr(logging, level.upper(), logging.INFO), message)
+
+# Example: Log app start
+log_to_ui("Streamlit app started.", "info")
+
+# At the end of the app, show logs in an expander
+with st.sidebar.expander("🪵 Show Logs", expanded=True):
+    for level, msg in st.session_state['log_messages'][-100:]:
+        st.markdown(f"**[{level.upper()}]** {msg}")
 
 # === Clear Session Button ===
 if st.sidebar.button('🧹 Clear Session'):
