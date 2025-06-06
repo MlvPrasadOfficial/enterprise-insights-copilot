@@ -1,3 +1,8 @@
+"""
+Loader utilities for reading, splitting, and chunking documents for RAG pipelines.
+Supports CSV, TXT, PDF, DOCX, MD, HTML, PPTX, IPYNB, and more.
+"""
+
 import os
 from pathlib import Path
 import pandas as pd
@@ -41,6 +46,16 @@ FILE_LOADER_MAPPING = {
 }
 
 def load_document(file_path: str, mapping: dict = FILE_LOADER_MAPPING) -> List[Any]:
+    """
+    Load a document from disk and return a list of Document objects.
+
+    Args:
+        file_path (str): Path to the file to load.
+        mapping (dict): Mapping of file extensions to loader classes/args.
+
+    Returns:
+        List[Any]: List of Document objects (one per row for CSV).
+    """
     logger.info(f"[loader] load_document called for file_path: {file_path}")
     ext = "." + file_path.rsplit(".", 1)[-1].lower()
     # Always use pandas for CSV to ensure JSON output per row
@@ -64,13 +79,40 @@ def load_document(file_path: str, mapping: dict = FILE_LOADER_MAPPING) -> List[A
             logger.info(f"[loader] Using loader: {loader_class.__name__}")
             return loader.load()
         except Exception as e:
-            logger.error(f"[Loader] {ext} loader failed: {e}. Trying pandas fallback.")
-            # fallback for CSV already handled above
+            logger.error(f"[Loader] {ext} loader failed: Error loading {file_path}. Trying pandas fallback.")
+    # Fallback for .md: read as plain text if loader fails
+    if ext == ".md":
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            logger.info(f"[loader] Markdown fallback succeeded for {file_path}.")
+            return [Document(content, metadata={"source": file_path})]
+        except Exception as e:
+            logger.error(f"[loader] Markdown fallback failed: {e}")
+            return []
     # Fallback: try pandas for TXT
+    if ext == ".txt":
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            return [Document(content, metadata={"source": file_path})]
+        except Exception as e:
+            logger.error(f"[loader] TXT fallback failed: {e}")
+            return []
     logger.warning(f"[loader] No loader found for extension: {ext}. Returning empty list.")
     return []
 
-def load_directory(path: str, silent_errors=True) -> List[Any]:
+def load_directory(path: str, silent_errors: bool = True) -> List[Any]:
+    """
+    Load all documents from a directory recursively.
+
+    Args:
+        path (str): Directory path to search for files.
+        silent_errors (bool): If True, skip files that fail to load.
+
+    Returns:
+        List[Any]: List of loaded Document objects.
+    """
     all_files = list(Path(path).rglob("**/[!.]*"))
     results = []
     with tqdm(total=len(all_files), desc="Loading documents", ncols=80) as pbar:
@@ -86,13 +128,32 @@ def load_directory(path: str, silent_errors=True) -> List[Any]:
     return results
 
 class SmartFAQSplitter:
-    """Splits FAQ-style documents into Q&A pairs or logical chunks."""
+    """
+    Splits FAQ-style documents into Q&A pairs or logical chunks.
+    """
     def __init__(self, question_prefixes=None, chunk_size=CHUNK_SIZE, chunk_overlap_pct=CHUNK_OVERLAP_PCT):
+        """
+        Initialize SmartFAQSplitter.
+
+        Args:
+            question_prefixes (list): List of prefixes to identify questions.
+            chunk_size (int): Max chunk size.
+            chunk_overlap_pct (int): Overlap percentage between chunks.
+        """
         self.question_prefixes = question_prefixes or ["Q:", "Question:", "Q.", "Q -", "Q-"]
         self.chunk_size = chunk_size
         self.chunk_overlap = int(chunk_size * chunk_overlap_pct / 100)
 
-    def split(self, docs):
+    def split(self, docs: List[Any]) -> List[Any]:
+        """
+        Split documents into Q&A or logical chunks, with optional further chunking.
+
+        Args:
+            docs (List[Any]): List of Document objects.
+
+        Returns:
+            List[Any]: List of split Document objects.
+        """
         split_docs = []
         for doc in docs:
             lines = doc.page_content.splitlines()
@@ -117,7 +178,18 @@ class SmartFAQSplitter:
         return final_chunks
 
 def split_documents(docs: List[Any], chunk_size: int = CHUNK_SIZE, chunk_overlap_pct: int = CHUNK_OVERLAP_PCT, splitter_type: str = "default") -> List[Any]:
-    """Split documents with runtime override and splitter type (default or smart_faq)."""
+    """
+    Split documents with runtime override and splitter type (default or smart_faq).
+
+    Args:
+        docs (List[Any]): List of Document objects.
+        chunk_size (int): Max chunk size.
+        chunk_overlap_pct (int): Overlap percentage between chunks.
+        splitter_type (str): Type of splitter to use ("default" or "smart_faq").
+
+    Returns:
+        List[Any]: List of split Document objects.
+    """
     if splitter_type == "smart_faq":
         splitter = SmartFAQSplitter(chunk_size=chunk_size, chunk_overlap_pct=chunk_overlap_pct)
         return splitter.split(docs)
@@ -135,5 +207,17 @@ def split_documents(docs: List[Any], chunk_size: int = CHUNK_SIZE, chunk_overlap
         return docs
 
 def load_and_split(file_path: str, chunk_size: int = CHUNK_SIZE, chunk_overlap_pct: int = CHUNK_OVERLAP_PCT, splitter_type: str = "default") -> List[Any]:
+    """
+    Load a file and split it into chunks for RAG ingestion.
+
+    Args:
+        file_path (str): Path to the file to load.
+        chunk_size (int): Max chunk size.
+        chunk_overlap_pct (int): Overlap percentage between chunks.
+        splitter_type (str): Type of splitter to use ("default" or "smart_faq").
+
+    Returns:
+        List[Any]: List of split Document objects.
+    """
     docs = load_document(file_path)
     return split_documents(docs, chunk_size, chunk_overlap_pct, splitter_type)

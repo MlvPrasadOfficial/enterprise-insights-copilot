@@ -11,6 +11,7 @@ import tempfile
 import traceback
 import logging
 from fastapi import status
+from typing import Any
 
 # Add project root to sys.path for cloud and local compatibility
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -137,32 +138,52 @@ api_v1 = APIRouter(prefix="/api/v1")
 
 
 class QueryInput(BaseModel):
+    """Input model for /query and similar endpoints."""
     query: str
 
 
 class ChartRequest(BaseModel):
+    """Input model for /chart endpoint."""
     x: str
     y: str
     chart_type: str
-    data: list
+    data: list[Any]
 
 
 class SQLQuery(BaseModel):
+    """Input model for /sql endpoint."""
     query: str
-    data: list
+    data: list[Any]
 
 
 class InsightRequest(BaseModel):
-    data: list
+    """Input model for /insights endpoint."""
+    data: list[Any]
 
 
 # Helper to extract user/session id (stub: replace with real auth/session logic)
-def get_user_id(request: Request):
+def get_user_id(request: Request) -> str:
+    """
+    Extract the user ID from the request headers. Defaults to 'anonymous'.
+    Args:
+        request (Request): The FastAPI request object.
+    Returns:
+        str: The user ID.
+    """
     return request.headers.get("X-User-Id", "anonymous")
 
 
 @api_v1.post("/index")
-async def index_csv(file: UploadFile = File(...)):
+async def index_csv(file: UploadFile = File(...)) -> Any:
+    """
+    Upload and index a CSV file. Returns success or actionable error message.
+    Args:
+        file (UploadFile): The uploaded CSV file.
+    Returns:
+        dict: Status and indexing info.
+    Raises:
+        HTTPException: If file is empty, too large, or processing fails.
+    """
     import time
     import psutil
     start_time = time.time()
@@ -172,7 +193,8 @@ async def index_csv(file: UploadFile = File(...)):
         file_size = len(contents)
         logger.info(f"[UPLOAD] Received file: {file.filename}, size: {file_size} bytes")
         if not contents:
-            raise ValueError("Uploaded file is empty.")
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail="Upload a valid CSV file (file is empty).")
         # File size limit (10MB)
         MAX_SIZE = 10 * 1024 * 1024
         if file_size > MAX_SIZE:
@@ -203,7 +225,13 @@ async def index_csv(file: UploadFile = File(...)):
         logger.info(f"[UPLOAD] Parsed {len(rows)} docs, skipped {len(skipped)} docs.")
         if skipped:
             logger.info(f"[UPLOAD] Sample skipped content: {skipped[:2]}")
+        if not rows:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail="No valid rows found in CSV. Please upload a valid CSV file.")
         df = pd.DataFrame(rows)
+        if df.empty:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail="Uploaded CSV contains no data rows.")
         cleaner = DataCleanerAgent(df)
         df = cleaner.clean()
         logger.info(f"[UPLOAD] DataFrame shape after clean: {df.shape}")
@@ -297,6 +325,7 @@ def sql_endpoint(req: SQLQuery):
         logger.error(f"[SQL] Exception: {e}")
         logger.error(traceback.format_exc())
         return {"error": str(e), "sql": sql}
+# 
 
 @api_v1.post("/insights")
 def generate_insights(req: InsightRequest):

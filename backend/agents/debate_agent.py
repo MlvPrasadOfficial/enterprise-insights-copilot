@@ -1,3 +1,7 @@
+"""
+DebateAgent: Runs a multi-agent debate (Insight, SQL, Chart) and uses LLM to arbitrate the best answer.
+"""
+
 from backend.agents.insight_agent import InsightAgent
 from backend.agents.sql_agent import SQLAgent
 from backend.agents.chart_agent import ChartAgent
@@ -7,17 +11,32 @@ from backend.core.logging import logger
 from openai import OpenAI
 import os
 import json
+from typing import Any, Dict
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=openai_api_key)
 
 class DebateAgent:
     def __init__(self, df):
+        """
+        Initialize DebateAgent with a DataFrame.
+        Args:
+            df (pd.DataFrame): The DataFrame to analyze.
+        """
         self.df = df
         self.columns = df.columns.tolist()
         logger.info(f"[DebateAgent] Initialized with DataFrame shape: {df.shape}")
 
-    def run_debate(self, query: str):
+    def run_debate(self, query: str) -> Dict[str, Any]:
+        """
+        Run a debate among InsightAgent, SQLAgent, and ChartAgent, then arbitrate with LLM.
+        Args:
+            query (str): The user's question in natural language.
+        Returns:
+            Dict[str, Any]: Responses, evaluations, and final decision.
+        Raises:
+            Exception: If any agent or LLM call fails.
+        """
         logger.info(f"[DebateAgent] run_debate called with query: {query}")
         try:
             insight = InsightAgent(self.df).generate_summary()

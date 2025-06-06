@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+
 import logging
 from backend.core.loader import load_and_split
 
@@ -7,7 +11,8 @@ logger = logging.getLogger("test_loader")
 def test_load_and_split_txt():
     logger.info("Running test_load_and_split_txt...")
     try:
-        docs = load_and_split("../data/sample.txt")
+        test_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "sample.txt"))
+        docs = load_and_split(test_file)
         assert len(docs) > 0
         assert hasattr(docs[0], "page_content")
         logger.info("test_load_and_split_txt passed.")
@@ -18,7 +23,8 @@ def test_load_and_split_txt():
 def test_load_and_split_md():
     logger.info("Running test_load_and_split_md...")
     try:
-        docs = load_and_split("../data/sample.md")
+        test_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "sample.md"))
+        docs = load_and_split(test_file)
         assert len(docs) > 0
         assert hasattr(docs[0], "page_content")
         logger.info("test_load_and_split_md passed.")
