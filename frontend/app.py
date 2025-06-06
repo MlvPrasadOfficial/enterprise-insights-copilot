@@ -5,6 +5,7 @@ import altair as alt
 import io
 import logging
 import traceback
+import streamlit.components.v1 as components
 
 # --- Logging helpers must be defined before any usage ---
 if 'log_messages' not in st.session_state:
@@ -280,7 +281,12 @@ with st.container():
 # === Log Dropdown Panel (Main Page) ===
 with st.expander('🪵 Show Session Logs (Dropdown)', expanded=False):
     st.markdown('''<div style="font-size:0.95em;">All logs for this session are shown below. Most recent at bottom.</div>''', unsafe_allow_html=True)
-    for level, msg in st.session_state['log_messages'][-100:]:
+    log_text = '\n'.join([f"[{level.upper()}] {msg}" for level, msg in st.session_state['log_messages']])
+    components.html(f'''
+        <button onclick="navigator.clipboard.writeText(document.getElementById('logtext').innerText)" style="margin-bottom:8px;padding:6px 16px;border-radius:6px;background:#4e8cff;color:white;font-weight:600;border:none;cursor:pointer;">📋 Copy Log</button>
+        <pre id="logtext" style="background:#f1f5f9;padding:12px;border-radius:8px;max-height:300px;overflow:auto;font-size:0.95em;">{log_text}</pre>
+    ''', height=340)
+    for level, msg in st.session_state['log_messages']:
         st.markdown(f"**[{level.upper()}]** {msg}")
 
 # === Streamlit logging setup ===
@@ -292,7 +298,12 @@ log_to_ui("Streamlit app started.", "info")
 
 # At the end of the app, show logs in an expander
 with st.sidebar.expander("🪵 Show Logs", expanded=True):
-    for level, msg in st.session_state['log_messages'][-100:]:
+    log_text = '\n'.join([f"[{level.upper()}] {msg}" for level, msg in st.session_state['log_messages']])
+    components.html(f'''
+        <button onclick="navigator.clipboard.writeText(document.getElementById('sidebarlogtext').innerText)" style="margin-bottom:8px;padding:6px 16px;border-radius:6px;background:#4e8cff;color:white;font-weight:600;border:none;cursor:pointer;">📋 Copy Log</button>
+        <pre id="sidebarlogtext" style="background:#f1f5f9;padding:12px;border-radius:8px;max-height:300px;overflow:auto;font-size:0.95em;">{log_text}</pre>
+    ''', height=340)
+    for level, msg in st.session_state['log_messages']:
         st.markdown(f"**[{level.upper()}]** {msg}")
 
 # === Clear Session Button ===
