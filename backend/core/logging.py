@@ -7,6 +7,7 @@ import sys
 import uuid
 from typing import Optional, Dict, Any
 
+
 def create_logger(level: str = "DEBUG") -> logging.Logger:
     """
     Create and configure a logger for the application.
@@ -20,14 +21,20 @@ def create_logger(level: str = "DEBUG") -> logging.Logger:
     logger = logging.getLogger("enterprise_insights_copilot")
     logger.propagate = False
     logger.setLevel(level)
-    if not any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers):
+    if not any(
+        isinstance(handler, logging.StreamHandler) for handler in logger.handlers
+    ):
         stream_handler = logging.StreamHandler(stream=sys.stdout)
-        formatter = logging.Formatter("%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s"
+        )
         stream_handler.setFormatter(formatter)
         logger.addHandler(stream_handler)
     return logger
 
+
 logger = create_logger()
+
 
 class UsageTracker:
     """
@@ -62,5 +69,6 @@ class UsageTracker:
             Dict[str, Any]: Usage stats (tokens, cost).
         """
         return self.usage.get(user_id, {"tokens": 0, "cost": 0.0})
+
 
 usage_tracker = UsageTracker()

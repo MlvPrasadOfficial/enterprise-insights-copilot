@@ -15,6 +15,7 @@ from langchain.schema.vectorstore import VectorStore
 from langchain.schema import BaseRetriever
 from pydantic import PrivateAttr
 
+
 def create_qa_chain(llm: Any, memory: Optional[Any] = None) -> Chain:
     """
     Create a simple QA chain using an LLM and a prompt.
@@ -34,10 +35,12 @@ def create_qa_chain(llm: Any, memory: Optional[Any] = None) -> Chain:
     logger.info("[chain] QA chain created.")
     return chain
 
+
 class MultiRetrieverFAQChain(Chain):
     """
     Chain that orchestrates multi-retriever (knowledge base + FAQ) and streaming responses.
     """
+
     _llm: Any = PrivateAttr()
     _knowledge_base_retrievers: list = PrivateAttr()
     _smart_faq_retriever: Any = PrivateAttr()
@@ -49,7 +52,14 @@ class MultiRetrieverFAQChain(Chain):
         arbitrary_types_allowed = True
         extra = "allow"
 
-    def __init__(self, llm: Any, knowledge_base_retrievers: list, smart_faq_retriever: Any = None, memory: Any = None, verbose: bool = True):
+    def __init__(
+        self,
+        llm: Any,
+        knowledge_base_retrievers: list,
+        smart_faq_retriever: Any = None,
+        memory: Any = None,
+        verbose: bool = True,
+    ):
         logger.info("[chain] MultiRetrieverFAQChain initialized.")
         super().__init__()
         self._llm = llm
@@ -57,9 +67,13 @@ class MultiRetrieverFAQChain(Chain):
         self._smart_faq_retriever = smart_faq_retriever
         self._memory = memory or ConversationBufferMemory(return_messages=True)
         self._verbose = verbose
-        self._qa_chain = LLMChain(llm=llm, prompt=RAG_PROMPT, memory=self._memory, verbose=verbose)
+        self._qa_chain = LLMChain(
+            llm=llm, prompt=RAG_PROMPT, memory=self._memory, verbose=verbose
+        )
 
-    def _call(self, inputs: Dict[str, Any], run_manager: Optional[Any] = None) -> Dict[str, str]:
+    def _call(
+        self, inputs: Dict[str, Any], run_manager: Optional[Any] = None
+    ) -> Dict[str, str]:
         """
         Run the multi-retriever chain for a given question.
         Args:
@@ -76,13 +90,17 @@ class MultiRetrieverFAQChain(Chain):
             docs = self._smart_faq_retriever.get_relevant_documents(question)
             if docs:
                 logger.info(f"[chain] FAQ docs found: {len(docs)}")
-                answer += "\n#### SMART FAQ ANSWER\n" + "\n".join([d.page_content for d in docs])
+                answer += "\n#### SMART FAQ ANSWER\n" + "\n".join(
+                    [d.page_content for d in docs]
+                )
         # Knowledge base retrieval
         for retriever in self._knowledge_base_retrievers:
             docs = retriever.get_relevant_documents(question)
             if docs:
                 logger.info(f"[chain] KB docs found: {len(docs)}")
-                answer += "\n#### KNOWLEDGE BASE ANSWER\n" + "\n".join([d.page_content for d in docs])
+                answer += "\n#### KNOWLEDGE BASE ANSWER\n" + "\n".join(
+                    [d.page_content for d in docs]
+                )
         # LLM answer
         answer += "\n#### LLM ANSWER\n" + self._qa_chain.run(question=question)
         logger.info("[chain] MultiRetrieverFAQChain _call completed.")
@@ -96,7 +114,14 @@ class MultiRetrieverFAQChain(Chain):
     def output_keys(self) -> List[str]:
         return ["answer"]
 
-def create_multi_chain(llm: Any, knowledge_base_retrievers: List[Any], smart_faq_retriever: Optional[Any] = None, memory: Optional[Any] = None, verbose: bool = True) -> MultiRetrieverFAQChain:
+
+def create_multi_chain(
+    llm: Any,
+    knowledge_base_retrievers: List[Any],
+    smart_faq_retriever: Optional[Any] = None,
+    memory: Optional[Any] = None,
+    verbose: bool = True,
+) -> MultiRetrieverFAQChain:
     """
     Create a MultiRetrieverFAQChain for multi-retriever orchestration.
     Args:
@@ -109,6 +134,9 @@ def create_multi_chain(llm: Any, knowledge_base_retrievers: List[Any], smart_faq
         MultiRetrieverFAQChain: Configured multi-retriever chain.
     """
     logger.info("[chain] create_multi_chain called.")
-    return MultiRetrieverFAQChain(llm, knowledge_base_retrievers, smart_faq_retriever, memory, verbose)
+    return MultiRetrieverFAQChain(
+        llm, knowledge_base_retrievers, smart_faq_retriever, memory, verbose
+    )
+
 
 # Extend with multi-retriever, FAQ, or other chains as needed

@@ -7,6 +7,7 @@ import json
 from typing import Dict, Any
 from backend.core.logging import logger
 
+
 class DataAgent:
     def __init__(self, df: pd.DataFrame):
         """
@@ -28,7 +29,7 @@ class DataAgent:
             "columns": list(self.df.columns),
             "shape": self.df.shape,
             "dtypes": self.df.dtypes.astype(str).to_dict(),
-            "missing_values": self.df.isnull().sum().to_dict()
+            "missing_values": self.df.isnull().sum().to_dict(),
         }
 
     def summarize_numeric(self) -> Dict[str, Any]:
@@ -48,6 +49,7 @@ class DataAgent:
         """
         logger.info("[DataAgent] infer_schema called.")
         return json.dumps(self.df.dtypes.astype(str).to_dict(), indent=2)
+
 
 # --- Utility extraction candidates ---
 # Consider moving profile, summarize_numeric, and infer_schema logic to backend/core/utils.py or a new services/dataframe_utils.py for modularity and reuse.

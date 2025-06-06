@@ -59,7 +59,9 @@ class SmartFAQSplitter:
         splitted_documents = []
         for document in documents:
             split_text = re.split(r"(?=\n\n\d+\.)", document.page_content.strip())
-            filtered_text = [re.sub(r"^\n+|\n+$", "", section) for section in split_text]
+            filtered_text = [
+                re.sub(r"^\n+|\n+$", "", section) for section in split_text
+            ]
             splitted_documents.extend(
                 [
                     Document(
@@ -100,7 +102,9 @@ class AutoGitLoader:
         try:
             return docs
         except:
-            raise RuntimeError("Error loading git. Make sure to use HTTPS GitHub repo links.")
+            raise RuntimeError(
+                "Error loading git. Make sure to use HTTPS GitHub repo links."
+            )
 
 
 FILE_LOADER_MAPPING = {

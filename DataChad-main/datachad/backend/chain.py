@@ -7,7 +7,12 @@ from langchain.chains.conversational_retrieval.base import _get_chat_history
 from langchain.chains.llm import LLMChain
 from langchain.chains.question_answering import load_qa_chain
 from langchain.memory import ConversationBufferMemory
-from langchain.schema import BaseChatMessageHistory, BasePromptTemplate, BaseRetriever, Document
+from langchain.schema import (
+    BaseChatMessageHistory,
+    BasePromptTemplate,
+    BaseRetriever,
+    Document,
+)
 from langchain.schema.language_model import BaseLanguageModel
 from langchain.schema.vectorstore import VectorStore
 from datachad.backend.constants import VERBOSE
@@ -58,7 +63,10 @@ class MultiRetrieverFAQChain(Chain):
     ) -> list[Document]:
         num_docs = len(docs)
 
-        tokens = [combine_docs_chain.llm_chain.llm.get_num_tokens(doc.page_content) for doc in docs]
+        tokens = [
+            combine_docs_chain.llm_chain.llm.get_num_tokens(doc.page_content)
+            for doc in docs
+        ]
         token_count = sum(tokens[:num_docs])
         while token_count > self.max_tokens_limit:
             num_docs -= 1
@@ -74,7 +82,9 @@ class MultiRetrieverFAQChain(Chain):
         run_manager: CallbackManagerForChainRun,
     ) -> list[Document]:
         """Get docs from retriever."""
-        docs = retriever.get_relevant_documents(question, callbacks=run_manager.get_child())
+        docs = retriever.get_relevant_documents(
+            question, callbacks=run_manager.get_child()
+        )
         return self._reduce_tokens_below_limit(docs, combine_docs_chain)
 
     def _add_text_to_answer(
@@ -145,7 +155,9 @@ class MultiRetrieverFAQChain(Chain):
         # Answer the question using
         # the general purpose QA chain
         if self.use_vanilla_llm:
-            answer = self._add_text_to_answer("\n#### LLM ANSWER\n", answer, run_manager)
+            answer = self._add_text_to_answer(
+                "\n#### LLM ANSWER\n", answer, run_manager
+            )
             answer += self.qa_chain.run(
                 question=inputs["question"], callbacks=run_manager.get_child()
             )

@@ -24,6 +24,14 @@ jobs:
         run: |
           pip install black
           black --check .
+      - name: Lint with flake8
+        run: |
+          pip install flake8
+          flake8 . --max-line-length=120 --ignore=E203,W503
+      - name: Run tests with coverage
+        run: |
+          pip install pytest pytest-cov
+          pytest --cov=backend --cov-report=xml
       - name: Run tests
         run: |
           pytest tests/

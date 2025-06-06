@@ -12,6 +12,7 @@ CritiqueAgent: Evaluates LLM answers for correctness, hallucinations, and datase
 Adds confidence, flags, and advice using OpenAI GPT-4.
 """
 
+
 class CritiqueAgent:
     def __init__(self, data_columns: List[str]):
         """
@@ -55,14 +56,13 @@ Evaluation (JSON format):
 
         try:
             response = client.chat.completions.create(
-                model="gpt-4",
-                messages=[{"role": "user", "content": prompt}]
+                model="gpt-4", messages=[{"role": "user", "content": prompt}]
             )
             logger.info(f"[CritiqueAgent] OpenAI response received.")
             content = response.choices[0].message.content.strip()
             # Remove code block markers if present
             if content.startswith("```"):
-                content = content.strip('`\n')
+                content = content.strip("`\n")
                 if content.startswith("json"):
                     content = content[4:].strip()
             parsed = json.loads(content)
@@ -73,5 +73,5 @@ Evaluation (JSON format):
                 "confidence": "Low",
                 "flagged": True,
                 "issues": ["Evaluation failed to parse"],
-                "advice": "Check response manually"
+                "advice": "Check response manually",
             }

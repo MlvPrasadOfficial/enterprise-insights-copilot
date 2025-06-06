@@ -5,6 +5,7 @@ from backend.core.logging import logger
 
 LOG_FILE = "logs/debate_log.json"
 
+
 def log_debate_entry(query, responses, evaluations, decision):
     logger.info(f"[debate_log] log_debate_entry called for query: {query}")
     entry = {
@@ -12,7 +13,7 @@ def log_debate_entry(query, responses, evaluations, decision):
         "query": query,
         "responses": responses,
         "evaluations": evaluations,
-        "decision": decision
+        "decision": decision,
     }
 
     if not os.path.exists(LOG_FILE):

@@ -161,7 +161,9 @@ def upload_data() -> None:
 
 def update_chain() -> None:
     try:
-        with st.session_state["info_container"], st.spinner("Applying data selection..."):
+        with st.session_state["info_container"], st.spinner(
+            "Applying data selection..."
+        ):
             st.session_state["chat_history"].clear()
             options = get_options()
             st.session_state["chain"] = create_chain(
@@ -204,7 +206,9 @@ def get_existing_smart_faqs_and_default_index() -> list[str]:
 
 
 def get_existing_knowledge_bases() -> list[str]:
-    return get_or_create_deeplake_vector_store_paths_for_user(st.session_state["credentials"], "kb")
+    return get_or_create_deeplake_vector_store_paths_for_user(
+        st.session_state["credentials"], "kb"
+    )
 
 
 def format_vector_stores(item: str) -> str:
@@ -214,7 +218,9 @@ def format_vector_stores(item: str) -> str:
 
 
 class StreamHandler(BaseCallbackHandler):
-    def __init__(self, container: st.delta_generator.DeltaGenerator, initial_text: str = ""):
+    def __init__(
+        self, container: st.delta_generator.DeltaGenerator, initial_text: str = ""
+    ):
         self.container = container
         self.stream_text = initial_text
         self.chain_state = 0

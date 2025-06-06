@@ -3,7 +3,7 @@ from backend.agents.debate_agent import DebateAgent
 from backend.core.session_memory import memory
 import logging
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("eval_runner")
 
 try:
@@ -16,7 +16,7 @@ try:
 
     agent = DebateAgent(df)
 
-    # agent 
+    # agent
 
     for i, row in eval_set.iterrows():
         query = row["query"]
@@ -30,16 +30,22 @@ try:
         responses = result["responses"]
 
         best_response = final.get("corrected", responses.get(final["winner"], ""))
-        matched_keywords = [k for k in expected_keywords if k.lower() in best_response.lower()]
-        score = "pass" if len(matched_keywords) >= len(expected_keywords) * 0.6 else "fail"
+        matched_keywords = [
+            k for k in expected_keywords if k.lower() in best_response.lower()
+        ]
+        score = (
+            "pass" if len(matched_keywords) >= len(expected_keywords) * 0.6 else "fail"
+        )
 
-        results.append({
-            "query": query,
-            "winner": final["winner"],
-            "keywords_matched": matched_keywords,
-            "score": score,
-            "reason": final["reason"]
-        })
+        results.append(
+            {
+                "query": query,
+                "winner": final["winner"],
+                "keywords_matched": matched_keywords,
+                "score": score,
+                "reason": final["reason"],
+            }
+        )
 
     pd.DataFrame(results).to_csv("logs/eval_results.csv", index=False)
     logger.info("Evaluation complete. Results saved to logs/eval_results.csv")

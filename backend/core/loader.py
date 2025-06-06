@@ -17,8 +17,14 @@ logger = logging.getLogger(__name__)
 
 try:
     from langchain_community.document_loaders import (
-        CSVLoader, TextLoader, PyPDFium2Loader, UnstructuredWordDocumentLoader,
-        UnstructuredMarkdownLoader, UnstructuredHTMLLoader, UnstructuredPowerPointLoader, NotebookLoader
+        CSVLoader,
+        TextLoader,
+        PyPDFium2Loader,
+        UnstructuredWordDocumentLoader,
+        UnstructuredMarkdownLoader,
+        UnstructuredHTMLLoader,
+        UnstructuredPowerPointLoader,
+        NotebookLoader,
     )
     from langchain_community.text_splitter import RecursiveCharacterTextSplitter
     from langchain_community.schema import Document
@@ -28,6 +34,7 @@ except ImportError:
         def __init__(self, page_content, metadata=None):
             self.page_content = page_content
             self.metadata = metadata or {}
+
 
 # File loader mapping (extensible)
 FILE_LOADER_MAPPING = {
@@ -45,6 +52,7 @@ FILE_LOADER_MAPPING = {
     # Add more mappings for other file types as needed
 }
 
+
 def load_document(file_path: str, mapping: dict = FILE_LOADER_MAPPING) -> List[Any]:
     """
     Load a document from disk and return a list of Document objects.
@@ -61,14 +69,18 @@ def load_document(file_path: str, mapping: dict = FILE_LOADER_MAPPING) -> List[A
     # Always use pandas for CSV to ensure JSON output per row
     if ext == ".csv":
         import json
+
         df = pd.read_csv(file_path)
         logger.info(f"[loader] Loaded CSV with shape: {df.shape}")
         # Detect if Document supports metadata as a keyword argument
         import inspect
+
         doc_params = inspect.signature(Document).parameters
-        if 'metadata' in doc_params:
+        if "metadata" in doc_params:
             logger.info("[loader] Using langchain Document with metadata kwarg.")
-            return [Document(row.to_json(), metadata={"row": i}) for i, row in df.iterrows()]
+            return [
+                Document(row.to_json(), metadata={"row": i}) for i, row in df.iterrows()
+            ]
         else:
             logger.info("[loader] Using fallback Document with metadata positional.")
             return [Document(row.to_json(), {"row": i}) for i, row in df.iterrows()]
@@ -79,7 +91,9 @@ def load_document(file_path: str, mapping: dict = FILE_LOADER_MAPPING) -> List[A
             logger.info(f"[loader] Using loader: {loader_class.__name__}")
             return loader.load()
         except Exception as e:
-            logger.error(f"[Loader] {ext} loader failed: Error loading {file_path}. Trying pandas fallback.")
+            logger.error(
+                f"[Loader] {ext} loader failed: Error loading {file_path}. Trying pandas fallback."
+            )
     # Fallback for .md: read as plain text if loader fails
     if ext == ".md":
         try:
@@ -99,8 +113,11 @@ def load_document(file_path: str, mapping: dict = FILE_LOADER_MAPPING) -> List[A
         except Exception as e:
             logger.error(f"[loader] TXT fallback failed: {e}")
             return []
-    logger.warning(f"[loader] No loader found for extension: {ext}. Returning empty list.")
+    logger.warning(
+        f"[loader] No loader found for extension: {ext}. Returning empty list."
+    )
     return []
+
 
 def load_directory(path: str, silent_errors: bool = True) -> List[Any]:
     """
@@ -127,11 +144,18 @@ def load_directory(path: str, silent_errors: bool = True) -> List[Any]:
             pbar.update()
     return results
 
+
 class SmartFAQSplitter:
     """
     Splits FAQ-style documents into Q&A pairs or logical chunks.
     """
-    def __init__(self, question_prefixes=None, chunk_size=CHUNK_SIZE, chunk_overlap_pct=CHUNK_OVERLAP_PCT):
+
+    def __init__(
+        self,
+        question_prefixes=None,
+        chunk_size=CHUNK_SIZE,
+        chunk_overlap_pct=CHUNK_OVERLAP_PCT,
+    ):
         """
         Initialize SmartFAQSplitter.
 
@@ -140,7 +164,13 @@ class SmartFAQSplitter:
             chunk_size (int): Max chunk size.
             chunk_overlap_pct (int): Overlap percentage between chunks.
         """
-        self.question_prefixes = question_prefixes or ["Q:", "Question:", "Q.", "Q -", "Q-"]
+        self.question_prefixes = question_prefixes or [
+            "Q:",
+            "Question:",
+            "Q.",
+            "Q -",
+            "Q-",
+        ]
         self.chunk_size = chunk_size
         self.chunk_overlap = int(chunk_size * chunk_overlap_pct / 100)
 
@@ -170,14 +200,22 @@ class SmartFAQSplitter:
         final_chunks = []
         for d in split_docs:
             if len(d.page_content) > self.chunk_size:
-                for i in range(0, len(d.page_content), self.chunk_size - self.chunk_overlap):
-                    chunk = d.page_content[i:i+self.chunk_size]
+                for i in range(
+                    0, len(d.page_content), self.chunk_size - self.chunk_overlap
+                ):
+                    chunk = d.page_content[i : i + self.chunk_size]
                     final_chunks.append(Document(chunk, d.metadata))
             else:
                 final_chunks.append(d)
         return final_chunks
 
-def split_documents(docs: List[Any], chunk_size: int = CHUNK_SIZE, chunk_overlap_pct: int = CHUNK_OVERLAP_PCT, splitter_type: str = "default") -> List[Any]:
+
+def split_documents(
+    docs: List[Any],
+    chunk_size: int = CHUNK_SIZE,
+    chunk_overlap_pct: int = CHUNK_OVERLAP_PCT,
+    splitter_type: str = "default",
+) -> List[Any]:
     """
     Split documents with runtime override and splitter type (default or smart_faq).
 
@@ -191,7 +229,9 @@ def split_documents(docs: List[Any], chunk_size: int = CHUNK_SIZE, chunk_overlap
         List[Any]: List of split Document objects.
     """
     if splitter_type == "smart_faq":
-        splitter = SmartFAQSplitter(chunk_size=chunk_size, chunk_overlap_pct=chunk_overlap_pct)
+        splitter = SmartFAQSplitter(
+            chunk_size=chunk_size, chunk_overlap_pct=chunk_overlap_pct
+        )
         return splitter.split(docs)
     # Use RecursiveCharacterTextSplitter if available, else fallback to simple split
     try:
@@ -199,14 +239,20 @@ def split_documents(docs: List[Any], chunk_size: int = CHUNK_SIZE, chunk_overlap
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
-            separators=["\n\n", "\n", ".", "!", "?", ",", " ", ""]
+            separators=["\n\n", "\n", ".", "!", "?", ",", " ", ""],
         )
         return splitter.split_documents(docs)
     except Exception:
         # Fallback: no split
         return docs
 
-def load_and_split(file_path: str, chunk_size: int = CHUNK_SIZE, chunk_overlap_pct: int = CHUNK_OVERLAP_PCT, splitter_type: str = "default") -> List[Any]:
+
+def load_and_split(
+    file_path: str,
+    chunk_size: int = CHUNK_SIZE,
+    chunk_overlap_pct: int = CHUNK_OVERLAP_PCT,
+    splitter_type: str = "default",
+) -> List[Any]:
     """
     Load a file and split it into chunks for RAG ingestion.
 

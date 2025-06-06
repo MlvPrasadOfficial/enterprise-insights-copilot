@@ -10,11 +10,13 @@ from openai import OpenAI
 from config.constants import OPENAI_EMBEDDING_MODEL
 from backend.core.logging import logger
 
+
 @dataclass
 class ModelConfig:
     name: str
     embedding: str
     context: int
+
 
 class MODELS:
     GPT4: ModelConfig = ModelConfig(
@@ -29,9 +31,11 @@ class MODELS:
     )
     # Add more models as needed
 
+
 class EMBEDDINGS:
     OPENAI: str = OPENAI_EMBEDDING_MODEL
     # Add HuggingFace or other embeddings as needed
+
 
 def get_openai_client(api_key: Optional[str] = None) -> OpenAI:
     """
@@ -49,6 +53,7 @@ def get_openai_client(api_key: Optional[str] = None) -> OpenAI:
         raise RuntimeError("OPENAI_API_KEY not set!")
     logger.info("[models] OpenAI client created.")
     return OpenAI(api_key=api_key)
+
 
 def get_tokenizer(model_name: str = OPENAI_EMBEDDING_MODEL) -> Any:
     """

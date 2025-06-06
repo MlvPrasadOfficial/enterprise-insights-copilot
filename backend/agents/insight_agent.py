@@ -13,6 +13,7 @@ from typing import Any
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
+
 class InsightAgent:
     def __init__(self, df: pd.DataFrame):
         """
@@ -39,7 +40,7 @@ class InsightAgent:
                 "columns": list(self.df.columns),
                 "shape": self.df.shape,
                 "summary_stats": self.df.describe().to_dict(),
-                "missing": self.df.isnull().sum().to_dict()
+                "missing": self.df.isnull().sum().to_dict(),
             }
 
             template = load_prompt("config/prompts/insight_prompt.txt")
@@ -48,8 +49,7 @@ class InsightAgent:
             client = OpenAI(api_key=openai_api_key)
             logger.info(f"[InsightAgent] Prompt sent to OpenAI.")
             response = client.chat.completions.create(
-                model="gpt-4",
-                messages=[{"role": "user", "content": prompt}]
+                model="gpt-4", messages=[{"role": "user", "content": prompt}]
             )
             logger.info(f"[InsightAgent] OpenAI response received.")
             return response.choices[0].message.content.strip()

@@ -6,8 +6,11 @@ from backend.core.loader import load_and_split
 from backend.core.llm_rag import upsert_documents_batch
 from backend.core.logging import logger
 
+
 def create_vector_store(files: list[io.BytesIO], name: str):
-    logger.info(f"[jobs] create_vector_store called for name: {name}, files: {[f.name for f in files]}")
+    logger.info(
+        f"[jobs] create_vector_store called for name: {name}, files: {[f.name for f in files]}"
+    )
     data_source = save_files(files, name)
     docs = load_and_split(data_source)
     ids = [f"{name}_{i}" for i in range(len(docs))]
@@ -17,19 +20,33 @@ def create_vector_store(files: list[io.BytesIO], name: str):
     logger.info(f"[jobs] Vector store created for {name}")
     return True
 
-def create_vector_store_async(files: list[io.BytesIO], name: str, chunk_size=None, chunk_overlap_pct=None, splitter_type=None):
+
+def create_vector_store_async(
+    files: list[io.BytesIO],
+    name: str,
+    chunk_size=None,
+    chunk_overlap_pct=None,
+    splitter_type=None,
+):
     logger.info(f"[jobs] create_vector_store_async called for name: {name}")
     loop = asyncio.get_event_loop()
     return loop.run_in_executor(None, create_vector_store, files, name)
 
+
 async def batch_upsert_async(ids, texts, batch_size=500):
-    logger.info(f"[jobs] batch_upsert_async called for {len(ids)} ids, batch_size={batch_size}")
+    logger.info(
+        f"[jobs] batch_upsert_async called for {len(ids)} ids, batch_size={batch_size}"
+    )
     with ThreadPoolExecutor() as executor:
         loop = asyncio.get_event_loop()
         tasks = []
         for i in range(0, len(ids), batch_size):
-            batch_ids = ids[i:i+batch_size]
-            batch_texts = texts[i:i+batch_size]
-            tasks.append(loop.run_in_executor(executor, upsert_documents_batch, batch_ids, batch_texts))
+            batch_ids = ids[i : i + batch_size]
+            batch_texts = texts[i : i + batch_size]
+            tasks.append(
+                loop.run_in_executor(
+                    executor, upsert_documents_batch, batch_ids, batch_texts
+                )
+            )
         await asyncio.gather(*tasks)
     logger.info("[jobs] batch_upsert_async completed.")

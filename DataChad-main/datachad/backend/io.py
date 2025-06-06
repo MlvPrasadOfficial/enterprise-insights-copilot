@@ -18,7 +18,9 @@ def concatenate_file_names(strings: list[str], n_max: int = 30) -> str:
     return clean_string_for_storing(result)
 
 
-def get_data_source_and_save_path(files: list[io.BytesIO], name: str) -> tuple[str, Path]:
+def get_data_source_and_save_path(
+    files: list[io.BytesIO], name: str
+) -> tuple[str, Path]:
     # generate data source string and path to save files to
     if len(files) > 1:
         # we create a folder where all the files will be stored

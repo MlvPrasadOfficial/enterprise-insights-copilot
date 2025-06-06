@@ -12,6 +12,7 @@ from typing import Any
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
+
 class SQLAgent:
     def __init__(self, df: pd.DataFrame):
         """
@@ -32,7 +33,9 @@ class SQLAgent:
         """
         logger.info(f"[SQLAgent] generate_sql called with user_query: {user_query}")
         # Convert DataFrame to a SQL table named 'df'
-        columns = ", ".join([f"{col} ({dtype})" for col, dtype in zip(self.df.columns, self.df.dtypes)])
+        columns = ", ".join(
+            [f"{col} ({dtype})" for col, dtype in zip(self.df.columns, self.df.dtypes)]
+        )
         schema_str = f"Table schema: {columns}"
 
         template = load_prompt("config/prompts/sql_prompt.txt")
@@ -40,10 +43,11 @@ class SQLAgent:
 
         client = OpenAI(api_key=openai_api_key)
         response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}]
+            model="gpt-4", messages=[{"role": "user", "content": prompt}]
         )
-        logger.info(f"[SQLAgent] Generated SQL: {response.choices[0].message.content.strip().split('```', 1)[0]}")
+        logger.info(
+            f"[SQLAgent] Generated SQL: {response.choices[0].message.content.strip().split('```', 1)[0]}"
+        )
         return response.choices[0].message.content.strip().split("```", 1)[0]
 
     def run_sql(self, query: str) -> pd.DataFrame:
@@ -61,7 +65,9 @@ class SQLAgent:
             con = duckdb.connect()
             con.register("df", self.df)
             result = con.execute(query).fetchdf()
-            logger.info(f"[SQLAgent] SQL executed successfully. Result shape: {result.shape}")
+            logger.info(
+                f"[SQLAgent] SQL executed successfully. Result shape: {result.shape}"
+            )
             return result
         except Exception as e:
             logger.error(f"[SQLAgent] SQL execution failed: {e}")

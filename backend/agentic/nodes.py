@@ -1,7 +1,9 @@
 from langgraph.graph import StateGraph, END
+
 # from langgraph.graph import State  # State does not exist in current langgraph
 from typing import TypedDict, List
 from backend.core.logging import logger
+
 
 # Define the shared state
 class AgentState(TypedDict):
@@ -10,9 +12,10 @@ class AgentState(TypedDict):
     steps: List[str]
     history: List[dict]  # memory trace of prior Q&A
 
+
 # Define agent functions
 def planner(state: AgentState) -> str:
-    query = state['query'].lower()
+    query = state["query"].lower()
     if "trend" in query or "chart" in query:
         return "chart"
     elif "insight" in query or "summary" in query:
@@ -22,11 +25,15 @@ def planner(state: AgentState) -> str:
     else:
         return "insight"
 
+
 def insight_node(state: AgentState) -> AgentState:
     from backend.agents.insight_agent import InsightAgent
     from backend.core.session_memory import memory
+
     prompt = state["query"]
-    past_insights = "\n".join([item["result"] for item in state["history"] if "insight" in item["steps"]])
+    past_insights = "\n".join(
+        [item["result"] for item in state["history"] if "insight" in item["steps"]]
+    )
     if past_insights:
         prompt = f"""You’ve previously said:\n{past_insights}\n\nNow answer:\n{state['query']}"""
     result = InsightAgent(memory.df).generate_summary(prompt)
@@ -34,12 +41,15 @@ def insight_node(state: AgentState) -> AgentState:
         **state,
         "result": result,
         "steps": state["steps"] + ["insight"],
-        "history": state["history"] + [{"query": state["query"], "result": result, "steps": ["insight"]}]
+        "history": state["history"]
+        + [{"query": state["query"], "result": result, "steps": ["insight"]}],
     }
+
 
 def chart_node(state: AgentState) -> AgentState:
     from backend.agents.chart_agent import ChartAgent
     from backend.core.session_memory import memory
+
     agent = ChartAgent(memory.df)
     x, y = agent.guess_axes()
     chart = agent.render_chart(x, y, agent.guess_chart(state["query"]))
@@ -47,12 +57,15 @@ def chart_node(state: AgentState) -> AgentState:
         **state,
         "result": chart.to_json(),
         "steps": state["steps"] + ["chart"],
-        "history": state["history"] + [{"query": state["query"], "result": chart.to_json(), "steps": ["chart"]}]
+        "history": state["history"]
+        + [{"query": state["query"], "result": chart.to_json(), "steps": ["chart"]}],
     }
+
 
 def sql_node(state: AgentState) -> AgentState:
     from backend.agents.sql_agent import SQLAgent
     from backend.core.session_memory import memory
+
     agent = SQLAgent(memory.df)
     sql = agent.generate_sql(state["query"])
     df = agent.run_sql(sql)
@@ -61,5 +74,6 @@ def sql_node(state: AgentState) -> AgentState:
         **state,
         "result": result,
         "steps": state["steps"] + ["sql"],
-        "history": state["history"] + [{"query": state["query"], "result": result, "steps": ["sql"]}]
+        "history": state["history"]
+        + [{"query": state["query"], "result": result, "steps": ["sql"]}],
     }

@@ -22,7 +22,9 @@ def create_vector_store(
     credentials: dict,
 ) -> VectorStore:
     file_data_source = save_files(files, name)
-    vector_store_path = get_unique_deeplake_vector_store_path(store_type, name, credentials)
+    vector_store_path = get_unique_deeplake_vector_store_path(
+        store_type, name, credentials
+    )
     vector_store = get_or_create_deeplake_vector_store(
         data_sources=[ds for ds in [data_source, file_data_source] if ds],
         vector_store_path=vector_store_path,

@@ -16,6 +16,7 @@ from typing import Any, Dict
 openai_api_key = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=openai_api_key)
 
+
 class DebateAgent:
     def __init__(self, df):
         """
@@ -51,11 +52,13 @@ class DebateAgent:
             responses = {
                 "InsightAgent": insight,
                 "SQLAgent": sql_result,
-                "ChartAgent": chart_response
+                "ChartAgent": chart_response,
             }
 
             critique = CritiqueAgent(self.columns)
-            evaluations = {name: critique.evaluate(query, ans) for name, ans in responses.items()}
+            evaluations = {
+                name: critique.evaluate(query, ans) for name, ans in responses.items()
+            }
             logger.info(f"[DebateAgent] Evaluations: {evaluations}")
 
             # Prepare decision prompt
@@ -81,14 +84,13 @@ Respond in JSON:
 """
 
             final = client.chat.completions.create(
-                model="gpt-4",
-                messages=[{"role": "user", "content": decision_prompt}]
+                model="gpt-4", messages=[{"role": "user", "content": decision_prompt}]
             )
             logger.info(f"[DebateAgent] Final decision received.")
             return {
                 "responses": responses,
                 "evaluations": evaluations,
-                "decision": final.choices[0].message.content.strip()
+                "decision": final.choices[0].message.content.strip(),
             }
         except Exception as e:
             logger.error(f"[DebateAgent] Exception: {e}")

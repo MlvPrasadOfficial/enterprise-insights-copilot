@@ -62,9 +62,9 @@ def authentication_widget() -> None:
     # Sidebar with Authentication
     with st.session_state["authentication_container"]:
         st.info(f"Learn how it works [here]({PROJECT_URL})")
-        with st.expander("Authentication", expanded=not st.session_state["auth_ok"]), st.form(
-            "authentication"
-        ):
+        with st.expander(
+            "Authentication", expanded=not st.session_state["auth_ok"]
+        ), st.form("authentication"):
             st.text_input(
                 f"OpenAI API Key",
                 type="password",
@@ -141,7 +141,10 @@ def selection_options_widget() -> None:
             min_value=1,
             max_value=30000,
             value=MAX_TOKENS,
-            help=("Limits the documents returned from " "database based on number of tokens"),
+            help=(
+                "Limits the documents returned from "
+                "database based on number of tokens"
+            ),
             key="max_tokens",
         )
 
@@ -161,7 +164,9 @@ def data_upload_widget() -> None:
             help=UPLOAD_HELP,
             key="uploaded_files",
         )
-        st.radio("Data Type", options=STORES.all(), key="data_type", help=DATA_TYPE_HELP)
+        st.radio(
+            "Data Type", options=STORES.all(), key="data_type", help=DATA_TYPE_HELP
+        )
         st.text_input(
             "Data Name",
             placeholder="Give a descriptive and unique name",
@@ -181,9 +186,9 @@ def data_upload_widget() -> None:
 
 
 def data_selection_widget() -> None:
-    with st.session_state["data_selection_container"], st.expander("Data Selection"), st.form(
-        "data_selection"
-    ):
+    with st.session_state["data_selection_container"], st.expander(
+        "Data Selection"
+    ), st.form("data_selection"):
         existing_smart_faqs, default_index = get_existing_smart_faqs_and_default_index()
         st.selectbox(
             "Select a single Smart FAQ",
@@ -200,7 +205,9 @@ def data_selection_widget() -> None:
             default=DEFAULT_KNOWLEDGE_BASES,
             key="knowledge_bases",
         )
-        st.checkbox("Add vanilla LLM answer", value=USE_VANILLA_LLM, key="use_vanilla_llm")
+        st.checkbox(
+            "Add vanilla LLM answer", value=USE_VANILLA_LLM, key="use_vanilla_llm"
+        )
         selection_options_widget()
         submitted = st.form_submit_button("Submit")
     if submitted:
@@ -248,4 +255,6 @@ def usage_widget() -> None:
         with st.session_state["usage_container"], st.expander("Usage"):
             col1, col2 = st.columns(2)
             col1.metric("Total Tokens", st.session_state["usage"]["total_tokens"])
-            col2.metric("Total Costs in $", round(st.session_state["usage"]["total_cost"], 4))
+            col2.metric(
+                "Total Costs in $", round(st.session_state["usage"]["total_cost"], 4)
+            )

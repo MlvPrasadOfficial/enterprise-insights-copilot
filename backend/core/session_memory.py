@@ -6,6 +6,7 @@ from typing import Any, Optional
 from collections import defaultdict
 from backend.core.logging import logger
 
+
 class SessionMemory:
     def __init__(self):
         """
@@ -28,7 +29,9 @@ class SessionMemory:
         self.df = df
         self.filename = filename
         self.columns = df.columns.tolist()
-        logger.info(f"[SessionMemory] Updated with filename: {filename}, shape: {df.shape}")
+        logger.info(
+            f"[SessionMemory] Updated with filename: {filename}, shape: {df.shape}"
+        )
 
     def clear(self) -> None:
         """
@@ -65,7 +68,10 @@ class SessionMemory:
             user_id (str): The user ID.
             message (Any): The message to add.
         """
-        logger.info(f"[SessionMemory] add called for user_id: {user_id}, message: {message}")
+        logger.info(
+            f"[SessionMemory] add called for user_id: {user_id}, message: {message}"
+        )
         self.memory[user_id].append(message)
+
 
 memory = SessionMemory()

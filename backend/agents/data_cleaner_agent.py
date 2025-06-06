@@ -3,6 +3,7 @@ import re
 from backend.core.logging import logger
 from typing import Any
 
+
 class DataCleanerAgent:
     def __init__(self, df: pd.DataFrame):
         """
@@ -34,7 +35,8 @@ class DataCleanerAgent:
         Returns:
             Any: The standardized value.
         """
-        if not isinstance(val, str): return val
+        if not isinstance(val, str):
+            return val
 
         val = val.strip().lower()
 
@@ -76,7 +78,9 @@ class DataCleanerAgent:
                 try:
                     self.df[col] = pd.to_numeric(self.df[col], errors="ignore")
                 except:
-                    logger.error(f"[DataCleanerAgent] Error fixing numerics in column {col}.")
+                    logger.error(
+                        f"[DataCleanerAgent] Error fixing numerics in column {col}."
+                    )
                     pass
         logger.info("[DataCleanerAgent] fix_numerics completed.")
         return self.df

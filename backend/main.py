@@ -10,7 +10,7 @@ from io import StringIO
 import tempfile
 import traceback
 import logging
-from fastapi import status
+from fastapi import status, HTTPException
 from typing import Any
 
 # Add project root to sys.path for cloud and local compatibility
@@ -34,7 +34,7 @@ from backend.agentic.agent_executor import get_agent_executor
 from backend.agentic.graph_runner import build_graph
 import altair as alt
 import json
-from backend.core.session_memory import memory
+from backend.core.session_memory import memory, session_memory
 from backend.agents.critique_agent import CritiqueAgent
 from backend.agents.report_generator import ReportGenerator
 from fastapi.responses import FileResponse
@@ -61,7 +61,7 @@ from starlette.responses import Response
 app = FastAPI(
     title="Enterprise Insights Copilot API",
     description="Conversational BI backend with LLM, RAG, and multi-retriever support.",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 # --- CORS & Security ---
@@ -74,6 +74,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: StarletteRequest, call_next):
         response: Response = await call_next(request)
@@ -81,11 +82,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         return response
+
+
 app.add_middleware(SecurityHeadersMiddleware)
 
 # --- Logging Configuration ---
 logger = logging.getLogger("fastapi_app")
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+
 
 # --- Request/Response Logging Middleware ---
 @app.middleware("http")
@@ -98,52 +102,67 @@ async def log_requests(request: FastAPIRequest, call_next):
     except Exception as e:
         tb = traceback.format_exc()
         logger.error(f"[EXCEPTION] {e}\n{tb}")
-        return JSONResponse(status_code=500, content={"detail": f"Internal server error: {e}"})
+        return JSONResponse(
+            status_code=500, content={"detail": f"Internal server error: {e}"}
+        )
+
 
 @app.exception_handler(FastAPIRequestValidationError)
 async def validation_exception_handler(request, exc):
     logger.error(f"[VALIDATION ERROR] {exc}")
     return JSONResponse(status_code=422, content={"detail": str(exc)})
 
+
 # --- Centralized Exception Handling ---
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled error: {exc}")
     return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": str(exc)}
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={"detail": str(exc)}
     )
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     logger.warning(f"Validation error: {exc}")
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={"detail": exc.errors()}
+        content={"detail": exc.errors()},
     )
+
 
 # --- Health & Readiness Endpoints ---
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
+
+@app.get("/healthz")
+def health_check():
+    return {"status": "ok"}
+
+
 @app.get("/ready")
 def ready():
     # Optionally check vector DB, LLM, etc.
     return {"status": "ready"}
 
+
 # --- API Versioning Helper ---
 from fastapi import APIRouter
+
 api_v1 = APIRouter(prefix="/api/v1")
 
 
 class QueryInput(BaseModel):
     """Input model for /query and similar endpoints."""
+
     query: str
 
 
 class ChartRequest(BaseModel):
     """Input model for /chart endpoint."""
+
     x: str
     y: str
     chart_type: str
@@ -152,12 +171,14 @@ class ChartRequest(BaseModel):
 
 class SQLQuery(BaseModel):
     """Input model for /sql endpoint."""
+
     query: str
     data: list[Any]
 
 
 class InsightRequest(BaseModel):
     """Input model for /insights endpoint."""
+
     data: list[Any]
 
 
@@ -186,6 +207,7 @@ async def index_csv(file: UploadFile = File(...)) -> Any:
     """
     import time
     import psutil
+
     start_time = time.time()
     process = psutil.Process(os.getpid())
     try:
@@ -193,16 +215,22 @@ async def index_csv(file: UploadFile = File(...)) -> Any:
         file_size = len(contents)
         logger.info(f"[UPLOAD] Received file: {file.filename}, size: {file_size} bytes")
         if not contents:
-            from fastapi import HTTPException
-            raise HTTPException(status_code=400, detail="Upload a valid CSV file (file is empty).")
+            raise HTTPException(
+                status_code=400, detail="Upload a valid CSV file (file is empty)."
+            )
         # File size limit (10MB)
         MAX_SIZE = 10 * 1024 * 1024
         if file_size > MAX_SIZE:
-            logger.warning(f"[UPLOAD] File too large: {file_size} bytes > {MAX_SIZE} bytes")
-            from fastapi import HTTPException
-            raise HTTPException(status_code=413, detail=f"File too large (>{MAX_SIZE//1024//1024}MB). Please upload a smaller file.")
+            logger.warning(
+                f"[UPLOAD] File too large: {file_size} bytes > {MAX_SIZE} bytes"
+            )
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large (> {MAX_SIZE//1024//1024}MB). Please upload a smaller file.",
+            )
         # Save uploaded file to a cross-platform temp path with original extension
         import uuid
+
         filename = file.filename or f"upload_{uuid.uuid4()}.csv"
         suffix = os.path.splitext(filename)[1] or ".csv"
         temp_dir = tempfile.gettempdir()
@@ -215,6 +243,7 @@ async def index_csv(file: UploadFile = File(...)) -> Any:
         docs = load_and_split(temp_path)
         logger.info(f"[UPLOAD] Loader returned {len(docs)} docs.")
         import json
+
         rows = []
         skipped = []
         for doc in docs:
@@ -226,32 +255,61 @@ async def index_csv(file: UploadFile = File(...)) -> Any:
         if skipped:
             logger.info(f"[UPLOAD] Sample skipped content: {skipped[:2]}")
         if not rows:
-            from fastapi import HTTPException
-            raise HTTPException(status_code=400, detail="No valid rows found in CSV. Please upload a valid CSV file.")
+            raise HTTPException(
+                status_code=400,
+                detail="No valid rows found in CSV. Please upload a valid CSV file.",
+            )
         df = pd.DataFrame(rows)
         if df.empty:
-            from fastapi import HTTPException
-            raise HTTPException(status_code=400, detail="Uploaded CSV contains no data rows.")
+            raise HTTPException(
+                status_code=400, detail="Uploaded CSV contains no data rows."
+            )
         cleaner = DataCleanerAgent(df)
         df = cleaner.clean()
         logger.info(f"[UPLOAD] DataFrame shape after clean: {df.shape}")
         memory.update(df, file.filename)
-        logger.info(f"[UPLOAD] memory.df is set: {memory.df is not None}, filename: {memory.filename}")
+        logger.info(
+            f"[UPLOAD] memory.df is set: {memory.df is not None}, filename: {memory.filename}"
+        )
         ids = [f"{file.filename}_{idx}" for idx in df.index]
         texts = [row.to_json() for _, row in df.iterrows()]
         from backend.core.llm_rag import upsert_documents_batch
-        upsert_documents_batch(ids, texts)
-        logger.info("[UPLOAD] All rows batch upserted.")
+
+        # Use parallelized upsert with higher max_workers to test limits
+        try:
+            upsert_documents_batch(ids, texts, batch_size=100, max_workers=16)
+            logger.info("[UPLOAD] All rows batch upserted.")
+            upsert_warning = None
+        except Exception as upsert_exc:
+            logger.error(f"[UPLOAD] Error during parallel upsert: {upsert_exc}")
+            logger.error(traceback.format_exc())
+            upsert_warning = (
+                "Some or all rows failed to index due to system or API limits. "
+                "Try a smaller file or contact support if this persists."
+            )
         elapsed = time.time() - start_time
         mem_mb = process.memory_info().rss / 1024 / 1024
-        logger.info(f"[UPLOAD] Completed in {elapsed:.2f}s, memory usage: {mem_mb:.2f} MB")
-        return {"status": "success", "rows_indexed": len(df), "elapsed": elapsed, "mem_mb": mem_mb}
+        logger.info(
+            f"[UPLOAD] Completed in {elapsed:.2f}s, memory usage: {mem_mb:.2f} MB"
+        )
+        response = {
+            "status": "success",
+            "rows_indexed": len(df),
+            "elapsed": elapsed,
+            "mem_mb": mem_mb,
+        }
+        if upsert_warning:
+            response["warning"] = upsert_warning
+        return response
+    except HTTPException:
+        raise
     except Exception as e:
         elapsed = time.time() - start_time
         mem_mb = process.memory_info().rss / 1024 / 1024
-        logger.error(f"❌ Error in /index: {str(e)} | Elapsed: {elapsed:.2f}s | Mem: {mem_mb:.2f} MB")
+        logger.error(
+            f"❌ Error in /index: {str(e)} | Elapsed: {elapsed:.2f}s | Mem: {mem_mb:.2f} MB"
+        )
         logger.error(traceback.format_exc())
-        from fastapi import HTTPException
         raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
 
 
@@ -262,6 +320,7 @@ async def query_rag(data: QueryInput, request: Request):
     if df is None:
         logger.error("[QUERY] No data uploaded in session.")
         from fastapi import HTTPException
+
         raise HTTPException(status_code=400, detail="No data uploaded in session.")
     try:
         answer = run_rag(data.query)
@@ -272,12 +331,18 @@ async def query_rag(data: QueryInput, request: Request):
         user_id = get_user_id(request)
         usage_tracker.log(user_id, tokens=100, cost=0.01)
         logger.info(f"[QUERY] Usage logged for user {user_id}")
-        return {"answer": answer, "evaluation": eval_report, "usage": usage_tracker.get_usage(user_id)}
+        return {
+            "answer": answer,
+            "evaluation": eval_report,
+            "usage": usage_tracker.get_usage(user_id),
+        }
     except Exception as e:
         logger.error(f"[QUERY] Exception: {e}")
         logger.error(traceback.format_exc())
         from fastapi import HTTPException
+
         raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
+
 
 @api_v1.post("/chart")
 def chart_handler(req: ChartRequest):
@@ -286,17 +351,22 @@ def chart_handler(req: ChartRequest):
     if df is None:
         logger.error("[CHART] No data uploaded in session.")
         from fastapi import HTTPException
+
         raise HTTPException(status_code=400, detail="No data uploaded in session.")
     try:
         agent = ChartAgent(df)
         chart = agent.render_chart(req.x, req.y, req.chart_type)
-        logger.info(f"[CHART] Chart generated for x={req.x}, y={req.y}, type={req.chart_type}")
+        logger.info(
+            f"[CHART] Chart generated for x={req.x}, y={req.y}, type={req.chart_type}"
+        )
         return {"chart": chart.to_json()}
     except Exception as e:
         logger.error(f"[CHART] Exception: {e}")
         logger.error(traceback.format_exc())
         from fastapi import HTTPException
+
         raise HTTPException(status_code=500, detail=f"Chart failed: {str(e)}")
+
 
 @api_v1.post("/sql")
 def sql_endpoint(req: SQLQuery):
@@ -305,6 +375,7 @@ def sql_endpoint(req: SQLQuery):
     if df is None:
         logger.error("[SQL] No data uploaded in session.")
         from fastapi import HTTPException
+
         raise HTTPException(status_code=400, detail="No data uploaded in session.")
     agent = SQLAgent(df)
     sql = agent.generate_sql(req.query)
@@ -325,7 +396,10 @@ def sql_endpoint(req: SQLQuery):
         logger.error(f"[SQL] Exception: {e}")
         logger.error(traceback.format_exc())
         return {"error": str(e), "sql": sql}
-# 
+
+
+#
+
 
 @api_v1.post("/insights")
 def generate_insights(req: InsightRequest):
@@ -334,6 +408,7 @@ def generate_insights(req: InsightRequest):
     if df is None:
         logger.error("[INSIGHTS] No data uploaded in session.")
         from fastapi import HTTPException
+
         raise HTTPException(status_code=400, detail="No data uploaded in session.")
     try:
         agent = InsightAgent(df)
@@ -347,7 +422,9 @@ def generate_insights(req: InsightRequest):
         logger.error(f"[INSIGHTS] Exception: {e}")
         logger.error(traceback.format_exc())
         from fastapi import HTTPException
+
         raise HTTPException(status_code=500, detail=f"Insights failed: {str(e)}")
+
 
 @api_v1.post("/auto-chart")
 def auto_chart(req: QueryInput):
@@ -355,6 +432,7 @@ def auto_chart(req: QueryInput):
     if memory.df is None:
         logger.error("[AUTO-CHART] No data in session.")
         from fastapi import HTTPException
+
         raise HTTPException(status_code=400, detail="No data in session.")
     try:
         query = req.query
@@ -374,7 +452,9 @@ def auto_chart(req: QueryInput):
         logger.error(f"[AUTO-CHART] Exception: {e}")
         logger.error(traceback.format_exc())
         from fastapi import HTTPException
+
         raise HTTPException(status_code=500, detail=f"Auto-chart failed: {str(e)}")
+
 
 @api_v1.post("/agentic")
 def agentic_chain(req: QueryInput):
@@ -388,7 +468,9 @@ def agentic_chain(req: QueryInput):
         logger.error(f"[AGENTIC] Exception: {e}")
         logger.error(traceback.format_exc())
         from fastapi import HTTPException
+
         raise HTTPException(status_code=500, detail=f"Agentic chain failed: {str(e)}")
+
 
 @api_v1.post("/langgraph")
 def run_graph(req: QueryInput):
@@ -413,7 +495,9 @@ def run_graph(req: QueryInput):
         logger.error(f"[LANGGRAPH] Exception: {e}")
         logger.error(traceback.format_exc())
         from fastapi import HTTPException
+
         raise HTTPException(status_code=500, detail=f"Langgraph failed: {str(e)}")
+
 
 @api_v1.post("/report")
 def generate_report():
@@ -422,6 +506,7 @@ def generate_report():
     if df is None:
         logger.error("[REPORT] No data uploaded.")
         from fastapi import HTTPException
+
         raise HTTPException(status_code=400, detail="No data uploaded")
     try:
         insight = InsightAgent(df).generate_summary()
@@ -443,13 +528,18 @@ def generate_report():
         logger.error(f"[REPORT] Exception: {e}")
         logger.error(traceback.format_exc())
         from fastapi import HTTPException
+
         raise HTTPException(status_code=500, detail=f"Report failed: {str(e)}")
+
 
 @api_v1.post("/debate")
 def debate_mode(req: QueryInput):
     logger.info(f"[DEBATE] /debate called with req: {req}")
     try:
         df = memory.df
+        if df is None:
+            logger.error("[DEBATE] No data uploaded.")
+            raise HTTPException(status_code=400, detail="No data uploaded")
         agent = DebateAgent(df)
         result = agent.run_debate(req.query)
         logger.info(f"[DEBATE] Result: {result}")
@@ -461,10 +551,12 @@ def debate_mode(req: QueryInput):
         )
         logger.info("[DEBATE] Debate entry logged.")
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"[DEBATE] Exception: {e}")
         logger.error(traceback.format_exc())
-        from fastapi import HTTPException
         raise HTTPException(status_code=500, detail=f"Debate failed: {str(e)}")
+
 
 app.include_router(api_v1)

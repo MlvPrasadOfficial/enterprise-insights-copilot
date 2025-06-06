@@ -3,6 +3,7 @@ import altair as alt
 from backend.core.logging import logger
 from typing import Tuple
 
+
 class ChartAgent:
     def __init__(self, df: pd.DataFrame):
         """
@@ -45,7 +46,9 @@ class ChartAgent:
         Returns:
             alt.Chart: The Altair chart object.
         """
-        logger.info(f"[ChartAgent] render_chart called with x={x}, y={y}, chart_type={chart_type}")
+        logger.info(
+            f"[ChartAgent] render_chart called with x={x}, y={y}, chart_type={chart_type}"
+        )
         if chart_type == "line":
             return alt.Chart(self.df).mark_line().encode(x=x, y=y)
         elif chart_type == "bar":
@@ -53,9 +56,7 @@ class ChartAgent:
         elif chart_type == "scatter":
             return alt.Chart(self.df).mark_circle().encode(x=x, y=y)
         elif chart_type == "hist":
-            return alt.Chart(self.df).mark_bar().encode(
-                alt.X(x, bin=True), y='count()'
-            )
+            return alt.Chart(self.df).mark_bar().encode(alt.X(x, bin=True), y="count()")
         else:
             return alt.Chart(self.df).mark_text().encode(text=x)
 
@@ -67,11 +68,14 @@ class ChartAgent:
         """
         logger.info("[ChartAgent] guess_axes called.")
         numeric_cols = self.df.select_dtypes(include=["float", "int"]).columns.tolist()
-        non_numeric_cols = self.df.select_dtypes(exclude=["float", "int"]).columns.tolist()
+        non_numeric_cols = self.df.select_dtypes(
+            exclude=["float", "int"]
+        ).columns.tolist()
 
         x = non_numeric_cols[0] if non_numeric_cols else self.df.columns[0]
         y = numeric_cols[0] if numeric_cols else self.df.columns[1]
         return x, y
+
 
 # --- Utility extraction candidates ---
 # Consider moving guess_chart, guess_axes, and chart rendering logic to backend/core/utils.py or a new services/chart_utils.py for modularity and reuse.

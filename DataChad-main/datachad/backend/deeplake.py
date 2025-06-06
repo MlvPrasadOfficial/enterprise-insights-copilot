@@ -43,7 +43,9 @@ def list_deeplake_datasets(
         suffix_public = LIST_DATASETS.format("public")
         suffix_user = LIST_DATASETS.format("all")
         if workspace:
-            res_datasets = self.get_workspace_datasets(workspace, suffix_public, suffix_user)
+            res_datasets = self.get_workspace_datasets(
+                workspace, suffix_public, suffix_user
+            )
         else:
             public_datasets = self.request(
                 "GET",
@@ -73,7 +75,9 @@ def get_deeplake_dataset_path(dataset_name: str, credentials: dict) -> str:
 
 
 def delete_all_deeplake_datasets(credentials: dict) -> None:
-    datasets = list_deeplake_datasets(credentials["activeloop_id"], credentials["activeloop_token"])
+    datasets = list_deeplake_datasets(
+        credentials["activeloop_id"], credentials["activeloop_token"]
+    )
     for dataset in datasets:
         path = f"hub://{dataset}"
         logger.info(f"Deleting dataset: {path}")
@@ -109,7 +113,9 @@ def get_or_create_deeplake_vector_store_display_name(dataset_path: str) -> str:
     return f"{splits[-4]} ({splits[-3][:4]}-{splits[-3][4:6]}-{splits[-3][6:8]})"
 
 
-def get_unique_deeplake_vector_store_path(store_type: str, name: str, credentials: dict) -> str:
+def get_unique_deeplake_vector_store_path(
+    store_type: str, name: str, credentials: dict
+) -> str:
     store_type_dict = {STORES.KNOWLEDGE_BASE: "kb", STORES.SMART_FAQ: "faq"}
     dataset_name = (
         # [-4] vector store name
@@ -216,7 +222,9 @@ def get_or_create_deeplake_vector_store(
         )
     else:
         logger.info(f"Vector Store '{vector_store_path}' does not exist -> uploading")
-        docs = load_data_sources_or_docs_from_deeplake(data_sources, options, credentials)
+        docs = load_data_sources_or_docs_from_deeplake(
+            data_sources, options, credentials
+        )
         docs = split_docs(docs, store_type, options)
         vector_store = DeepLake.from_documents(
             docs,
@@ -225,5 +233,7 @@ def get_or_create_deeplake_vector_store(
             token=credentials["activeloop_token"],
             verbose=VERBOSE,
         )
-    logger.info(f"Vector Store {vector_store_path} loaded in {round(time.time() - t_start)}s!")
+    logger.info(
+        f"Vector Store {vector_store_path} loaded in {round(time.time() - t_start)}s!"
+    )
     return vector_store

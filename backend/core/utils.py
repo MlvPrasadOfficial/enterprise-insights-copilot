@@ -1,8 +1,10 @@
 """
 Utility functions for string cleaning and (future) dataframe/chart utilities.
 """
+
 import re
 from backend.core.logging import logger
+
 
 def clean_string_for_storing(string: str) -> str:
     """
@@ -17,6 +19,7 @@ def clean_string_for_storing(string: str) -> str:
     cleaned_string = re.sub(r"--+", "-", cleaned_string).strip("-")
     logger.info(f"[utils] Cleaned string: {cleaned_string}")
     return cleaned_string
+
 
 # --- DataFrame and chart utilities for modularization ---
 # def profile_dataframe(df: pd.DataFrame) -> dict:

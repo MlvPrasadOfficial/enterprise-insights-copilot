@@ -1,5 +1,6 @@
 # 🧠 Enterprise Insights Copilot
 
+[![CI](https://github.com/MlvPrasadOfficial/enterprise-insights-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/MlvPrasadOfficial/enterprise-insights-copilot/actions/workflows/ci.yml)
 ![GenAI BI](https://img.shields.io/badge/GenAI-BI-blueviolet?style=for-the-badge)
 ![FastAPI Backend](https://img.shields.io/badge/FastAPI-Backend-green?style=for-the-badge)
 ![Streamlit Frontend](https://img.shields.io/badge/Streamlit-Frontend-orange?style=for-the-badge)

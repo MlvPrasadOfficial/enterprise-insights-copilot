@@ -5,6 +5,7 @@ import logging
 PROMPT_DIR = os.path.join(os.path.dirname(__file__), "../../config/prompts")
 logger = logging.getLogger(__name__)
 
+
 def load_prompt(filename: str) -> str:
     logger.info(f"[prompts] load_prompt called with filename: {filename}")
     path = os.path.join(PROMPT_DIR, filename)
@@ -12,6 +13,7 @@ def load_prompt(filename: str) -> str:
         content = f.read()
     logger.info(f"[prompts] Loaded prompt from {path}")
     return content
+
 
 # Example: load and wrap as PromptTemplate
 RAG_PROMPT = PromptTemplate(

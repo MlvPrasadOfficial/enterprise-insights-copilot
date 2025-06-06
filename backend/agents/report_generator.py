@@ -8,6 +8,7 @@ import os
 from backend.core.logging import logger
 from typing import Optional
 
+
 class ReportGenerator:
     def __init__(self, title: str = "Enterprise Insights Report"):
         """
@@ -25,10 +26,15 @@ class ReportGenerator:
         Add the title and timestamp to the PDF report.
         """
         self.pdf.add_page()
-        self.pdf.set_font("Arial", 'B', 16)
-        self.pdf.cell(0, 10, self.title, ln=True, align='C')
-        self.pdf.set_font("Arial", '', 12)
-        self.pdf.cell(0, 10, f"Generated on: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}", ln=True)
+        self.pdf.set_font("Arial", "B", 16)
+        self.pdf.cell(0, 10, self.title, ln=True, align="C")
+        self.pdf.set_font("Arial", "", 12)
+        self.pdf.cell(
+            0,
+            10,
+            f"Generated on: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            ln=True,
+        )
         logger.info("[ReportGenerator] Title and timestamp added.")
 
     def add_insight_section(self, insight_text: str) -> None:
@@ -37,9 +43,9 @@ class ReportGenerator:
         Args:
             insight_text (str): The insights text to include.
         """
-        self.pdf.set_font("Arial", 'B', 14)
+        self.pdf.set_font("Arial", "B", 14)
         self.pdf.cell(0, 10, "Key Insights", ln=True)
-        self.pdf.set_font("Arial", '', 12)
+        self.pdf.set_font("Arial", "", 12)
         self.pdf.multi_cell(0, 8, insight_text)
         logger.info("[ReportGenerator] Insight section added.")
 
@@ -50,7 +56,7 @@ class ReportGenerator:
             chart_path (str): Path to the chart image file.
         """
         if os.path.exists(chart_path):
-            self.pdf.set_font("Arial", 'B', 14)
+            self.pdf.set_font("Arial", "B", 14)
             self.pdf.cell(0, 10, "Visualization", ln=True)
             self.pdf.image(chart_path, w=170)
             logger.info(f"[ReportGenerator] Chart added from {chart_path}.")

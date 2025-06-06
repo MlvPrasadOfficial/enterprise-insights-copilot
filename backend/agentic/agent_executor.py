@@ -3,6 +3,7 @@ from langchain_community.chat_models import ChatOpenAI
 from backend.agentic.tools import ask_rag, ask_sql, ask_insight
 from backend.core.logging import logger
 
+
 def get_agent_executor():
     tools = [ask_rag, ask_sql, ask_insight]
     llm = ChatOpenAI(model="gpt-4", temperature=0)

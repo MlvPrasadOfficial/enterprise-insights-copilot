@@ -16,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import openai
 
+
 # Vector store abstraction for future extensibility
 class VectorStore:
     def __init__(self, backend: str = "pinecone", **kwargs):
@@ -43,7 +44,9 @@ class VectorStore:
         logger.info(f"[llm_rag] Upserting {len(vectors)} vectors.")
         self.index.upsert(vectors=vectors)
 
-    def query(self, vector: List[float], top_k: int = 5, include_metadata: bool = True) -> Any:
+    def query(
+        self, vector: List[float], top_k: int = 5, include_metadata: bool = True
+    ) -> Any:
         """
         Query the vector store for similar vectors.
         Args:
@@ -54,13 +57,17 @@ class VectorStore:
             Any: Query results from the vector store.
         """
         logger.info(f"[llm_rag] Querying vector store with top_k={top_k}.")
-        return self.index.query(vector=vector, top_k=top_k, include_metadata=include_metadata)
+        return self.index.query(
+            vector=vector, top_k=top_k, include_metadata=include_metadata
+        )
 
 
 try:
     import tiktoken
 except ImportError:
-    raise ImportError("tiktoken is required for batching embeddings. Please install with 'pip install tiktoken'.")
+    raise ImportError(
+        "tiktoken is required for batching embeddings. Please install with 'pip install tiktoken'."
+    )
 
 print("[DEBUG] Importing backend/core/llm_rag.py...")
 load_dotenv()
@@ -77,7 +84,7 @@ INDEX_NAME = "enterprisenew"
 
 # Pinecone v3.x: list_indexes returns a dict with 'indexes' key
 print("[DEBUG] Listing Pinecone indexes...")
-index_names = [idx['name'] for idx in pc.list_indexes().get('indexes', [])]
+index_names = [idx["name"] for idx in pc.list_indexes().get("indexes", [])]
 if INDEX_NAME not in index_names:
     print(f"[DEBUG] Pinecone index '{INDEX_NAME}' does not exist!")
     raise RuntimeError(
@@ -89,8 +96,13 @@ index = pc.Index(INDEX_NAME)
 vector_store = VectorStore(backend="pinecone", index=index)
 print("[DEBUG] Pinecone index connected.")
 
+
 def retry_with_backoff(
-    func: Callable[[], Any], max_retries: int = 5, initial_delay: int = 1, backoff_factor: int = 2, exceptions: Tuple[type, ...] = (Exception,)
+    func: Callable[[], Any],
+    max_retries: int = 5,
+    initial_delay: int = 1,
+    backoff_factor: int = 2,
+    exceptions: Tuple[type, ...] = (Exception,),
 ) -> Any:
     """
     Retry a function with exponential backoff on specified exceptions.
@@ -116,6 +128,7 @@ def retry_with_backoff(
             time.sleep(delay)
             delay *= backoff_factor
 
+
 def embed_text(text: str) -> List[float]:
     """
     Embed a single text string using OpenAI embeddings.
@@ -125,13 +138,16 @@ def embed_text(text: str) -> List[float]:
         List[float]: The embedding vector.
     """
     client = get_openai_client()
+
     def call():
         response = client.embeddings.create(
-            model="text-embedding-ada-002",
-            input=[text]
+            model="text-embedding-ada-002", input=[text]
         )
         return response.data[0].embedding
-    return retry_with_backoff(call, exceptions=(openai.RateLimitError, openai.APIError, Exception))
+
+    return retry_with_backoff(
+        call, exceptions=(openai.RateLimitError, openai.APIError, Exception)
+    )
 
 
 def upsert_document(doc_id: str, text: str) -> None:
@@ -142,8 +158,12 @@ def upsert_document(doc_id: str, text: str) -> None:
         text (str): The document text.
     """
     vector = embed_text(text)
+
     def call():
-        vector_store.upsert([{"id": doc_id, "values": vector, "metadata": {"text": text}}])
+        vector_store.upsert(
+            [{"id": doc_id, "values": vector, "metadata": {"text": text}}]
+        )
+
     retry_with_backoff(call, exceptions=(Exception,))
 
 
@@ -174,8 +194,7 @@ def run_rag(query: str) -> str:
     prompt = RAG_PROMPT.format(context=context, query=query)
     client = get_openai_client()
     completion = client.chat.completions.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": prompt}]
+        model="gpt-4", messages=[{"role": "user", "content": prompt}]
     )
     return completion.choices[0].message.content.strip()
 
@@ -193,7 +212,7 @@ def embed_text_batch(texts: List[str], batch_size: int = 500) -> List[List[float
     for t in texts:
         if t is None:
             continue
-        s = str(t).replace('\n', ' ').replace('\r', ' ').strip()
+        s = str(t).replace("\n", " ").replace("\r", " ").strip()
         if s:
             clean_texts.append(s)
     if not clean_texts:
@@ -203,17 +222,18 @@ def embed_text_batch(texts: List[str], batch_size: int = 500) -> List[List[float
     total = len(clean_texts)
     client = get_openai_client()
     for i in range(0, total, batch_size):
-        batch = clean_texts[i:i+batch_size]
-        print(f"[DEBUG] Sending batch {i//batch_size+1} ({i+1}-{min(i+batch_size, total)}) of {((total-1)//batch_size)+1} to OpenAI embeddings: batch size: {len(batch)}")
-        response = client.embeddings.create(
-            model="text-embedding-ada-002",
-            input=batch
+        batch = clean_texts[i : i + batch_size]
+        print(
+            f"[DEBUG] Sending batch {i//batch_size+1} ({i+1}-{min(i+batch_size, total)}) of {((total-1)//batch_size)+1} to OpenAI embeddings: batch size: {len(batch)}"
         )
+        response = client.embeddings.create(model="text-embedding-ada-002", input=batch)
         results.extend([item.embedding for item in response.data])
     return results
 
 
-def embed_text_batch_parallel(texts: List[str], batch_size: int = 500, max_workers: int = 4) -> List[List[float]]:
+def embed_text_batch_parallel(
+    texts: List[str], batch_size: int = 500, max_workers: int = 4
+) -> List[List[float]]:
     """
     Embed a batch of texts in parallel using multiple workers.
     Args:
@@ -223,16 +243,28 @@ def embed_text_batch_parallel(texts: List[str], batch_size: int = 500, max_worke
     Returns:
         List[List[float]]: List of embedding vectors.
     """
-    clean_texts = [str(t).replace('\n', ' ').replace('\r', ' ').strip() for t in texts if t and str(t).strip()]
-    batches = [clean_texts[i:i+batch_size] for i in range(0, len(clean_texts), batch_size)]
+    clean_texts = [
+        str(t).replace("\n", " ").replace("\r", " ").strip()
+        for t in texts
+        if t and str(t).strip()
+    ]
+    batches = [
+        clean_texts[i : i + batch_size] for i in range(0, len(clean_texts), batch_size)
+    ]
     results = [None] * len(batches)
+
     def embed_batch(idx: int, batch: list[str]) -> tuple[int, list[list[float]]]:
         client = get_openai_client()
         response = client.embeddings.create(model="text-embedding-ada-002", input=batch)
         return idx, [item.embedding for item in response.data]
+
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(embed_batch, i, batch) for i, batch in enumerate(batches)]
-        for f in tqdm(as_completed(futures), total=len(futures), desc="Embedding batches"):
+        futures = [
+            executor.submit(embed_batch, i, batch) for i, batch in enumerate(batches)
+        ]
+        for f in tqdm(
+            as_completed(futures), total=len(futures), desc="Embedding batches"
+        ):
             idx, embeddings = f.result()
             results[idx] = embeddings
     return [emb for batch in results if batch for emb in batch]
@@ -264,31 +296,69 @@ def batch_by_token_limit(texts: List[str], max_tokens: int = 100000) -> List[Lis
     return batches
 
 
-MAX_PINECONE_BATCH_SIZE = 100  # Pinecone recommends small batches, and 100 is well below the 4MB limit
+MAX_PINECONE_BATCH_SIZE = (
+    100  # Pinecone recommends small batches, and 100 is well below the 4MB limit
+)
 MAX_PINECONE_MESSAGE_BYTES = 4 * 1024 * 1024  # 4MB
 
-def upsert_documents_batch(ids: List[str], texts: List[str]) -> None:
+
+def upsert_documents_batch(
+    ids: List[str], texts: List[str], batch_size: int = 100, max_workers: int = 4
+) -> None:
     """
-    Embed and upsert multiple documents in batches into the vector store.
+    Embed and upsert multiple documents in batches into the vector store, using parallel embedding and upsert.
     Args:
         ids (List[str]): List of document IDs.
         texts (List[str]): List of document texts.
+        batch_size (int): Batch size for embedding and upsert.
+        max_workers (int): Number of parallel workers.
     """
     max_tokens = 100000  # well below OpenAI's 300k limit for safety
     text_batches = batch_by_token_limit(texts, max_tokens)
     idx = 0
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    import json
+
+    def upsert_batch(batch_ids, pinecone_batch, embeddings):
+        vectors = []
+        for doc_id, text, vector in zip(batch_ids, pinecone_batch, embeddings):
+            vectors.append({"id": doc_id, "values": vector, "metadata": {"text": text}})
+        message_bytes = len(json.dumps(vectors).encode("utf-8"))
+        if message_bytes > MAX_PINECONE_MESSAGE_BYTES:
+            print(
+                f"[ERROR] Pinecone upsert batch too large: {message_bytes} bytes. Skipping this batch."
+            )
+            return
+        vector_store.upsert(vectors=vectors)
+
     for batch in text_batches:
-        for j in range(0, len(batch), MAX_PINECONE_BATCH_SIZE):
-            pinecone_batch = batch[j:j+MAX_PINECONE_BATCH_SIZE]
-            batch_ids = ids[idx:idx+len(pinecone_batch)]
-            embeddings = embed_text_batch(pinecone_batch, batch_size=MAX_PINECONE_BATCH_SIZE)
-            vectors = []
-            for doc_id, text, vector in zip(batch_ids, pinecone_batch, embeddings):
-                vectors.append({"id": doc_id, "values": vector, "metadata": {"text": text}})
-            import json
-            message_bytes = len(json.dumps(vectors).encode('utf-8'))
-            if message_bytes > MAX_PINECONE_MESSAGE_BYTES:
-                print(f"[ERROR] Pinecone upsert batch too large: {message_bytes} bytes. Skipping this batch.")
-                continue
-            vector_store.upsert(vectors=vectors)
-            idx += len(pinecone_batch)
+        # Parallel embedding for all Pinecone batches in this text batch
+        pinecone_batches = [
+            batch[j : j + batch_size] for j in range(0, len(batch), batch_size)
+        ]
+        batch_ids_list = [
+            ids[idx + j : idx + j + len(pinecone_batches[i])]
+            for i, j in enumerate(range(0, len(batch), batch_size))
+        ]
+        # Parallel embed
+        embeddings_batches = embed_text_batch_parallel(
+            batch, batch_size=batch_size, max_workers=max_workers
+        )
+        # Split embeddings_batches into pinecone_batches
+        emb_idx = 0
+        upsert_futures = []
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            for i, pinecone_batch in enumerate(pinecone_batches):
+                this_ids = batch_ids_list[i]
+                this_embeddings = embeddings_batches[
+                    emb_idx : emb_idx + len(pinecone_batch)
+                ]
+                emb_idx += len(pinecone_batch)
+                upsert_futures.append(
+                    executor.submit(
+                        upsert_batch, this_ids, pinecone_batch, this_embeddings
+                    )
+                )
+            for f in as_completed(upsert_futures):
+                f.result()
+        idx += len(batch)
