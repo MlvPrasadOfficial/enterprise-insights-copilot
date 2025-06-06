@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 from typing import List, Any
 from tqdm import tqdm
-from ..config.constants import CHUNK_SIZE, CHUNK_OVERLAP_PCT
+from config.constants import CHUNK_SIZE, CHUNK_OVERLAP_PCT
 
 try:
     from langchain_community.document_loaders import (
