@@ -70,7 +70,14 @@ async def index_csv(file: UploadFile = File(...)):
     try:
         contents = await file.read()
         print(f"[DEBUG] Received file: {file.filename}, size: {len(contents)} bytes")
-        df = pd.read_csv(StringIO(contents.decode("utf-8")))
+        # Defensive: check if file is empty
+        if not contents:
+            raise ValueError("Uploaded file is empty.")
+        try:
+            df = pd.read_csv(StringIO(contents.decode("utf-8")))
+        except Exception as e:
+            print(f"[DEBUG] CSV decode error: {e}")
+            raise ValueError(f"Could not parse CSV: {e}")
         print(f"[DEBUG] DataFrame shape: {df.shape}")
         cleaner = DataCleanerAgent(df)
         df = cleaner.clean()  # 🔧 Cleaned before embedding
