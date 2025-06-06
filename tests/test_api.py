@@ -61,3 +61,26 @@ def test_index_too_large_file():
     )
     assert response.status_code == 413
     assert "too large" in response.json()["detail"].lower()
+
+
+def test_agentic_flow_endpoint():
+    # Simulate a session with data (mock memory.df)
+    from backend.core import session_memory
+
+    import pandas as pd
+
+    session_memory.memory.df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+    response = client.post(
+        "/api/v1/agentic-flow", json={"query": "Show me a chart of a vs b"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "answer" in data
+    assert "chart" in data
+    assert "critique" in data
+    # Check stub values
+    assert (
+        "stub" in data["answer"]
+        or "stub" in data["chart"]
+        or "stub" in str(data["critique"])
+    )

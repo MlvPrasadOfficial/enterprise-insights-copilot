@@ -72,3 +72,17 @@ class SQLAgent:
         except Exception as e:
             logger.error(f"[SQLAgent] SQL execution failed: {e}")
             raise
+
+    @staticmethod
+    def analyze(user_query: str, docs: Any, data: Any) -> str:
+        """
+        Analyze the user query and docs for the agentic flow (stub for now).
+        Args:
+            user_query (str): The user's question.
+            docs (Any): Retrieved context (if any).
+            data (Any): The data to analyze.
+        Returns:
+            str: Analysis result (stubbed as string).
+        """
+        # TODO: Implement real analysis logic (e.g., SQL, LLM, DataFrame ops)
+        return "[SQLAgent] Analysis result (stub)"

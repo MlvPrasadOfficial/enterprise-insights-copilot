@@ -76,6 +76,20 @@ class ChartAgent:
         y = numeric_cols[0] if numeric_cols else self.df.columns[1]
         return x, y
 
+    @staticmethod
+    def generate(user_query: str, docs: any, data: any) -> str:
+        """
+        Generate a chart for the agentic flow (stub for now).
+        Args:
+            user_query (str): The user's question.
+            docs (Any): Retrieved context (if any).
+            data (Any): The data to visualize.
+        Returns:
+            str: Chart result (stubbed as string).
+        """
+        # TODO: Implement real chart generation logic
+        return "[ChartAgent] Chart result (stub)"
+
 
 # --- Utility extraction candidates ---
 # Consider moving guess_chart, guess_axes, and chart rendering logic to backend/core/utils.py or a new services/chart_utils.py for modularity and reuse.

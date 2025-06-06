@@ -27,3 +27,18 @@ class QueryAgent:
         logger.info(f"[QueryAgent] analyze called with user_query: {user_query}")
         # Route to run RAG first
         return run_rag(user_query)
+
+    @staticmethod
+    def retrieve(user_query: str, data: any) -> any:
+        """
+        Retrieve context for the agentic flow (stub for now).
+
+        Args:
+            user_query (str): The user's question.
+            data (Any): The data to search.
+
+        Returns:
+            Any: Retrieved context (stubbed as None).
+        """
+        # TODO: Implement real retrieval logic (e.g., RAG, semantic search)
+        return None

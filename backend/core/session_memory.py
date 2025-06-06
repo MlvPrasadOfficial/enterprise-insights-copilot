@@ -74,4 +74,7 @@ class SessionMemory:
         self.memory[user_id].append(message)
 
 
+# Singleton session memory for multi-user support (stub)
+session_memory = {}
+
 memory = SessionMemory()

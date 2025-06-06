@@ -75,3 +75,15 @@ Evaluation (JSON format):
                 "issues": ["Evaluation failed to parse"],
                 "advice": "Check response manually",
             }
+
+    @staticmethod
+    def critique(analysis: Any) -> dict:
+        """
+        Critique the analysis result (stub for agentic flow).
+        Args:
+            analysis (Any): The analysis result to critique.
+        Returns:
+            dict: Critique result (stubbed as dict).
+        """
+        # TODO: Implement real critique logic (e.g., LLM evaluation)
+        return {"critique": "[CritiqueAgent] Critique result (stub)"}

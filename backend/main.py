@@ -32,6 +32,7 @@ from backend.agents.insight_agent import InsightAgent
 from backend.agents.data_cleaner_agent import DataCleanerAgent
 from backend.agentic.agent_executor import get_agent_executor
 from backend.agentic.graph_runner import build_graph
+from backend.agentic.orchestrator import agentic_flow
 import altair as alt
 import json
 from backend.core.session_memory import memory, session_memory
@@ -470,6 +471,17 @@ def agentic_chain(req: QueryInput):
         from fastapi import HTTPException
 
         raise HTTPException(status_code=500, detail=f"Agentic chain failed: {str(e)}")
+
+
+@api_v1.post("/agentic-flow")
+async def run_agentic_flow(request: Request):
+    body = await request.json()
+    user_query = body["query"]
+    df = memory.df
+    if df is None:
+        raise HTTPException(status_code=400, detail="No data uploaded in session.")
+    result = agentic_flow(user_query, df)
+    return result
 
 
 @api_v1.post("/langgraph")
