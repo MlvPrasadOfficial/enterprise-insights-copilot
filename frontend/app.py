@@ -167,7 +167,7 @@ def fetch_auto_insights(df=None):
 def download_insights_pdf(insights):
     if not FPDF_AVAILABLE:
         st.error("PDF export is unavailable (fpdf not installed). Please contact your administrator or install fpdf.")
-        return None
+        return b"PDF export unavailable"
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font('Arial', 'B', 16)
@@ -177,7 +177,8 @@ def download_insights_pdf(insights):
     safe_insights = insights.encode("latin1", "replace").decode("latin1")
     pdf.multi_cell(0, 10, safe_insights)
     pdf_bytes = pdf.output(dest="S").encode("latin1")
-    return io.BytesIO(pdf_bytes)
+    # Always return bytes, not BytesIO, for Streamlit compatibility
+    return pdf_bytes
 
 def download_insights_csv(insights):
     import io
@@ -185,7 +186,8 @@ def download_insights_csv(insights):
     buf.write('Insight\n')
     buf.write('"' + insights.replace('"', '""') + '"\n')
     csv_bytes = buf.getvalue().encode("utf-8")
-    return io.BytesIO(csv_bytes)
+    # Always return bytes, not BytesIO, for Streamlit compatibility
+    return csv_bytes
 
 # === Query Section Card (with Chat History & Insights) ===
 with st.container():
