@@ -23,7 +23,7 @@ footer { visibility: hidden; }
 ''', unsafe_allow_html=True)
 
 # === Sidebar ===
-st.sidebar.image("https://img.shields.io/badge/GenAI-BI-blueviolet?style=for-the-badge", use_column_width=True)
+st.sidebar.image("https://img.shields.io/badge/GenAI-BI-blueviolet?style=for-the-badge", use_container_width=True)
 st.sidebar.title("Enterprise Insights Copilot")
 st.sidebar.markdown("""
 - [GitHub](https://github.com/your-name/enterprise-insights-copilot)
