@@ -84,8 +84,12 @@ async def index_csv(file: UploadFile = File(...)):
         cleaner = DataCleanerAgent(df)
         df = cleaner.clean()  # 🔧 Cleaned before embedding
         memory.update(df, file.filename)
+        print("[DEBUG] Starting upsert loop...")
         for idx, row in df.iterrows():
+            print(f"[DEBUG] Upserting row {idx}...")
             upsert_document(f"{file.filename}_{idx}", row.to_json())
+            print(f"[DEBUG] Finished upserting row {idx}.")
+        print("[DEBUG] All rows upserted.")
         return {"status": "success", "rows_indexed": len(df)}
     except Exception as e:
         print(f"❌ Error in /index: {str(e)}")
