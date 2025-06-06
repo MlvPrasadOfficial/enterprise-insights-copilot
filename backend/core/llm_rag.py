@@ -26,11 +26,11 @@ index = pc.Index(INDEX_NAME)
 
 
 def embed_text(text: str) -> List[float]:
-    response = openai.Embedding.create(
-        input=[text],
-        model="text-embedding-3-large"  # <-- must match your Pinecone index
+    response = openai.embeddings.create(
+        model="text-embedding-3-large",
+        input=[text]
     )
-    return response["data"][0]["embedding"]
+    return response.data[0].embedding
 
 
 def upsert_document(doc_id: str, text: str):
