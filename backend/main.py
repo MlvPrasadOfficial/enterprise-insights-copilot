@@ -4,6 +4,7 @@ import sys
 import os
 import pandas as pd
 from dotenv import load_dotenv
+from io import StringIO
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -67,7 +68,7 @@ class InsightRequest(BaseModel):
 @app.post("/index")
 async def index_csv(file: UploadFile = File(...)):
     contents = await file.read()
-    df = pd.read_csv(pd.compat.StringIO(contents.decode("utf-8")))
+    df = pd.read_csv(StringIO(contents.decode("utf-8")))
     cleaner = DataCleanerAgent(df)
     df = cleaner.clean()  # 🔧 Cleaned before embedding
     memory.update(df, file.filename)
