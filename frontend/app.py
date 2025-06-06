@@ -138,10 +138,8 @@ def download_insights_pdf(insights):
     pdf.cell(0, 10, 'AI Copilot Insights', ln=True, align='C')
     pdf.set_font('Arial', '', 12)
     pdf.multi_cell(0, 10, insights)
-    buf = io.BytesIO()
-    pdf.output(buf)
-    buf.seek(0)
-    return buf
+    pdf_bytes = pdf.output(dest="S").encode("latin1")
+    return io.BytesIO(pdf_bytes)
 
 def download_insights_csv(insights):
     buf = io.StringIO()
