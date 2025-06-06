@@ -1,7 +1,7 @@
 from langchain.prompts.prompt import PromptTemplate
 import os
 
-PROMPT_DIR = os.path.join(os.path.dirname(__file__), "../prompts")
+PROMPT_DIR = os.path.join(os.path.dirname(__file__), "../../config/prompts")
 
 def load_prompt(filename: str) -> str:
     path = os.path.join(PROMPT_DIR, filename)
