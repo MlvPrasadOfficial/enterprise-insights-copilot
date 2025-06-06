@@ -12,10 +12,14 @@ import traceback
 import logging
 from fastapi import status
 
+# Add project root to sys.path for cloud and local compatibility
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
 load_dotenv()  # Load environment variables from .env file
 
 # ✅ Add project root to PYTHONPATH so backend/, config/, etc. are accessible
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_ROOT not in sys.path:
     sys.path.append(PROJECT_ROOT)
 
