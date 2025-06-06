@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import requests
 import altair as alt
+import io
+from fpdf import FPDF
 
 # === Config === =
 st.set_page_config(page_title="Enterprise Insights Copilot", page_icon="📊", layout="wide")
@@ -55,11 +57,43 @@ with st.container():
     if uploaded_file:
         df = pd.read_csv(uploaded_file)
         st.dataframe(df.head(), use_container_width=True)
-        if st.button("🔁 Send to Copilot", key="upload1"):
+        if st.button("📤 Upload & Index Data", key="upload1"):
             with st.spinner("Uploading to backend..."):
                 files = {"file": uploaded_file.getvalue()}
                 res = requests.post(f"{BACKEND_URL}/api/v1/index", files=files)
                 st.success("📁 File uploaded and indexed!")
+
+# --- Example Questions ---
+def get_example_questions(df=None):
+    # If df is provided, generate context-aware examples
+    if df is not None:
+        cols = list(df.columns)
+        if len(cols) >= 2:
+            return [
+                f"Show {cols[0]} by {cols[1]}",
+                f"Top 3 {cols[0]} by {cols[1]}",
+                f"Average {cols[1]} by {cols[0]}",
+                f"Trend of {cols[1]} over time",
+            ]
+    # Fallback generic examples
+    return [
+        "Compare revenue across product categories",
+        "What is the sales trend by month?",
+        "Show me outliers in recovery time by hospital",
+        "Summarize this dataset's key patterns"
+    ]
+
+if 'example_idx' not in st.session_state:
+    st.session_state['example_idx'] = 0
+
+example_questions = get_example_questions(df if 'df' in locals() else None)
+
+if st.button('✨ Try Example'):
+    st.session_state['example_idx'] = (st.session_state['example_idx'] + 1) % len(example_questions)
+    st.session_state['example_query'] = example_questions[st.session_state['example_idx']]
+else:
+    if 'example_query' not in st.session_state:
+        st.session_state['example_query'] = example_questions[0]
 
 # === Settings Sidebar ===
 st.sidebar.markdown('---')
@@ -78,13 +112,36 @@ if 'metrics' in st.session_state:
     st.sidebar.markdown(f"**Tokens Used:** {st.session_state['metrics'].get('anonymous', {}).get('tokens', 0)}")
     st.sidebar.markdown(f"**Cost:** ${st.session_state['metrics'].get('anonymous', {}).get('cost', 0):.4f}")
 
-# === Example Query Button ===
-if st.button('✨ Try Example'):
-    st.session_state['example_query'] = 'Compare revenue across product categories'
-else:
-    st.session_state['example_query'] = ''
+# --- Insights Panel ---
+def fetch_auto_insights():
+    try:
+        response = requests.post(f"{BACKEND_URL}/api/v1/insights", json={"data": []})
+        result = response.json()
+        return result.get("insights", "No insights available."), result.get("evaluation", "")
+    except Exception:
+        return "No insights available.", ""
 
-# === Query Section Card (with Chat History) ===
+# --- Download Results ---
+def download_insights_pdf(insights):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font('Arial', 'B', 16)
+    pdf.cell(0, 10, 'AI Copilot Insights', ln=True, align='C')
+    pdf.set_font('Arial', '', 12)
+    pdf.multi_cell(0, 10, insights)
+    buf = io.BytesIO()
+    pdf.output(buf)
+    buf.seek(0)
+    return buf
+
+def download_insights_csv(insights):
+    buf = io.StringIO()
+    buf.write('Insight\n')
+    buf.write(f'"{insights.replace('"', '""')}"\n')
+    buf.seek(0)
+    return buf
+
+# === Query Section Card (with Chat History & Insights) ===
 with st.container():
     st.markdown('---')
     st.markdown('### 💬 Ask a Question', unsafe_allow_html=True)
@@ -99,8 +156,15 @@ with st.container():
                 try:
                     response = requests.post(f"{BACKEND_URL}/api/v1/query", json={"query": query})
                     result = response.json()
-                    answer = result.get('answer', 'No answer returned.')
+                    answer = result.get('answer')
+                    if not answer or answer == 'No answer returned.':
+                        answer = 'No answer. Please try a different question or re-upload your data.'
                     st.session_state['chat_history'].append((query, answer))
+                    # Fetch auto insights after query
+                    insights, evaluation = fetch_auto_insights()
+                    st.session_state['last_insights'] = insights
+                    st.session_state['last_evaluation'] = evaluation
+                    st.success('✅ Query complete!')
                 except Exception as e:
                     st.error('❌ Failed to query backend.')
     # Show chat history
@@ -109,7 +173,30 @@ with st.container():
         st.markdown('#### 🗨️ Chat History')
         for q, a in reversed(st.session_state['chat_history'][-6:]):
             st.markdown(f"<div style='margin-bottom:8px;'><b>🧑‍💼 You:</b> {q}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div style='margin-bottom:16px; background:#e0e7ff; border-radius:8px; padding:8px;'><b>🤖 Copilot:</b> {a}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='margin-bottom:16px; background:#e0e7ff; border-radius:8px; padding:8px; display:flex; align-items:center;'><img src='https://img.icons8.com/fluency/48/000000/robot-2.png' width='24' style='margin-right:8px;'/> <b>AI:</b> {a}</div>", unsafe_allow_html=True)
+    # Show insights panel
+    if st.session_state.get('last_insights'):
+        st.markdown('---')
+        st.markdown('### 📈 Auto Insights')
+        st.info(st.session_state['last_insights'])
+        if st.session_state.get('last_evaluation'):
+            st.caption(f"Evaluation: {st.session_state['last_evaluation']}")
+        # === Download Buttons ===
+        col1, col2 = st.columns(2)
+        with col1:
+            st.download_button(
+                label="⬇️ Download Insights as PDF",
+                data=download_insights_pdf(st.session_state['last_insights']),
+                file_name="insights.pdf",
+                mime="application/pdf"
+            )
+        with col2:
+            st.download_button(
+                label="⬇️ Download Insights as CSV",
+                data=download_insights_csv(st.session_state['last_insights']),
+                file_name="insights.csv",
+                mime="text/csv"
+            )
 
 # === Clear Session Button ===
 if st.sidebar.button('🧹 Clear Session'):
