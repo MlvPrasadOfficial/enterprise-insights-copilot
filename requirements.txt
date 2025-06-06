@@ -27,3 +27,4 @@ duckdb==0.10.1
 # Tools
 python-dotenv==1.0.1
 httpx==0.27.0
+fpdf
