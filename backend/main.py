@@ -161,7 +161,7 @@ def get_user_id(request: Request):
     return request.headers.get("X-User-Id", "anonymous")
 
 
-@app.post("/index")
+@api_v1.post("/index")
 async def index_csv(file: UploadFile = File(...)):
     import time
     import psutil
@@ -227,7 +227,7 @@ async def index_csv(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
 
 
-@app.post("/query")
+@api_v1.post("/query")
 async def query_rag(data: QueryInput, request: Request):
     logger.info(f"[QUERY] /query called with data: {data}")
     df = memory.df
@@ -251,7 +251,7 @@ async def query_rag(data: QueryInput, request: Request):
         from fastapi import HTTPException
         raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
 
-@app.post("/chart")
+@api_v1.post("/chart")
 def chart_handler(req: ChartRequest):
     logger.info(f"[CHART] /chart called with req: {req}")
     df = memory.df
@@ -270,7 +270,7 @@ def chart_handler(req: ChartRequest):
         from fastapi import HTTPException
         raise HTTPException(status_code=500, detail=f"Chart failed: {str(e)}")
 
-@app.post("/sql")
+@api_v1.post("/sql")
 def sql_endpoint(req: SQLQuery):
     logger.info(f"[SQL] /sql called with req: {req}")
     df = memory.df
@@ -298,7 +298,7 @@ def sql_endpoint(req: SQLQuery):
         logger.error(traceback.format_exc())
         return {"error": str(e), "sql": sql}
 
-@app.post("/insights")
+@api_v1.post("/insights")
 def generate_insights(req: InsightRequest):
     logger.info(f"[INSIGHTS] /insights called. memory.df is None? {memory.df is None}")
     df = memory.df
@@ -320,7 +320,7 @@ def generate_insights(req: InsightRequest):
         from fastapi import HTTPException
         raise HTTPException(status_code=500, detail=f"Insights failed: {str(e)}")
 
-@app.post("/auto-chart")
+@api_v1.post("/auto-chart")
 def auto_chart(req: QueryInput):
     logger.info(f"[AUTO-CHART] /auto-chart called with req: {req}")
     if memory.df is None:
@@ -347,7 +347,7 @@ def auto_chart(req: QueryInput):
         from fastapi import HTTPException
         raise HTTPException(status_code=500, detail=f"Auto-chart failed: {str(e)}")
 
-@app.post("/agentic")
+@api_v1.post("/agentic")
 def agentic_chain(req: QueryInput):
     logger.info(f"[AGENTIC] /agentic called with req: {req}")
     try:
@@ -361,7 +361,7 @@ def agentic_chain(req: QueryInput):
         from fastapi import HTTPException
         raise HTTPException(status_code=500, detail=f"Agentic chain failed: {str(e)}")
 
-@app.post("/langgraph")
+@api_v1.post("/langgraph")
 def run_graph(req: QueryInput):
     logger.info(f"[LANGGRAPH] /langgraph called with req: {req}")
     user_id = "default"  # You can sessionize this later
@@ -386,7 +386,7 @@ def run_graph(req: QueryInput):
         from fastapi import HTTPException
         raise HTTPException(status_code=500, detail=f"Langgraph failed: {str(e)}")
 
-@app.post("/report")
+@api_v1.post("/report")
 def generate_report():
     logger.info("[REPORT] /report called.")
     df = memory.df
@@ -416,7 +416,7 @@ def generate_report():
         from fastapi import HTTPException
         raise HTTPException(status_code=500, detail=f"Report failed: {str(e)}")
 
-@app.post("/debate")
+@api_v1.post("/debate")
 def debate_mode(req: QueryInput):
     logger.info(f"[DEBATE] /debate called with req: {req}")
     try:
@@ -437,3 +437,5 @@ def debate_mode(req: QueryInput):
         logger.error(traceback.format_exc())
         from fastapi import HTTPException
         raise HTTPException(status_code=500, detail=f"Debate failed: {str(e)}")
+
+app.include_router(api_v1)
