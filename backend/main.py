@@ -1,3 +1,5 @@
+print("[DEBUG] Starting backend/main.py...")
+
 # FastAPI app runner entry point
 
 import sys

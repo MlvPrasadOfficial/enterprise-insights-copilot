@@ -5,24 +5,32 @@ from dotenv import load_dotenv
 from typing import List
 from config.settings import load_prompt
 
+print("[DEBUG] Importing backend/core/llm_rag.py...")
 load_dotenv()
+print("[DEBUG] Loaded .env and set OpenAI key...")
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 if not os.getenv("PINECONE_API_KEY"):
+    print("[DEBUG] Missing PINECONE_API_KEY!")
     raise RuntimeError("Missing PINECONE_API_KEY")
 
 # Initialize Pinecone v3.x
+print("[DEBUG] Initializing Pinecone client...")
 pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 INDEX_NAME = "enterprisenew"
 
 # Pinecone v3.x: list_indexes returns a dict with 'indexes' key
+print("[DEBUG] Listing Pinecone indexes...")
 index_names = [idx['name'] for idx in pc.list_indexes().get('indexes', [])]
 if INDEX_NAME not in index_names:
+    print(f"[DEBUG] Pinecone index '{INDEX_NAME}' does not exist!")
     raise RuntimeError(
         f"Pinecone index '{INDEX_NAME}' does not exist. Please create it manually in the Pinecone dashboard "
         "with the correct embedding model and dimensions."
     )
+print("[DEBUG] Connecting to Pinecone index...")
 index = pc.Index(INDEX_NAME)
+print("[DEBUG] Pinecone index connected.")
 
 
 def embed_text(text: str) -> List[float]:
