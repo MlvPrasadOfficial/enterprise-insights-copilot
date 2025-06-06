@@ -27,7 +27,7 @@ uploaded_file = st.file_uploader("Drop your CSV file here", type=["csv"])
 
 show_df = False
 if uploaded_file:
-    if st.button("🔁 Send to Copilot"):
+    if st.button("🔁 Send to Copilot", key="upload1"):
         with st.spinner("Uploading to backend..."):
             files = {"file": uploaded_file.getvalue()}
             res = requests.post(f"{BACKEND_URL}/upload", files=files)
@@ -38,7 +38,7 @@ if uploaded_file:
         st.dataframe(df.head(), use_container_width=True)
 
     # Send to backend
-    if st.button("🔁 Send to Copilot"):
+    if st.button("🔁 Send to Copilot", key="upload2"):
         with st.spinner("Uploading to backend..."):
             files = {"file": uploaded_file.getvalue()}
             res = requests.post(f"{BACKEND_URL}/upload", files=files)
