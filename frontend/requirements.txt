@@ -4,3 +4,4 @@ pandas
 altair
 python-dotenv
 langgraph==0.0.38
+fpdf
