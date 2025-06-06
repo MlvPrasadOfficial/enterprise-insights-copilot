@@ -1,6 +1,6 @@
 import os
 import openai
-from pinecone import Pinecone, ServerlessSpec
+from pinecone import Pinecone
 from dotenv import load_dotenv
 from typing import List
 from config.settings import load_prompt
