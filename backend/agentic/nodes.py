@@ -1,5 +1,5 @@
 from langgraph.graph import StateGraph, END
-from langgraph.graph.schema import State
+# from langgraph.graph import State  # State does not exist in current langgraph
 from typing import TypedDict, List
 
 # Define the shared state

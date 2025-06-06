@@ -13,17 +13,14 @@ if not os.getenv("PINECONE_API_KEY"):
 
 # Initialize Pinecone v3.x
 pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-INDEX_NAME = "enterprise-insights"
+INDEX_NAME = "enterprisenew"
 
-if INDEX_NAME not in pc.list_indexes():
-    pc.create_index(
-        name=INDEX_NAME,
-        spec=ServerlessSpec(
-            cloud="aws",
-            region="us-east-1",
-            metric="cosine",
-            dimensions=1536
-        )
+# Pinecone v3.x: list_indexes returns a dict with 'indexes' key
+index_names = [idx['name'] for idx in pc.list_indexes().get('indexes', [])]
+if INDEX_NAME not in index_names:
+    raise RuntimeError(
+        f"Pinecone index '{INDEX_NAME}' does not exist. Please create it manually in the Pinecone dashboard "
+        "with the correct embedding model and dimensions."
     )
 index = pc.Index(INDEX_NAME)
 
@@ -31,7 +28,7 @@ index = pc.Index(INDEX_NAME)
 def embed_text(text: str) -> List[float]:
     response = openai.Embedding.create(
         input=[text],
-        model="text-embedding-3-small"
+        model="text-embedding-3-large"  # <-- must match your Pinecone index
     )
     return response["data"][0]["embedding"]
 

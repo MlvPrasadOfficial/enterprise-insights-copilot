@@ -4,6 +4,9 @@
 openai==1.50.2
 langchain==0.1.17
 llama-index==0.10.32
+langchain-core
+langchain-community
+langgraph==0.0.38
 
 # Vector DB
 pinecone-client==3.0.0
