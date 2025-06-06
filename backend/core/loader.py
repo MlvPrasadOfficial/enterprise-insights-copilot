@@ -6,7 +6,10 @@ from tqdm import tqdm
 from config.constants import CHUNK_SIZE, CHUNK_OVERLAP_PCT
 
 try:
-    from langchain_community.document_loaders import CSVLoader, TextLoader, PyPDFium2Loader, UnstructuredWordDocumentLoader
+    from langchain_community.document_loaders import (
+        CSVLoader, TextLoader, PyPDFium2Loader, UnstructuredWordDocumentLoader,
+        UnstructuredMarkdownLoader, UnstructuredHTMLLoader, UnstructuredPowerPointLoader, NotebookLoader
+    )
     from langchain.text_splitter import RecursiveCharacterTextSplitter
     from langchain.schema import Document
 except ImportError:
@@ -23,6 +26,12 @@ FILE_LOADER_MAPPING = {
     ".pdf": (PyPDFium2Loader, {}),
     ".doc": (UnstructuredWordDocumentLoader, {}),
     ".docx": (UnstructuredWordDocumentLoader, {}),
+    ".md": (UnstructuredMarkdownLoader, {}),
+    ".markdown": (UnstructuredMarkdownLoader, {}),
+    ".html": (UnstructuredHTMLLoader, {}),
+    ".htm": (UnstructuredHTMLLoader, {}),
+    ".pptx": (UnstructuredPowerPointLoader, {}),
+    ".ipynb": (NotebookLoader, {}),
     # Add more mappings for other file types as needed
 }
 
@@ -40,13 +49,8 @@ def load_document(file_path: str, mapping: dict = FILE_LOADER_MAPPING) -> List[A
         with open(file_path, encoding="utf-8") as f:
             return [Document(f.read(), {"file": file_path})]
     elif ext == ".pdf":
-        try:
-            from PyPDF2 import PdfReader
-            reader = PdfReader(file_path)
-            text = "\n".join(page.extract_text() or "" for page in reader.pages)
-            return [Document(text, {"file": file_path})]
-        except Exception as e:
-            raise ValueError(f"PDF loading failed: {e}")
+        # Only use PyPDFium2Loader or langchain loader for PDF, do not fallback to PyPDF2
+        raise ValueError(f"PDF loading failed for {file_path}. Please ensure PyPDFium2Loader is installed and working.")
     else:
         raise ValueError(f"Unsupported file type: {ext}")
 
@@ -65,7 +69,42 @@ def load_directory(path: str, silent_errors=True) -> List[Any]:
             pbar.update()
     return results
 
-def split_documents(docs: List[Any], chunk_size: int = CHUNK_SIZE, chunk_overlap_pct: int = CHUNK_OVERLAP_PCT) -> List[Any]:
+class SmartFAQSplitter:
+    """Splits FAQ-style documents into Q&A pairs or logical chunks."""
+    def __init__(self, question_prefixes=None, chunk_size=CHUNK_SIZE, chunk_overlap_pct=CHUNK_OVERLAP_PCT):
+        self.question_prefixes = question_prefixes or ["Q:", "Question:", "Q.", "Q -", "Q-"]
+        self.chunk_size = chunk_size
+        self.chunk_overlap = int(chunk_size * chunk_overlap_pct / 100)
+
+    def split(self, docs):
+        split_docs = []
+        for doc in docs:
+            lines = doc.page_content.splitlines()
+            current = []
+            for line in lines:
+                if any(line.strip().startswith(q) for q in self.question_prefixes):
+                    if current:
+                        split_docs.append(Document("\n".join(current), doc.metadata))
+                        current = []
+                current.append(line)
+            if current:
+                split_docs.append(Document("\n".join(current), doc.metadata))
+        # Optionally further chunk if too large
+        final_chunks = []
+        for d in split_docs:
+            if len(d.page_content) > self.chunk_size:
+                for i in range(0, len(d.page_content), self.chunk_size - self.chunk_overlap):
+                    chunk = d.page_content[i:i+self.chunk_size]
+                    final_chunks.append(Document(chunk, d.metadata))
+            else:
+                final_chunks.append(d)
+        return final_chunks
+
+def split_documents(docs: List[Any], chunk_size: int = CHUNK_SIZE, chunk_overlap_pct: int = CHUNK_OVERLAP_PCT, splitter_type: str = "default") -> List[Any]:
+    """Split documents with runtime override and splitter type (default or smart_faq)."""
+    if splitter_type == "smart_faq":
+        splitter = SmartFAQSplitter(chunk_size=chunk_size, chunk_overlap_pct=chunk_overlap_pct)
+        return splitter.split(docs)
     # Use RecursiveCharacterTextSplitter if available, else fallback to simple split
     try:
         chunk_overlap = int(chunk_size * chunk_overlap_pct / 100)
@@ -79,6 +118,6 @@ def split_documents(docs: List[Any], chunk_size: int = CHUNK_SIZE, chunk_overlap
         # Fallback: no split
         return docs
 
-def load_and_split(file_path: str) -> List[Any]:
+def load_and_split(file_path: str, chunk_size: int = CHUNK_SIZE, chunk_overlap_pct: int = CHUNK_OVERLAP_PCT, splitter_type: str = "default") -> List[Any]:
     docs = load_document(file_path)
-    return split_documents(docs)
+    return split_documents(docs, chunk_size, chunk_overlap_pct, splitter_type)

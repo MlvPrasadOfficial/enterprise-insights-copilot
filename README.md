@@ -1,20 +1,23 @@
 # 🧠 Enterprise Insights Copilot
 
-A GenAI-powered Conversational BI Platform that transforms natural language questions into actionable insights from structured data (CSV, SQL, dashboards).
+![GenAI BI](https://img.shields.io/badge/GenAI-BI-blueviolet?style=for-the-badge)
+![FastAPI Backend](https://img.shields.io/badge/FastAPI-Backend-green?style=for-the-badge)
+![Streamlit Frontend](https://img.shields.io/badge/Streamlit-Frontend-orange?style=for-the-badge)
+![Pinecone RAG](https://img.shields.io/badge/Pinecone-RAG-9cf?style=for-the-badge)
 
-Built for analysts, PMs, and executives who want instant answers, charts, and insights — without writing code.
+**Conversational BI with LLMs, RAG, and instant analytics for everyone.**
 
 ---
 
 ## 🚀 Features
 
-- 📁 Upload CSVs directly from the UI
-- 💬 Ask natural language questions (e.g., "Show sales trend by region")
-- 🧠 Retrieval-Augmented Generation (RAG) using OpenAI + Pinecone
-- 📊 Auto-generate charts via Altair (line, bar, scatter, histogram)
-- 🧾 Natural Language → SQL → Result using DuckDB + GPT-4
-- 📌 Auto-insights summary: KPIs, anomalies, trends
-- 🧱 Modular multi-agent architecture (DataAgent, QueryAgent, ChartAgent, SQLAgent, InsightAgent)
+- 📁 **Upload CSVs** directly from the UI
+- 💬 **Ask natural language questions** (e.g., "Show sales trend by region")
+- 🧠 **Retrieval-Augmented Generation (RAG)** using OpenAI + Pinecone
+- 📊 **Auto-generate charts** via Altair (line, bar, scatter, histogram)
+- 🧾 **Natural Language → SQL → Result** using DuckDB + GPT-4
+- 📌 **Auto-insights summary**: KPIs, anomalies, trends
+- 🧱 **Modular multi-agent architecture** (DataAgent, QueryAgent, ChartAgent, SQLAgent, InsightAgent)
 
 ---
 
@@ -34,67 +37,77 @@ Built for analysts, PMs, and executives who want instant answers, charts, and in
 
 ## 🗂 Folder Structure
 
+```text
 enterprise_insights_copilot/
-├── frontend/ # Streamlit UI
-├── backend/ # FastAPI, Agents, Core logic
+├── frontend/   # Streamlit UI
+├── backend/    # FastAPI, Agents, Core logic
 │   ├── agents/ # QueryAgent, ChartAgent, InsightAgent etc.
-│   ├── core/ # LLM + Pinecone integration (RAG)
+│   ├── core/   # LLM + Pinecone integration (RAG)
 │   └── main.py
-├── config/ # .env and settings
+├── config/     # .env and settings
 ├── requirements.txt
 ├── README.md
+```
 
 ---
 
 ## 🧪 Example Prompts
 
-```
-"Compare average profit across categories"
-"What is the sales trend by month?"
-"Show me outliers in recovery time by hospital"
-"Summarize this dataset's key patterns"
+```text
+Compare average profit across categories
+What is the sales trend by month?
+Show me outliers in recovery time by hospital
+Summarize this dataset's key patterns
 ```
 
 ---
 
-## ✅ Setup Instructions
+## ✅ Quickstart
 
 ```powershell
-# Clone the repo
+# 1. Clone the repo
 git clone https://github.com/your-name/enterprise-insights-copilot.git
 
-# Setup virtual environment
+# 2. Setup virtual environment
 python -m venv venv
 .\venv\Scripts\activate
 
-# Install requirements
+# 3. Install requirements
 pip install -r requirements.txt
 
-# Run backend
+# 4. Run backend
 cd backend
 uvicorn main:app --reload --port 8000
 
-# Run frontend
+# 5. Run frontend
 cd ../frontend
 streamlit run app.py
 ```
 
 ---
 
-## 📌 Demo Video Script (Optional)
+## 🌐 API Endpoints
 
-“This is Enterprise Insights Copilot — a GenAI platform for business users. Just upload a CSV and ask any question. The AI uses RAG to fetch context, generates charts, SQL queries, and auto-insights — all within seconds. No need for BI tools or SQL knowledge.”
+- `GET /api/v1/health` — Health check
+- `POST /api/v1/index` — Upload and index CSV
+- `POST /api/v1/query` — Ask a question (RAG)
+- `POST /api/v1/chart` — Auto-generate chart
+- `POST /api/v1/sql` — Natural language to SQL
+- `POST /api/v1/insights` — Get auto-insights
+- `GET /api/v1/config` — View config/constants
+- `GET /api/v1/metrics` — Usage/cost metrics
+- ...and more!
 
 ---
 
 ## 📄 License
+
 MIT License
 
 ---
 
-Would you like me to also generate:
-- 📽️ A full **demo video script/voiceover**?
-- 📊 LangSmith or logging for evaluation?
-- 🧠 Prompt templates for each agent?
+> “Just upload a CSV and ask any question. The AI uses RAG to fetch context, generates charts, SQL queries, and auto-insights — all within seconds. No need for BI tools or SQL knowledge.”
 
-Let’s polish this into a portfolio center-piece.
+---
+
+## 🎨 Let’s polish this into a portfolio centerpiece. 🚀

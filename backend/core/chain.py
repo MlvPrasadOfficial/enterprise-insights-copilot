@@ -5,6 +5,9 @@ from langchain.memory import ConversationBufferMemory
 from langchain.prompts.prompt import PromptTemplate
 from backend.core.prompts import RAG_PROMPT, INSIGHT_PROMPT, SQL_PROMPT
 from backend.core.logging import logger
+from langchain.chains.combine_documents.base import BaseCombineDocumentsChain
+from langchain.schema.vectorstore import VectorStore
+from langchain.schema import BaseRetriever
 
 # Example: a simple QA chain using a prompt and LLM
 
@@ -17,5 +20,44 @@ def create_qa_chain(llm, memory=None) -> Chain:
     )
     logger.info("QA chain created.")
     return chain
+
+class MultiRetrieverFAQChain(Chain):
+    """Chain that orchestrates multi-retriever (knowledge base + FAQ) and streaming responses."""
+    def __init__(self, llm, knowledge_base_retrievers, smart_faq_retriever=None, memory=None, verbose=True):
+        self.llm = llm
+        self.knowledge_base_retrievers = knowledge_base_retrievers
+        self.smart_faq_retriever = smart_faq_retriever
+        self.memory = memory or ConversationBufferMemory(return_messages=True)
+        self.verbose = verbose
+        self.qa_chain = LLMChain(llm=llm, prompt=RAG_PROMPT, memory=self.memory, verbose=verbose)
+
+    def _call(self, inputs: dict, run_manager=None):
+        question = inputs["question"]
+        answer = ""
+        # FAQ retrieval
+        if self.smart_faq_retriever:
+            docs = self.smart_faq_retriever.get_relevant_documents(question)
+            if docs:
+                answer += "\n#### SMART FAQ ANSWER\n" + "\n".join([d.page_content for d in docs])
+        # Knowledge base retrieval
+        for retriever in self.knowledge_base_retrievers:
+            docs = retriever.get_relevant_documents(question)
+            if docs:
+                answer += "\n#### KNOWLEDGE BASE ANSWER\n" + "\n".join([d.page_content for d in docs])
+        # LLM answer
+        answer += "\n#### LLM ANSWER\n" + self.qa_chain.run(question=question)
+        return {"answer": answer}
+
+    @property
+    def input_keys(self):
+        return ["question"]
+
+    @property
+    def output_keys(self):
+        return ["answer"]
+
+def create_multi_chain(llm, knowledge_base_retrievers, smart_faq_retriever=None, memory=None, verbose=True):
+    logger.info("MultiRetrieverFAQChain created.")
+    return MultiRetrieverFAQChain(llm, knowledge_base_retrievers, smart_faq_retriever, memory, verbose)
 
 # Extend with multi-retriever, FAQ, or other chains as needed

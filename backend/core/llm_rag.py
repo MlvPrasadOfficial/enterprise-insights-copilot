@@ -9,6 +9,8 @@ from backend.core.logging import logger
 from config.constants import CHUNK_SIZE, MAX_TOKENS
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
+import openai
 
 # Vector store abstraction for future extensibility
 class VectorStore:
@@ -57,18 +59,34 @@ index = pc.Index(INDEX_NAME)
 vector_store = VectorStore(backend="pinecone", index=index)
 print("[DEBUG] Pinecone index connected.")
 
+def retry_with_backoff(func, max_retries=5, initial_delay=1, backoff_factor=2, exceptions=(Exception,)):
+    delay = initial_delay
+    for attempt in range(max_retries):
+        try:
+            return func()
+        except exceptions as e:
+            logger.warning(f"Retry {attempt+1}/{max_retries} after error: {e}")
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(delay)
+            delay *= backoff_factor
+
 def embed_text(text: str) -> List[float]:
     client = get_openai_client()
-    response = client.embeddings.create(
-        model="text-embedding-ada-002",
-        input=[text]
-    )
-    return response.data[0].embedding
+    def call():
+        response = client.embeddings.create(
+            model="text-embedding-ada-002",
+            input=[text]
+        )
+        return response.data[0].embedding
+    return retry_with_backoff(call, exceptions=(openai.RateLimitError, openai.APIError, Exception))
 
 
 def upsert_document(doc_id: str, text: str):
     vector = embed_text(text)
-    vector_store.upsert([{"id": doc_id, "values": vector, "metadata": {"text": text}}])
+    def call():
+        vector_store.upsert([{"id": doc_id, "values": vector, "metadata": {"text": text}}])
+    retry_with_backoff(call, exceptions=(Exception,))
 
 
 def retrieve_relevant_chunks(query: str, top_k: int = 5):

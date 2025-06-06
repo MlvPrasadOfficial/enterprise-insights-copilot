@@ -31,3 +31,8 @@ httpx==0.27.0
 fpdf
 python-multipart
 PyPDF2
+# For advanced file loaders
+beautifulsoup4
+python-pptx
+nbformat
+# langchain_community loaders cover markdown, html, pptx, notebook

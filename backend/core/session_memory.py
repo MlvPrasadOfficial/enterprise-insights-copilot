@@ -1,5 +1,6 @@
 # core/session_memory.py
 from backend.core.logging import logger
+from collections import defaultdict
 
 class SessionMemory:
     def __init__(self):
@@ -7,6 +8,7 @@ class SessionMemory:
         self.filename = None
         self.last_query = None
         self.columns = None
+        self.memory = defaultdict(list)
 
     def update(self, df, filename):
         self.df = df
@@ -18,5 +20,11 @@ class SessionMemory:
 
     def is_active(self):
         return self.df is not None
+
+    def get(self, user_id):
+        return self.memory[user_id]
+
+    def add(self, user_id, message):
+        self.memory[user_id].append(message)
 
 memory = SessionMemory()

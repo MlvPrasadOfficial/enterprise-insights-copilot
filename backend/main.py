@@ -38,17 +38,72 @@ from backend.core.loader import load_and_split
 from backend.core.models import get_openai_client, get_tokenizer
 from backend.core.prompts import RAG_PROMPT, INSIGHT_PROMPT, SQL_PROMPT
 from backend.core.utils import clean_string_for_storing
+from backend.core.logging import usage_tracker, logger
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi import status
+from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request as StarletteRequest
+from starlette.responses import Response
+import logging
 
-app = FastAPI()
+# --- API Metadata ---
+app = FastAPI(
+    title="Enterprise Insights Copilot API",
+    description="Conversational BI backend with LLM, RAG, and multi-retriever support.",
+    version="1.0.0"
+)
 
-# Allow Streamlit frontend to access FastAPI backend
+# --- CORS & Security ---
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: StarletteRequest, call_next):
+        response: Response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        return response
+app.add_middleware(SecurityHeadersMiddleware)
+
+# --- Centralized Exception Handling ---
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled error: {exc}")
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": str(exc)}
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.warning(f"Validation error: {exc}")
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": exc.errors()}
+    )
+
+# --- Health & Readiness Endpoints ---
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+@app.get("/ready")
+def ready():
+    # Optionally check vector DB, LLM, etc.
+    return {"status": "ready"}
+
+# --- API Versioning Helper ---
+from fastapi import APIRouter
+api_v1 = APIRouter(prefix="/api/v1")
 
 
 class QueryInput(BaseModel):
@@ -69,6 +124,11 @@ class SQLQuery(BaseModel):
 
 class InsightRequest(BaseModel):
     data: list
+
+
+# Helper to extract user/session id (stub: replace with real auth/session logic)
+def get_user_id(request: Request):
+    return request.headers.get("X-User-Id", "anonymous")
 
 
 @app.post("/index")
@@ -108,16 +168,18 @@ async def index_csv(file: UploadFile = File(...)):
 
 
 @app.post("/query")
-async def query_rag(data: QueryInput):
+async def query_rag(data: QueryInput, request: Request):
     df = memory.df
     if df is None:
         from fastapi import HTTPException
-
         raise HTTPException(status_code=400, detail="No data uploaded in session.")
     answer = run_rag(data.query)
     critique = CritiqueAgent(df.columns.tolist())
     eval_report = critique.evaluate(data.query, answer)
-    return {"answer": answer, "evaluation": eval_report}
+    # Log usage (stub: replace with real token/cost calculation)
+    user_id = get_user_id(request)
+    usage_tracker.log(user_id, tokens=100, cost=0.01)  # Example values
+    return {"answer": answer, "evaluation": eval_report, "usage": usage_tracker.get_usage(user_id)}
 
 
 @app.post("/chart")
@@ -272,3 +334,139 @@ def debate_mode(req: QueryInput):
 @app.get("/")
 def read_root():
     return {"message": "Enterprise Copilot API is running."}
+
+# Move all endpoints to the versioned API router
+@api_v1.post("/index")
+async def index_csv_v1(file: UploadFile = File(...)):
+    return await index_csv(file)
+
+@api_v1.post("/query")
+async def query_rag_v1(data: QueryInput, request: Request):
+    return await query_rag(data, request)
+
+@api_v1.post("/chart")
+def chart_handler_v1(req: ChartRequest):
+    return chart_handler(req)
+
+@api_v1.post("/sql")
+def sql_endpoint_v1(req: SQLQuery):
+    return sql_endpoint(req)
+
+@api_v1.post("/insights")
+def generate_insights_v1(req: InsightRequest):
+    return generate_insights(req)
+
+@api_v1.post("/auto-chart")
+def auto_chart_v1(req: QueryInput):
+    return auto_chart(req)
+
+@api_v1.post("/agentic")
+def agentic_chain_v1(req: QueryInput):
+    return agentic_chain(req)
+
+@api_v1.post("/langgraph")
+def run_graph_v1(req: QueryInput):
+    return run_graph(req)
+
+@api_v1.post("/report")
+def generate_report_v1():
+    return generate_report()
+
+@api_v1.post("/debate")
+def debate_mode_v1(req: QueryInput):
+    return debate_mode(req)
+
+# --- ENV Validation ---
+REQUIRED_ENV_VARS = ["OPENAI_API_KEY", "PINECONE_API_KEY"]
+for var in REQUIRED_ENV_VARS:
+    if not os.getenv(var):
+        raise RuntimeError(f"Missing required environment variable: {var}")
+
+# --- Configurable Logging Level ---
+log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+logger.setLevel(getattr(logging, log_level, logging.INFO))
+
+# --- Graceful Shutdown ---
+@app.on_event("shutdown")
+def shutdown_event():
+    logger.info("Shutting down API and cleaning up resources...")
+    # Optionally close DB/vector connections here
+
+app.include_router(api_v1)
+
+from fastapi.responses import PlainTextResponse
+
+# --- Deprecation warning decorator ---
+def deprecated_endpoint(func):
+    async def wrapper(*args, **kwargs):
+        logger.warning("[DEPRECATED] This endpoint will be removed in a future release. Please use /api/v1/ endpoints.")
+        return await func(*args, **kwargs)
+    return wrapper
+
+# --- Unversioned endpoints now warn ---
+@app.post("/index")
+@deprecated_endpoint
+def index_csv_deprecated(*args, **kwargs):
+    return index_csv_v1(*args, **kwargs)
+
+@app.post("/query")
+@deprecated_endpoint
+def query_rag_deprecated(*args, **kwargs):
+    return query_rag_v1(*args, **kwargs)
+
+@app.post("/chart")
+@deprecated_endpoint
+def chart_handler_deprecated(*args, **kwargs):
+    return chart_handler_v1(*args, **kwargs)
+
+@app.post("/sql")
+@deprecated_endpoint
+def sql_endpoint_deprecated(*args, **kwargs):
+    return sql_endpoint_v1(*args, **kwargs)
+
+@app.post("/insights")
+@deprecated_endpoint
+def generate_insights_deprecated(*args, **kwargs):
+    return generate_insights_v1(*args, **kwargs)
+
+@app.post("/auto-chart")
+@deprecated_endpoint
+def auto_chart_deprecated(*args, **kwargs):
+    return auto_chart_v1(*args, **kwargs)
+
+@app.post("/agentic")
+@deprecated_endpoint
+def agentic_chain_deprecated(*args, **kwargs):
+    return agentic_chain_v1(*args, **kwargs)
+
+@app.post("/langgraph")
+@deprecated_endpoint
+def run_graph_deprecated(*args, **kwargs):
+    return run_graph_v1(*args, **kwargs)
+
+@app.post("/report")
+@deprecated_endpoint
+def generate_report_deprecated(*args, **kwargs):
+    return generate_report_v1(*args, **kwargs)
+
+@app.post("/debate")
+@deprecated_endpoint
+def debate_mode_deprecated(*args, **kwargs):
+    return debate_mode_v1(*args, **kwargs)
+
+# --- Serve advanced docs as endpoint ---
+@app.get("/docs/advanced", response_class=PlainTextResponse, tags=["docs"])
+def advanced_docs():
+    with open(os.path.join(PROJECT_ROOT, "enterprise_insights_copilot", "README_ADVANCED.md"), encoding="utf-8") as f:
+        return f.read()
+
+# --- Expose config/constants ---
+@app.get("/config", tags=["config"])
+def get_config():
+    from config import constants
+    return {k: getattr(constants, k) for k in dir(constants) if k.isupper()}
+
+# --- Expose usage/cost metrics ---
+@app.get("/metrics", tags=["metrics"])
+def get_metrics():
+    return usage_tracker.usage
