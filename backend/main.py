@@ -80,16 +80,17 @@ async def index_csv(file: UploadFile = File(...)):
         except Exception as e:
             print(f"[DEBUG] CSV decode error: {e}")
             raise ValueError(f"Could not parse CSV: {e}")
-        print(f"[DEBUG] DataFrame shape: {df.shape}")
+        print("[DEBUG] DataFrame shape: {}".format(df.shape))
         cleaner = DataCleanerAgent(df)
         df = cleaner.clean()  # 🔧 Cleaned before embedding
         memory.update(df, file.filename)
-        print("[DEBUG] Starting upsert loop...")
-        for idx, row in df.iterrows():
-            print(f"[DEBUG] Upserting row {idx}...")
-            upsert_document(f"{file.filename}_{idx}", row.to_json())
-            print(f"[DEBUG] Finished upserting row {idx}.")
-        print("[DEBUG] All rows upserted.")
+        print("[DEBUG] Starting batch upsert...")
+        ids = [f"{file.filename}_{idx}" for idx in df.index]
+        texts = [row.to_json() for _, row in df.iterrows()]
+        from backend.core.llm_rag import upsert_documents_batch
+
+        upsert_documents_batch(ids, texts)
+        print("[DEBUG] All rows batch upserted.")
         return {"status": "success", "rows_indexed": len(df)}
     except Exception as e:
         print(f"❌ Error in /index: {str(e)}")

@@ -25,9 +25,17 @@ st.markdown("Ask questions about your data. Upload a CSV and start chatting with
 st.markdown("### 📁 Upload CSV")
 uploaded_file = st.file_uploader("Drop your CSV file here", type=["csv"])
 
+show_df = False
 if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-    st.dataframe(df.head(), use_container_width=True)
+    if st.button("🔁 Send to Copilot"):
+        with st.spinner("Uploading to backend..."):
+            files = {"file": uploaded_file.getvalue()}
+            res = requests.post(f"{BACKEND_URL}/upload", files=files)
+            st.success("📁 File uploaded successfully!")
+            show_df = True
+    if show_df:
+        df = pd.read_csv(uploaded_file)
+        st.dataframe(df.head(), use_container_width=True)
 
     # Send to backend
     if st.button("🔁 Send to Copilot"):

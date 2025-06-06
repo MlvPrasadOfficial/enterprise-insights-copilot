@@ -4,6 +4,10 @@ from pinecone import Pinecone
 from dotenv import load_dotenv
 from typing import List
 from config.settings import load_prompt
+try:
+    import tiktoken
+except ImportError:
+    raise ImportError("tiktoken is required for batching embeddings. Please install with 'pip install tiktoken'.")
 
 print("[DEBUG] Importing backend/core/llm_rag.py...")
 load_dotenv()
@@ -63,3 +67,44 @@ def run_rag(query: str) -> str:
         messages=[{"role": "user", "content": prompt}]
     )
     return completion.choices[0].message.content.strip()
+
+
+def embed_text_batch(texts: list) -> list:
+    response = openai.embeddings.create(
+        model="text-embedding-ada-002",
+        input=texts
+    )
+    return [item.embedding for item in response.data]
+
+
+def batch_by_token_limit(texts, max_tokens=100000):
+    enc = tiktoken.get_encoding("cl100k_base")
+    batches = []
+    current_batch = []
+    current_tokens = 0
+    for text in texts:
+        tokens = len(enc.encode(text))
+        if current_tokens + tokens > max_tokens and current_batch:
+            batches.append(current_batch)
+            current_batch = []
+            current_tokens = 0
+        current_batch.append(text)
+        current_tokens += tokens
+    if current_batch:
+        batches.append(current_batch)
+    return batches
+
+
+def upsert_documents_batch(ids: list, texts: list):
+    # Split into batches by token limit
+    max_tokens = 100000  # well below OpenAI's 300k limit for safety
+    text_batches = batch_by_token_limit(texts, max_tokens)
+    idx = 0
+    for batch in text_batches:
+        batch_ids = ids[idx:idx+len(batch)]
+        embeddings = embed_text_batch(batch)
+        vectors = []
+        for doc_id, text, vector in zip(batch_ids, batch, embeddings):
+            vectors.append({"id": doc_id, "values": vector, "metadata": {"text": text}})
+        index.upsert(vectors=vectors)
+        idx += len(batch)
