@@ -6,6 +6,7 @@ from backend.core.logging import logger
 LOG_FILE = "logs/debate_log.json"
 
 def log_debate_entry(query, responses, evaluations, decision):
+    logger.info(f"[debate_log] log_debate_entry called for query: {query}")
     entry = {
         "timestamp": datetime.now().isoformat(),
         "query": query,
@@ -23,3 +24,4 @@ def log_debate_entry(query, responses, evaluations, decision):
         existing.append(entry)
         with open(LOG_FILE, "w") as f:
             json.dump(existing, f, indent=2)
+    logger.info(f"[debate_log] Debate entry logged.")

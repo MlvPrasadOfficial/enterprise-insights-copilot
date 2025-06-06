@@ -34,10 +34,12 @@ def get_openai_client(api_key=None):
     if not api_key:
         logger.error("OPENAI_API_KEY not set!")
         raise RuntimeError("OPENAI_API_KEY not set!")
+    logger.info("[models] OpenAI client created.")
     return OpenAI(api_key=api_key)
 
 def get_tokenizer(model_name: str = OPENAI_EMBEDDING_MODEL):
     try:
+        logger.info(f"[models] get_tokenizer called for model: {model_name}")
         return tiktoken.encoding_for_model(model_name)
     except Exception as e:
         logger.error(f"Tokenizer for {model_name} not found: {e}")

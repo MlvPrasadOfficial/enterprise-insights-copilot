@@ -163,23 +163,35 @@ def get_user_id(request: Request):
 
 @app.post("/index")
 async def index_csv(file: UploadFile = File(...)):
+    import time
+    import psutil
+    start_time = time.time()
+    process = psutil.Process(os.getpid())
     try:
         contents = await file.read()
-        print(f"[DEBUG] Received file: {file.filename}, size: {len(contents)} bytes")
+        file_size = len(contents)
+        logger.info(f"[UPLOAD] Received file: {file.filename}, size: {file_size} bytes")
         if not contents:
             raise ValueError("Uploaded file is empty.")
+        # File size limit (10MB)
+        MAX_SIZE = 10 * 1024 * 1024
+        if file_size > MAX_SIZE:
+            logger.warning(f"[UPLOAD] File too large: {file_size} bytes > {MAX_SIZE} bytes")
+            from fastapi import HTTPException
+            raise HTTPException(status_code=413, detail=f"File too large (>{MAX_SIZE//1024//1024}MB). Please upload a smaller file.")
         # Save uploaded file to a cross-platform temp path with original extension
         import uuid
         filename = file.filename or f"upload_{uuid.uuid4()}.csv"
         suffix = os.path.splitext(filename)[1] or ".csv"
         temp_dir = tempfile.gettempdir()
         temp_path = os.path.join(temp_dir, f"upload_{uuid.uuid4()}{suffix}")
+        logger.info(f"[UPLOAD] Saving file to temp path: {temp_path}")
         with open(temp_path, "wb") as f:
             f.write(contents)
         # Use modular loader abstraction
-        print(f"[DEBUG] Loading and splitting file: {temp_path}")
+        logger.info(f"[UPLOAD] Loading and splitting file: {temp_path}")
         docs = load_and_split(temp_path)
-        print(f"[DEBUG] Loader returned {len(docs)} docs.")
+        logger.info(f"[UPLOAD] Loader returned {len(docs)} docs.")
         import json
         rows = []
         skipped = []
@@ -188,330 +200,240 @@ async def index_csv(file: UploadFile = File(...)):
                 rows.append(json.loads(doc.page_content))
             except Exception as e:
                 skipped.append(doc.page_content[:100])
-        print(f"[DEBUG] Parsed {len(rows)} docs, skipped {len(skipped)} docs.")
+        logger.info(f"[UPLOAD] Parsed {len(rows)} docs, skipped {len(skipped)} docs.")
         if skipped:
-            print(f"[DEBUG] Sample skipped content: {skipped[:2]}")
+            logger.info(f"[UPLOAD] Sample skipped content: {skipped[:2]}")
         df = pd.DataFrame(rows)
         cleaner = DataCleanerAgent(df)
         df = cleaner.clean()
-        print(f"[DEBUG] DataFrame shape after clean: {df.shape}")
+        logger.info(f"[UPLOAD] DataFrame shape after clean: {df.shape}")
         memory.update(df, file.filename)
-        print(f"[DEBUG] memory.df is set: {memory.df is not None}, filename: {memory.filename}")
+        logger.info(f"[UPLOAD] memory.df is set: {memory.df is not None}, filename: {memory.filename}")
         ids = [f"{file.filename}_{idx}" for idx in df.index]
         texts = [row.to_json() for _, row in df.iterrows()]
         from backend.core.llm_rag import upsert_documents_batch
         upsert_documents_batch(ids, texts)
-        print("[DEBUG] All rows batch upserted.")
-        return {"status": "success", "rows_indexed": len(df)}
+        logger.info("[UPLOAD] All rows batch upserted.")
+        elapsed = time.time() - start_time
+        mem_mb = process.memory_info().rss / 1024 / 1024
+        logger.info(f"[UPLOAD] Completed in {elapsed:.2f}s, memory usage: {mem_mb:.2f} MB")
+        return {"status": "success", "rows_indexed": len(df), "elapsed": elapsed, "mem_mb": mem_mb}
     except Exception as e:
-        print(f"❌ Error in /index: {str(e)}")
-        traceback.print_exc()
+        elapsed = time.time() - start_time
+        mem_mb = process.memory_info().rss / 1024 / 1024
+        logger.error(f"❌ Error in /index: {str(e)} | Elapsed: {elapsed:.2f}s | Mem: {mem_mb:.2f} MB")
+        logger.error(traceback.format_exc())
         from fastapi import HTTPException
         raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
 
 
 @app.post("/query")
 async def query_rag(data: QueryInput, request: Request):
+    logger.info(f"[QUERY] /query called with data: {data}")
     df = memory.df
     if df is None:
+        logger.error("[QUERY] No data uploaded in session.")
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="No data uploaded in session.")
-    answer = run_rag(data.query)
-    critique = CritiqueAgent(df.columns.tolist())
-    eval_report = critique.evaluate(data.query, answer)
-    # Log usage (stub: replace with real token/cost calculation)
-    user_id = get_user_id(request)
-    usage_tracker.log(user_id, tokens=100, cost=0.01)  # Example values
-    return {"answer": answer, "evaluation": eval_report, "usage": usage_tracker.get_usage(user_id)}
-
+    try:
+        answer = run_rag(data.query)
+        logger.info(f"[QUERY] RAG answer: {answer}")
+        critique = CritiqueAgent(df.columns.tolist())
+        eval_report = critique.evaluate(data.query, answer)
+        logger.info(f"[QUERY] Critique: {eval_report}")
+        user_id = get_user_id(request)
+        usage_tracker.log(user_id, tokens=100, cost=0.01)
+        logger.info(f"[QUERY] Usage logged for user {user_id}")
+        return {"answer": answer, "evaluation": eval_report, "usage": usage_tracker.get_usage(user_id)}
+    except Exception as e:
+        logger.error(f"[QUERY] Exception: {e}")
+        logger.error(traceback.format_exc())
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
 
 @app.post("/chart")
 def chart_handler(req: ChartRequest):
+    logger.info(f"[CHART] /chart called with req: {req}")
     df = memory.df
     if df is None:
+        logger.error("[CHART] No data uploaded in session.")
         from fastapi import HTTPException
-
         raise HTTPException(status_code=400, detail="No data uploaded in session.")
-    agent = ChartAgent(df)
-    chart = agent.render_chart(req.x, req.y, req.chart_type)
-    return {"chart": chart.to_json()}
-
+    try:
+        agent = ChartAgent(df)
+        chart = agent.render_chart(req.x, req.y, req.chart_type)
+        logger.info(f"[CHART] Chart generated for x={req.x}, y={req.y}, type={req.chart_type}")
+        return {"chart": chart.to_json()}
+    except Exception as e:
+        logger.error(f"[CHART] Exception: {e}")
+        logger.error(traceback.format_exc())
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Chart failed: {str(e)}")
 
 @app.post("/sql")
 def sql_endpoint(req: SQLQuery):
+    logger.info(f"[SQL] /sql called with req: {req}")
     df = memory.df
     if df is None:
+        logger.error("[SQL] No data uploaded in session.")
         from fastapi import HTTPException
-
         raise HTTPException(status_code=400, detail="No data uploaded in session.")
     agent = SQLAgent(df)
     sql = agent.generate_sql(req.query)
+    logger.info(f"[SQL] Generated SQL: {sql}")
     try:
         result = agent.run_sql(sql)
+        logger.info(f"[SQL] SQL executed successfully.")
         result_string = result.to_markdown()
         critique = CritiqueAgent(df.columns.tolist())
         eval_report = critique.evaluate(req.query, result_string)
+        logger.info(f"[SQL] Critique: {eval_report}")
         return {
             "sql": sql,
             "result": result.to_dict(orient="records"),
             "evaluation": eval_report,
         }
     except Exception as e:
+        logger.error(f"[SQL] Exception: {e}")
+        logger.error(traceback.format_exc())
         return {"error": str(e), "sql": sql}
-
 
 @app.post("/insights")
 def generate_insights(req: InsightRequest):
-    print(f"[DEBUG] /insights called. memory.df is None? {memory.df is None}")
+    logger.info(f"[INSIGHTS] /insights called. memory.df is None? {memory.df is None}")
     df = memory.df
     if df is None:
+        logger.error("[INSIGHTS] No data uploaded in session.")
         from fastapi import HTTPException
-        print("[DEBUG] No data uploaded in session for /insights.")
         raise HTTPException(status_code=400, detail="No data uploaded in session.")
-    agent = InsightAgent(df)
-    result = agent.generate_summary()
-    critique = CritiqueAgent(df.columns.tolist())
-    eval_report = critique.evaluate("insights", result)
-    print(f"[DEBUG] Insights generated: {result}")
-    return {"insights": result, "evaluation": eval_report}
-
+    try:
+        agent = InsightAgent(df)
+        result = agent.generate_summary()
+        logger.info(f"[INSIGHTS] Insights generated: {result}")
+        critique = CritiqueAgent(df.columns.tolist())
+        eval_report = critique.evaluate("insights", result)
+        logger.info(f"[INSIGHTS] Critique: {eval_report}")
+        return {"insights": result, "evaluation": eval_report}
+    except Exception as e:
+        logger.error(f"[INSIGHTS] Exception: {e}")
+        logger.error(traceback.format_exc())
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Insights failed: {str(e)}")
 
 @app.post("/auto-chart")
 def auto_chart(req: QueryInput):
+    logger.info(f"[AUTO-CHART] /auto-chart called with req: {req}")
     if memory.df is None:
+        logger.error("[AUTO-CHART] No data in session.")
         from fastapi import HTTPException
-
         raise HTTPException(status_code=400, detail="No data in session.")
-
-    query = req.query
-    df = memory.df
-
-    agent = ChartAgent(df)
-
-    chart_type = agent.guess_chart(query)
-    x, y = agent.guess_axes()
-    chart = agent.render_chart(x, y, chart_type)
-
-    return {
-        "chart_type": chart_type,
-        "x": x,
-        "y": y,
-        "chart": chart.to_json(),
-    }
-
+    try:
+        query = req.query
+        df = memory.df
+        agent = ChartAgent(df)
+        chart_type = agent.guess_chart(query)
+        x, y = agent.guess_axes()
+        chart = agent.render_chart(x, y, chart_type)
+        logger.info(f"[AUTO-CHART] Chart generated: type={chart_type}, x={x}, y={y}")
+        return {
+            "chart_type": chart_type,
+            "x": x,
+            "y": y,
+            "chart": chart.to_json(),
+        }
+    except Exception as e:
+        logger.error(f"[AUTO-CHART] Exception: {e}")
+        logger.error(traceback.format_exc())
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Auto-chart failed: {str(e)}")
 
 @app.post("/agentic")
 def agentic_chain(req: QueryInput):
-    agent = get_agent_executor()
-    result = agent.run(req.query)
-    return {"response": result}
-
-
-session_memory = {}
-
+    logger.info(f"[AGENTIC] /agentic called with req: {req}")
+    try:
+        agent = get_agent_executor()
+        result = agent.run(req.query)
+        logger.info(f"[AGENTIC] Result: {result}")
+        return {"response": result}
+    except Exception as e:
+        logger.error(f"[AGENTIC] Exception: {e}")
+        logger.error(traceback.format_exc())
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Agentic chain failed: {str(e)}")
 
 @app.post("/langgraph")
 def run_graph(req: QueryInput):
+    logger.info(f"[LANGGRAPH] /langgraph called with req: {req}")
     user_id = "default"  # You can sessionize this later
     if user_id not in session_memory:
         session_memory[user_id] = []
-
-    # Load memory from previous session
-    graph = build_graph()
-    state = graph.invoke(
-        {
-            "query": req.query,
-            "result": "",
-            "steps": [],
-            "history": session_memory[user_id],
-        }
-    )
-
-    # Update memory for next turn
-    session_memory[user_id] = state["history"]
-    return {"steps": state["steps"], "output": state["result"]}
-
+    try:
+        graph = build_graph()
+        state = graph.invoke(
+            {
+                "query": req.query,
+                "result": "",
+                "steps": [],
+                "history": session_memory[user_id],
+            }
+        )
+        session_memory[user_id] = state["history"]
+        logger.info(f"[LANGGRAPH] Steps: {state['steps']}, Output: {state['result']}")
+        return {"steps": state["steps"], "output": state["result"]}
+    except Exception as e:
+        logger.error(f"[LANGGRAPH] Exception: {e}")
+        logger.error(traceback.format_exc())
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Langgraph failed: {str(e)}")
 
 @app.post("/report")
 def generate_report():
+    logger.info("[REPORT] /report called.")
     df = memory.df
     if df is None:
+        logger.error("[REPORT] No data uploaded.")
         from fastapi import HTTPException
-
         raise HTTPException(status_code=400, detail="No data uploaded")
-
-    # Get insights
-    insight = InsightAgent(df).generate_summary()
-
-    # Generate report
-    report = ReportGenerator()
-    report.add_title()
-    report.add_insight_section(insight)
-
-    # Optional: attach last chart image (save from Streamlit or backend)
-    chart_path = "logs/last_chart.png"
-    if os.path.exists(chart_path):
-        report.add_chart(chart_path)
-
-    report_path = "logs/report.pdf"
-    report.save(report_path)
-    return FileResponse(
-        report_path, media_type="application/pdf", filename="insight_report.pdf"
-    )
-
+    try:
+        insight = InsightAgent(df).generate_summary()
+        logger.info(f"[REPORT] Insight: {insight}")
+        report = ReportGenerator()
+        report.add_title()
+        report.add_insight_section(insight)
+        chart_path = "logs/last_chart.png"
+        if os.path.exists(chart_path):
+            report.add_chart(chart_path)
+            logger.info(f"[REPORT] Chart added from {chart_path}")
+        report_path = "logs/report.pdf"
+        report.save(report_path)
+        logger.info(f"[REPORT] Report saved to {report_path}")
+        return FileResponse(
+            report_path, media_type="application/pdf", filename="insight_report.pdf"
+        )
+    except Exception as e:
+        logger.error(f"[REPORT] Exception: {e}")
+        logger.error(traceback.format_exc())
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Report failed: {str(e)}")
 
 @app.post("/debate")
 def debate_mode(req: QueryInput):
-    df = memory.df
-    agent = DebateAgent(df)
-    result = agent.run_debate(req.query)
-
-    log_debate_entry(
-        req.query,
-        result["responses"],
-        result["evaluations"],
-        result["decision"],
-    )
-
-    return result
-
-
-@app.get("/")
-def read_root():
-    return {"message": "Enterprise Copilot API is running."}
-
-# Move all endpoints to the versioned API router
-@api_v1.post("/index")
-async def index_csv_v1(file: UploadFile = File(...)):
-    return await index_csv(file)
-
-@api_v1.post("/query")
-async def query_rag_v1(data: QueryInput, request: Request):
-    return await query_rag(data, request)
-
-@api_v1.post("/chart")
-def chart_handler_v1(req: ChartRequest):
-    return chart_handler(req)
-
-@api_v1.post("/sql")
-def sql_endpoint_v1(req: SQLQuery):
-    return sql_endpoint(req)
-
-@api_v1.post("/insights")
-def generate_insights_v1(req: InsightRequest):
-    return generate_insights(req)
-
-@api_v1.post("/auto-chart")
-def auto_chart_v1(req: QueryInput):
-    return auto_chart(req)
-
-@api_v1.post("/agentic")
-def agentic_chain_v1(req: QueryInput):
-    return agentic_chain(req)
-
-@api_v1.post("/langgraph")
-def run_graph_v1(req: QueryInput):
-    return run_graph(req)
-
-@api_v1.post("/report")
-def generate_report_v1():
-    return generate_report()
-
-@api_v1.post("/debate")
-def debate_mode_v1(req: QueryInput):
-    return debate_mode(req)
-
-# --- ENV Validation ---
-REQUIRED_ENV_VARS = ["OPENAI_API_KEY", "PINECONE_API_KEY"]
-for var in REQUIRED_ENV_VARS:
-    if not os.getenv(var):
-        raise RuntimeError(f"Missing required environment variable: {var}")
-
-# --- Configurable Logging Level ---
-log_level = os.getenv("LOG_LEVEL", "INFO").upper()
-logger.setLevel(getattr(logging, log_level, logging.INFO))
-
-# --- Graceful Shutdown ---
-@app.on_event("shutdown")
-def shutdown_event():
-    logger.info("Shutting down API and cleaning up resources...")
-    # Optionally close DB/vector connections here
-
-app.include_router(api_v1)
-
-from fastapi.responses import PlainTextResponse
-
-# --- Deprecation warning decorator ---
-def deprecated_endpoint(func):
-    async def wrapper(*args, **kwargs):
-        logger.warning("[DEPRECATED] This endpoint will be removed in a future release. Please use /api/v1/ endpoints.")
-        return await func(*args, **kwargs)
-    return wrapper
-
-# --- Unversioned endpoints now warn ---
-@app.post("/index")
-@deprecated_endpoint
-def index_csv_deprecated(*args, **kwargs):
-    return index_csv_v1(*args, **kwargs)
-
-@app.post("/query")
-@deprecated_endpoint
-def query_rag_deprecated(*args, **kwargs):
-    return query_rag_v1(*args, **kwargs)
-
-@app.post("/chart")
-@deprecated_endpoint
-def chart_handler_deprecated(*args, **kwargs):
-    return chart_handler_v1(*args, **kwargs)
-
-@app.post("/sql")
-@deprecated_endpoint
-def sql_endpoint_deprecated(*args, **kwargs):
-    return sql_endpoint_v1(*args, **kwargs)
-
-@app.post("/insights")
-@deprecated_endpoint
-def generate_insights_deprecated(*args, **kwargs):
-    return generate_insights_v1(*args, **kwargs)
-
-@app.post("/auto-chart")
-@deprecated_endpoint
-def auto_chart_deprecated(*args, **kwargs):
-    return auto_chart_v1(*args, **kwargs)
-
-@app.post("/agentic")
-@deprecated_endpoint
-def agentic_chain_deprecated(*args, **kwargs):
-    return agentic_chain_v1(*args, **kwargs)
-
-@app.post("/langgraph")
-@deprecated_endpoint
-def run_graph_deprecated(*args, **kwargs):
-    return run_graph_v1(*args, **kwargs)
-
-@app.post("/report")
-@deprecated_endpoint
-def generate_report_deprecated(*args, **kwargs):
-    return generate_report_v1(*args, **kwargs)
-
-@app.post("/debate")
-@deprecated_endpoint
-def debate_mode_deprecated(*args, **kwargs):
-    return debate_mode_v1(*args, **kwargs)
-
-# --- Serve advanced docs as endpoint ---
-@app.get("/docs/advanced", response_class=PlainTextResponse, tags=["docs"])
-def advanced_docs():
-    with open(os.path.join(PROJECT_ROOT, "enterprise_insights_copilot", "README_ADVANCED.md"), encoding="utf-8") as f:
-        return f.read()
-
-# --- Expose config/constants ---
-@app.get("/config", tags=["config"])
-def get_config():
-    from config import constants
-    return {k: getattr(constants, k) for k in dir(constants) if k.isupper()}
-
-# --- Expose usage/cost metrics ---
-@app.get("/metrics", tags=["metrics"])
-def get_metrics():
-    return usage_tracker.usage
+    logger.info(f"[DEBATE] /debate called with req: {req}")
+    try:
+        df = memory.df
+        agent = DebateAgent(df)
+        result = agent.run_debate(req.query)
+        logger.info(f"[DEBATE] Result: {result}")
+        log_debate_entry(
+            req.query,
+            result["responses"],
+            result["evaluations"],
+            result["decision"],
+        )
+        logger.info("[DEBATE] Debate entry logged.")
+        return result
+    except Exception as e:
+        logger.error(f"[DEBATE] Exception: {e}")
+        logger.error(traceback.format_exc())
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Debate failed: {str(e)}")

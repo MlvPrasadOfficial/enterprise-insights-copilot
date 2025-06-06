@@ -17,13 +17,17 @@ class VectorStore:
     def __init__(self, backend="pinecone", **kwargs):
         if backend == "pinecone":
             self.index = kwargs.get("index")
+            logger.info("[llm_rag] VectorStore initialized with Pinecone index.")
         else:
+            logger.error(f"[llm_rag] Unsupported backend: {backend}")
             raise NotImplementedError("Only Pinecone backend is currently supported.")
 
     def upsert(self, vectors):
+        logger.info(f"[llm_rag] Upserting {len(vectors)} vectors.")
         self.index.upsert(vectors=vectors)
 
     def query(self, vector, top_k=5, include_metadata=True):
+        logger.info(f"[llm_rag] Querying vector store with top_k={top_k}.")
         return self.index.query(vector=vector, top_k=top_k, include_metadata=include_metadata)
 
 

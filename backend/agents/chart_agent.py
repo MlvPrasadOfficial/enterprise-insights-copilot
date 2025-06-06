@@ -5,8 +5,10 @@ from backend.core.logging import logger
 class ChartAgent:
     def __init__(self, df: pd.DataFrame):
         self.df = df
+        logger.info(f"[ChartAgent] Initialized with DataFrame shape: {df.shape}")
 
     def guess_chart(self, query: str):
+        logger.info(f"[ChartAgent] guess_chart called with query: {query}")
         query = query.lower()
         if "trend" in query or "over time" in query:
             return "line"
@@ -21,6 +23,7 @@ class ChartAgent:
         return "table"
 
     def render_chart(self, x: str, y: str, chart_type: str = "line"):
+        logger.info(f"[ChartAgent] render_chart called with x={x}, y={y}, chart_type={chart_type}")
         if chart_type == "line":
             return alt.Chart(self.df).mark_line().encode(x=x, y=y)
         elif chart_type == "bar":
@@ -35,6 +38,7 @@ class ChartAgent:
             return alt.Chart(self.df).mark_text().encode(text=x)
 
     def guess_axes(self):
+        logger.info("[ChartAgent] guess_axes called.")
         numeric_cols = self.df.select_dtypes(include=["float", "int"]).columns.tolist()
         non_numeric_cols = self.df.select_dtypes(exclude=["float", "int"]).columns.tolist()
 

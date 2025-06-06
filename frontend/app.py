@@ -28,10 +28,18 @@ except ImportError:
     FPDF_AVAILABLE = False
 
 # === Config === =
-st.set_page_config(page_title="Enterprise Insights Copilot", page_icon="📊", layout="wide")
+try:
+    st.set_page_config(page_title="Enterprise Insights Copilot", page_icon="📊", layout="wide")
+    log_to_ui("Page config set.", "info")
+except Exception as e:
+    log_exception_to_ui(e, context="Page Config Error")
 
 # === Secrets ===
-BACKEND_URL = st.secrets["BACKEND_URL"]
+try:
+    BACKEND_URL = st.secrets["BACKEND_URL"]
+    log_to_ui(f"Loaded BACKEND_URL: {BACKEND_URL}", "info")
+except Exception as e:
+    log_exception_to_ui(e, context="Secrets Error")
 
 # === Modern Styles ===
 st.markdown('''
@@ -85,6 +93,7 @@ with st.container():
         try:
             df = pd.read_csv(uploaded_file)
             st.dataframe(df.head(), use_container_width=True)
+            log_to_ui("CSV file read successfully.", "info")
         except Exception as e:
             log_exception_to_ui(e, context="CSV Preview Error")
         if st.button("📤 Upload & Index Data", key="upload1"):
@@ -96,6 +105,7 @@ with st.container():
                     log_to_ui(f"Upload response: {res.status_code} {res.text}", level="info")
                     if res.status_code == 200:
                         st.success("📁 File uploaded and indexed!")
+                        log_to_ui("File uploaded and indexed successfully.", "info")
                     else:
                         # Try to parse JSON error, else show a generic error
                         try:
@@ -106,6 +116,7 @@ with st.container():
                             else:
                                 error_msg = res.text
                         st.error(f"❌ Upload failed: {error_msg}")
+                        log_to_ui(f"Upload failed: {error_msg}", "error")
                 except Exception as e:
                     log_exception_to_ui(e, context="File Upload Error")
 
@@ -137,6 +148,7 @@ example_questions = get_example_questions(df if 'df' in locals() else None)
 if st.button('✨ Try Example'):
     st.session_state['example_idx'] = (st.session_state['example_idx'] + 1) % len(example_questions)
     st.session_state['example_query'] = example_questions[st.session_state['example_idx']]
+    log_to_ui(f"Example question tried: {st.session_state['example_query']}", "info")
 else:
     if 'example_query' not in st.session_state:
         st.session_state['example_query'] = example_questions[0]
@@ -152,8 +164,10 @@ if st.sidebar.button('🔄 Refresh Usage Metrics'):
     try:
         metrics = requests.get(f"{BACKEND_URL}/api/v1/metrics").json()
         st.session_state['metrics'] = metrics
+        log_to_ui("Usage metrics refreshed.", "info")
     except:
         st.session_state['metrics'] = {'error': 'Could not fetch metrics'}
+        log_to_ui("Failed to refresh usage metrics.", "error")
 if 'metrics' in st.session_state:
     st.sidebar.markdown(f"**Tokens Used:** {st.session_state['metrics'].get('anonymous', {}).get('tokens', 0)}")
     st.sidebar.markdown(f"**Cost:** ${st.session_state['metrics'].get('anonymous', {}).get('cost', 0):.4f}")
@@ -167,8 +181,10 @@ def fetch_auto_insights(df=None):
             data = df.head(100).to_dict(orient="records")
         response = requests.post(f"{BACKEND_URL}/api/v1/insights", json={"data": data})
         result = response.json()
+        log_to_ui(f"Insights response: {response.status_code} {response.text}", level="info")
         return result.get("insights", "No insights available."), result.get("evaluation", "")
     except Exception:
+        log_to_ui("Failed to fetch auto insights.", "error")
         return "No insights available.", ""
 
 # --- Download Results ---
@@ -186,6 +202,7 @@ def download_insights_pdf(insights):
     pdf.multi_cell(0, 10, safe_insights)
     pdf_bytes = pdf.output(dest="S").encode("latin1")
     # Always return bytes, not BytesIO, for Streamlit compatibility
+    log_to_ui("Insights PDF downloaded.", "info")
     return pdf_bytes
 
 def download_insights_csv(insights):
@@ -195,6 +212,7 @@ def download_insights_csv(insights):
     buf.write('"' + insights.replace('"', '""') + '"\n')
     csv_bytes = buf.getvalue().encode("utf-8")
     # Always return bytes, not BytesIO, for Streamlit compatibility
+    log_to_ui("Insights CSV downloaded.", "info")
     return csv_bytes
 
 # === Query Section Card (with Chat History & Insights) ===
@@ -205,8 +223,10 @@ with st.container():
     if st.button('🚀 Run Query'):
         if not uploaded_file:
             st.warning('Please upload a CSV first.')
+            log_to_ui("Query attempt without CSV upload.", "warning")
         elif not query:
             st.warning('Enter a query to run.')
+            log_to_ui("Query submitted but empty.", "warning")
         else:
             with st.spinner('Querying Copilot...'):
                 try:
@@ -217,6 +237,7 @@ with st.container():
                     if not answer or answer == 'No answer returned.':
                         answer = 'No answer. Please try a different question or re-upload your data.'
                     st.session_state['chat_history'].append((query, answer))
+                    log_to_ui(f"Query successful: {query} -> {answer[:50]}...", "info")  # Log first 50 chars of answer
                     # Fetch auto insights after query
                     insights, evaluation = fetch_auto_insights(df if 'df' in locals() else None)
                     st.session_state['last_insights'] = insights
@@ -224,6 +245,7 @@ with st.container():
                     st.success('✅ Query complete!')
                 except Exception as e:
                     log_exception_to_ui(e, context="Query Error")
+                    log_to_ui("Query processing failed.", "error")
     # Show chat history
     if st.session_state['chat_history']:
         st.markdown('---')
@@ -254,6 +276,12 @@ with st.container():
                 file_name="insights.csv",
                 mime="text/csv"
             )
+
+# === Log Dropdown Panel (Main Page) ===
+with st.expander('🪵 Show Session Logs (Dropdown)', expanded=False):
+    st.markdown('''<div style="font-size:0.95em;">All logs for this session are shown below. Most recent at bottom.</div>''', unsafe_allow_html=True)
+    for level, msg in st.session_state['log_messages'][-100:]:
+        st.markdown(f"**[{level.upper()}]** {msg}")
 
 # === Streamlit logging setup ===
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')

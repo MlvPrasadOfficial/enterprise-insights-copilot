@@ -15,28 +15,32 @@ class DebateAgent:
     def __init__(self, df):
         self.df = df
         self.columns = df.columns.tolist()
+        logger.info(f"[DebateAgent] Initialized with DataFrame shape: {df.shape}")
 
     def run_debate(self, query: str):
-        insight = InsightAgent(self.df).generate_summary()
-        sql_agent = SQLAgent(self.df)
-        sql = sql_agent.generate_sql(query)
-        sql_result = sql_agent.run_sql(sql).to_markdown()
-        chart_agent = ChartAgent(self.df)
-        x, y = chart_agent.guess_axes()
-        chart_type = chart_agent.guess_chart(query)
-        chart_response = f"A {chart_type} chart of {y} vs {x} was suggested."
+        logger.info(f"[DebateAgent] run_debate called with query: {query}")
+        try:
+            insight = InsightAgent(self.df).generate_summary()
+            sql_agent = SQLAgent(self.df)
+            sql = sql_agent.generate_sql(query)
+            sql_result = sql_agent.run_sql(sql).to_markdown()
+            chart_agent = ChartAgent(self.df)
+            x, y = chart_agent.guess_axes()
+            chart_type = chart_agent.guess_chart(query)
+            chart_response = f"A {chart_type} chart of {y} vs {x} was suggested."
 
-        responses = {
-            "InsightAgent": insight,
-            "SQLAgent": sql_result,
-            "ChartAgent": chart_response
-        }
+            responses = {
+                "InsightAgent": insight,
+                "SQLAgent": sql_result,
+                "ChartAgent": chart_response
+            }
 
-        critique = CritiqueAgent(self.columns)
-        evaluations = {name: critique.evaluate(query, ans) for name, ans in responses.items()}
+            critique = CritiqueAgent(self.columns)
+            evaluations = {name: critique.evaluate(query, ans) for name, ans in responses.items()}
+            logger.info(f"[DebateAgent] Evaluations: {evaluations}")
 
-        # Prepare decision prompt
-        decision_prompt = f"""You are an LLM arbiter.
+            # Prepare decision prompt
+            decision_prompt = f"""You are an LLM arbiter.
 All agent responses are below, including critiques.
 
 Question: {query}
@@ -57,16 +61,16 @@ Respond in JSON:
 }}
 """
 
-        final = client.chat.completions.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": decision_prompt}]
-        )
-
-        decision_text = final.choices[0].message.content.strip()
-        parsed_decision = eval(decision_text)
-
-        return {
-            "responses": responses,
-            "evaluations": evaluations,
-            "decision": parsed_decision
-        }
+            final = client.chat.completions.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": decision_prompt}]
+            )
+            logger.info(f"[DebateAgent] Final decision received.")
+            return {
+                "responses": responses,
+                "evaluations": evaluations,
+                "decision": final.choices[0].message.content.strip()
+            }
+        except Exception as e:
+            logger.error(f"[DebateAgent] Exception: {e}")
+            raise

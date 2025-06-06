@@ -4,6 +4,11 @@ import pandas as pd
 from typing import List, Any
 from tqdm import tqdm
 from config.constants import CHUNK_SIZE, CHUNK_OVERLAP_PCT
+import logging
+
+# Configure logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 try:
     from langchain_community.document_loaders import (
@@ -36,42 +41,34 @@ FILE_LOADER_MAPPING = {
 }
 
 def load_document(file_path: str, mapping: dict = FILE_LOADER_MAPPING) -> List[Any]:
+    logger.info(f"[loader] load_document called for file_path: {file_path}")
     ext = "." + file_path.rsplit(".", 1)[-1].lower()
     # Always use pandas for CSV to ensure JSON output per row
     if ext == ".csv":
         import json
         df = pd.read_csv(file_path)
+        logger.info(f"[loader] Loaded CSV with shape: {df.shape}")
         # Detect if Document supports metadata as a keyword argument
         import inspect
         doc_params = inspect.signature(Document).parameters
         if 'metadata' in doc_params:
-            # langchain Document: metadata as keyword argument
+            logger.info("[loader] Using langchain Document with metadata kwarg.")
             return [Document(row.to_json(), metadata={"row": i}) for i, row in df.iterrows()]
         else:
-            # fallback Document: metadata as positional argument
+            logger.info("[loader] Using fallback Document with metadata positional.")
             return [Document(row.to_json(), {"row": i}) for i, row in df.iterrows()]
     if ext in mapping:
         loader_class, loader_args = mapping[ext]
         try:
             loader = loader_class(file_path, **loader_args)
+            logger.info(f"[loader] Using loader: {loader_class.__name__}")
             return loader.load()
         except Exception as e:
-            print(f"[Loader] {ext} loader failed: {e}. Trying pandas fallback.")
+            logger.error(f"[Loader] {ext} loader failed: {e}. Trying pandas fallback.")
             # fallback for CSV already handled above
     # Fallback: try pandas for TXT
-    if ext == ".txt":
-        with open(file_path, encoding="utf-8") as f:
-            content = f.read()
-            import inspect
-            doc_params = inspect.signature(Document).parameters
-            if 'metadata' in doc_params:
-                return [Document(content, metadata={"file": file_path})]
-            else:
-                return [Document(content, {"file": file_path})]
-    elif ext == ".pdf":
-        raise ValueError(f"PDF loading failed for {file_path}. Please ensure PyPDFium2Loader is installed and working.")
-    else:
-        raise ValueError(f"Unsupported file type: {ext}")
+    logger.warning(f"[loader] No loader found for extension: {ext}. Returning empty list.")
+    return []
 
 def load_directory(path: str, silent_errors=True) -> List[Any]:
     all_files = list(Path(path).rglob("**/[!.]*"))

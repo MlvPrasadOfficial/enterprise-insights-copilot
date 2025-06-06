@@ -8,8 +8,10 @@ client = OpenAI(api_key=openai_api_key)
 class CritiqueAgent:
     def __init__(self, data_columns: list):
         self.data_columns = data_columns
+        logger.info(f"[CritiqueAgent] Initialized with columns: {data_columns}")
 
     def evaluate(self, query: str, answer: str) -> dict:
+        logger.info(f"[CritiqueAgent] evaluate called with query: {query}")
         prompt = f"""
 You are an LLM evaluation agent.
 
@@ -31,14 +33,16 @@ Evaluation (JSON format):
 }}
 """
 
-        response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}]
-        )
         try:
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": prompt}]
+            )
+            logger.info(f"[CritiqueAgent] OpenAI response received.")
             parsed = eval(response.choices[0].message.content.strip())
             return parsed
-        except Exception:
+        except Exception as e:
+            logger.error(f"[CritiqueAgent] Exception: {e}")
             return {
                 "confidence": "Low",
                 "flagged": True,
