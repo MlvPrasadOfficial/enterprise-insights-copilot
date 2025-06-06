@@ -168,9 +168,12 @@ async def index_csv(file: UploadFile = File(...)):
         print(f"[DEBUG] Received file: {file.filename}, size: {len(contents)} bytes")
         if not contents:
             raise ValueError("Uploaded file is empty.")
-        # Save uploaded file to a cross-platform temp path
+        # Save uploaded file to a cross-platform temp path with original extension
+        import uuid
+        filename = file.filename or f"upload_{uuid.uuid4()}.csv"
+        suffix = os.path.splitext(filename)[1] or ".csv"
         temp_dir = tempfile.gettempdir()
-        temp_path = os.path.join(temp_dir, file.filename)
+        temp_path = os.path.join(temp_dir, f"upload_{uuid.uuid4()}{suffix}")
         with open(temp_path, "wb") as f:
             f.write(contents)
         # Use modular loader abstraction
