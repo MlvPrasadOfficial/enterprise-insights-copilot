@@ -97,7 +97,15 @@ with st.container():
                     if res.status_code == 200:
                         st.success("📁 File uploaded and indexed!")
                     else:
-                        st.error(f"❌ Upload failed: {res.text}")
+                        # Try to parse JSON error, else show a generic error
+                        try:
+                            error_msg = res.json().get("detail", res.text)
+                        except Exception:
+                            if "<html" in res.text.lower():
+                                error_msg = "Backend error (502/504 or server crash). Please try again later or check backend logs."
+                            else:
+                                error_msg = res.text
+                        st.error(f"❌ Upload failed: {error_msg}")
                 except Exception as e:
                     log_exception_to_ui(e, context="File Upload Error")
 
