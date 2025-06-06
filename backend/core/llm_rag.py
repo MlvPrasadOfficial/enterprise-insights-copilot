@@ -1,6 +1,6 @@
 import os
 import openai
-from pinecone import Pinecone
+from pinecone import Pinecone, ServerlessSpec
 from dotenv import load_dotenv
 from typing import List
 from config.settings import load_prompt
@@ -8,12 +8,23 @@ from config.settings import load_prompt
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+if not os.getenv("PINECONE_API_KEY"):
+    raise RuntimeError("Missing PINECONE_API_KEY")
+
 # Initialize Pinecone v3.x
-pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"), environment=os.getenv("PINECONE_ENV"))
+pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 INDEX_NAME = "enterprise-insights"
 
 if INDEX_NAME not in pc.list_indexes():
-    pc.create_index(name=INDEX_NAME, dimension=1536, metric="cosine")
+    pc.create_index(
+        name=INDEX_NAME,
+        spec=ServerlessSpec(
+            cloud="aws",
+            region="us-east-1",
+            metric="cosine",
+            dimensions=1536
+        )
+    )
 index = pc.Index(INDEX_NAME)
 
 
