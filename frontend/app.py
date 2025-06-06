@@ -3,7 +3,13 @@ import pandas as pd
 import requests
 import altair as alt
 import io
-from fpdf import FPDF
+
+# Try to import FPDF, but set a flag if it fails
+try:
+    from fpdf import FPDF
+    FPDF_AVAILABLE = True
+except ImportError:
+    FPDF_AVAILABLE = False
 
 # === Config === =
 st.set_page_config(page_title="Enterprise Insights Copilot", page_icon="📊", layout="wide")
@@ -123,6 +129,9 @@ def fetch_auto_insights():
 
 # --- Download Results ---
 def download_insights_pdf(insights):
+    if not FPDF_AVAILABLE:
+        st.error("PDF export is unavailable (fpdf not installed). Please contact your administrator or install fpdf.")
+        return None
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font('Arial', 'B', 16)
