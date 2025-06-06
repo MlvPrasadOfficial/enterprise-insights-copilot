@@ -236,3 +236,8 @@ def debate_mode(req: QueryInput):
     )
 
     return result
+
+
+@app.get("/")
+def read_root():
+    return {"message": "Enterprise Copilot API is running."}
