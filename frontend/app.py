@@ -137,7 +137,7 @@ def download_insights_pdf(insights):
 def download_insights_csv(insights):
     buf = io.StringIO()
     buf.write('Insight\n')
-    buf.write(f'"{insights.replace('"', '""')}"\n')
+    buf.write('"' + insights.replace('"', '""') + '"\n')
     buf.seek(0)
     return buf
 
