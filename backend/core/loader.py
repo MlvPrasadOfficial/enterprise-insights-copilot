@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 from typing import List, Any
 from tqdm import tqdm
-from config.constants import CHUNK_SIZE, CHUNK_OVERLAP_PCT
+from enterprise_insights_copilot.config.constants import CHUNK_SIZE, CHUNK_OVERLAP_PCT
 
 try:
     from langchain_community.document_loaders import (
@@ -37,6 +37,19 @@ FILE_LOADER_MAPPING = {
 
 def load_document(file_path: str, mapping: dict = FILE_LOADER_MAPPING) -> List[Any]:
     ext = "." + file_path.rsplit(".", 1)[-1].lower()
+    # Always use pandas for CSV to ensure JSON output per row
+    if ext == ".csv":
+        import json
+        df = pd.read_csv(file_path)
+        # Detect if Document supports metadata as a keyword argument
+        import inspect
+        doc_params = inspect.signature(Document).parameters
+        if 'metadata' in doc_params:
+            # langchain Document: metadata as keyword argument
+            return [Document(row.to_json(), metadata={"row": i}) for i, row in df.iterrows()]
+        else:
+            # fallback Document: metadata as positional argument
+            return [Document(row.to_json(), {"row": i}) for i, row in df.iterrows()]
     if ext in mapping:
         loader_class, loader_args = mapping[ext]
         try:
@@ -44,31 +57,17 @@ def load_document(file_path: str, mapping: dict = FILE_LOADER_MAPPING) -> List[A
             return loader.load()
         except Exception as e:
             print(f"[Loader] {ext} loader failed: {e}. Trying pandas fallback.")
-            if ext == ".csv":
-                with open(file_path, encoding="utf-8") as f:
-                    raw = f.read()
-                    print(f"[Loader DEBUG] Raw CSV content (first 200 chars): {raw[:200]}")
-                try:
-                    df = pd.read_csv(file_path)
-                    return [Document(row.to_json(), {"row": i}) for i, row in df.iterrows()]
-                except Exception as pandas_e:
-                    print(f"[Loader ERROR] pandas.read_csv failed: {pandas_e}")
-                    raise
-    # Fallback: try pandas for CSV, TXT
-    if ext == ".csv":
-        with open(file_path, encoding="utf-8") as f:
-            raw = f.read()
-            print(f"[Loader DEBUG] Raw CSV content (first 200 chars): {raw[:200]}")
-        try:
-            df = pd.read_csv(file_path)
-            return [Document(row.to_json(), {"row": i}) for i, row in df.iterrows()]
-        except Exception as pandas_e:
-            print(f"[Loader ERROR] pandas.read_csv failed: {pandas_e}")
-            raise
-    elif ext == ".txt":
+            # fallback for CSV already handled above
+    # Fallback: try pandas for TXT
+    if ext == ".txt":
         with open(file_path, encoding="utf-8") as f:
             content = f.read()
-            return [Document(content, {"file": file_path})]
+            import inspect
+            doc_params = inspect.signature(Document).parameters
+            if 'metadata' in doc_params:
+                return [Document(content, metadata={"file": file_path})]
+            else:
+                return [Document(content, {"file": file_path})]
     elif ext == ".pdf":
         raise ValueError(f"PDF loading failed for {file_path}. Please ensure PyPDFium2Loader is installed and working.")
     else:

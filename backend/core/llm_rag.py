@@ -168,16 +168,28 @@ def batch_by_token_limit(texts, max_tokens=100000):
     return batches
 
 
+MAX_PINECONE_BATCH_SIZE = 100  # Pinecone recommends small batches, and 100 is well below the 4MB limit
+MAX_PINECONE_MESSAGE_BYTES = 4 * 1024 * 1024  # 4MB
+
 def upsert_documents_batch(ids: list, texts: list):
-    # Split into batches by token limit
+    # Split into batches by token limit and by Pinecone batch size
     max_tokens = 100000  # well below OpenAI's 300k limit for safety
     text_batches = batch_by_token_limit(texts, max_tokens)
     idx = 0
     for batch in text_batches:
-        batch_ids = ids[idx:idx+len(batch)]
-        embeddings = embed_text_batch(batch)
-        vectors = []
-        for doc_id, text, vector in zip(batch_ids, batch, embeddings):
-            vectors.append({"id": doc_id, "values": vector, "metadata": {"text": text}})
-        vector_store.upsert(vectors=vectors)
-        idx += len(batch)
+        # Further split by Pinecone batch size
+        for j in range(0, len(batch), MAX_PINECONE_BATCH_SIZE):
+            pinecone_batch = batch[j:j+MAX_PINECONE_BATCH_SIZE]
+            batch_ids = ids[idx:idx+len(pinecone_batch)]
+            embeddings = embed_text_batch(pinecone_batch, batch_size=MAX_PINECONE_BATCH_SIZE)
+            vectors = []
+            for doc_id, text, vector in zip(batch_ids, pinecone_batch, embeddings):
+                vectors.append({"id": doc_id, "values": vector, "metadata": {"text": text}})
+            # Check message size before upsert
+            import json
+            message_bytes = len(json.dumps(vectors).encode('utf-8'))
+            if message_bytes > MAX_PINECONE_MESSAGE_BYTES:
+                print(f"[ERROR] Pinecone upsert batch too large: {message_bytes} bytes. Skipping this batch.")
+                continue
+            vector_store.upsert(vectors=vectors)
+            idx += len(pinecone_batch)

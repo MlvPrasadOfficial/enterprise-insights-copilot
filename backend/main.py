@@ -8,6 +8,9 @@ import pandas as pd
 from dotenv import load_dotenv
 from io import StringIO
 import tempfile
+import traceback
+import logging
+from fastapi import status
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -41,13 +44,13 @@ from backend.core.prompts import RAG_PROMPT, INSIGHT_PROMPT, SQL_PROMPT
 from backend.core.utils import clean_string_for_storing
 from backend.core.logging import usage_tracker, logger
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
-from fastapi import status
+from fastapi.requests import Request as FastAPIRequest
+from fastapi.exception_handlers import RequestValidationError
+from fastapi.exceptions import RequestValidationError as FastAPIRequestValidationError
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
 from starlette.responses import Response
-import logging
 
 # --- API Metadata ---
 app = FastAPI(
@@ -74,6 +77,28 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         return response
 app.add_middleware(SecurityHeadersMiddleware)
+
+# --- Logging Configuration ---
+logger = logging.getLogger("fastapi_app")
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+
+# --- Request/Response Logging Middleware ---
+@app.middleware("http")
+async def log_requests(request: FastAPIRequest, call_next):
+    logger.info(f"Request: {request.method} {request.url}")
+    try:
+        response = await call_next(request)
+        logger.info(f"Response status: {response.status_code}")
+        return response
+    except Exception as e:
+        tb = traceback.format_exc()
+        logger.error(f"[EXCEPTION] {e}\n{tb}")
+        return JSONResponse(status_code=500, content={"detail": f"Internal server error: {e}"})
+
+@app.exception_handler(FastAPIRequestValidationError)
+async def validation_exception_handler(request, exc):
+    logger.error(f"[VALIDATION ERROR] {exc}")
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
 
 # --- Centralized Exception Handling ---
 @app.exception_handler(Exception)
@@ -145,11 +170,20 @@ async def index_csv(file: UploadFile = File(...)):
         with open(temp_path, "wb") as f:
             f.write(contents)
         # Use modular loader abstraction
+        print(f"[DEBUG] Loading and splitting file: {temp_path}")
         docs = load_and_split(temp_path)
-        # Convert docs to DataFrame (for CSV, each doc is a row)
+        print(f"[DEBUG] Loader returned {len(docs)} docs.")
         import json
-
-        rows = [json.loads(doc.page_content) for doc in docs]
+        rows = []
+        skipped = []
+        for doc in docs:
+            try:
+                rows.append(json.loads(doc.page_content))
+            except Exception as e:
+                skipped.append(doc.page_content[:100])
+        print(f"[DEBUG] Parsed {len(rows)} docs, skipped {len(skipped)} docs.")
+        if skipped:
+            print(f"[DEBUG] Sample skipped content: {skipped[:2]}")
         df = pd.DataFrame(rows)
         cleaner = DataCleanerAgent(df)
         df = cleaner.clean()
@@ -159,14 +193,13 @@ async def index_csv(file: UploadFile = File(...)):
         ids = [f"{file.filename}_{idx}" for idx in df.index]
         texts = [row.to_json() for _, row in df.iterrows()]
         from backend.core.llm_rag import upsert_documents_batch
-
         upsert_documents_batch(ids, texts)
         print("[DEBUG] All rows batch upserted.")
         return {"status": "success", "rows_indexed": len(df)}
     except Exception as e:
         print(f"❌ Error in /index: {str(e)}")
+        traceback.print_exc()
         from fastapi import HTTPException
-
         raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
 
 

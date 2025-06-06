@@ -4,6 +4,21 @@ import requests
 import altair as alt
 import io
 import logging
+import traceback
+
+# --- Logging helpers must be defined before any usage ---
+if 'log_messages' not in st.session_state:
+    st.session_state['log_messages'] = []
+
+def log_to_ui(message, level="info"):
+    st.session_state['log_messages'].append((level, message))
+    logging.log(getattr(logging, level.upper(), logging.INFO), message)
+
+def log_exception_to_ui(e, context=""):
+    tb = traceback.format_exc()
+    msg = f"[EXCEPTION] {context}: {e}\n{tb}"
+    log_to_ui(msg, level="error")
+    st.error(f"❌ {context}: {e}")
 
 # Try to import FPDF, but set a flag if it fails
 try:
@@ -28,6 +43,11 @@ section.main > div { background: #f8fafc !important; border-radius: 18px; box-sh
 .stDataFrame { border-radius: 10px; overflow: hidden; }
 .stMarkdown h3 { color: #4e8cff; }
 footer { visibility: hidden; }
+/* Chat history styles */
+.chat-bubble-user { background: #e0e7ff; color: #222; border-radius: 8px; padding: 8px; margin-bottom: 8px; }
+.chat-bubble-ai { background: #232634; color: #f1f5f9; border-radius: 8px; padding: 8px; margin-bottom: 16px; display: flex; align-items: center; }
+body.dark .chat-bubble-user { background: #232634 !important; color: #f1f5f9 !important; }
+body.dark .chat-bubble-ai { background: #181825 !important; color: #f1f5f9 !important; }
 </style>
 ''', unsafe_allow_html=True)
 
@@ -62,13 +82,24 @@ with st.container():
     st.markdown("### 📁 Upload CSV", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("Drop your CSV file here", type=["csv"])
     if uploaded_file:
-        df = pd.read_csv(uploaded_file)
-        st.dataframe(df.head(), use_container_width=True)
+        try:
+            df = pd.read_csv(uploaded_file)
+            st.dataframe(df.head(), use_container_width=True)
+        except Exception as e:
+            log_exception_to_ui(e, context="CSV Preview Error")
         if st.button("📤 Upload & Index Data", key="upload1"):
             with st.spinner("Uploading to backend..."):
-                files = {"file": uploaded_file.getvalue()}
-                res = requests.post(f"{BACKEND_URL}/api/v1/index", files=files)
-                st.success("📁 File uploaded and indexed!")
+                try:
+                    # Set filename and content-type for backend compatibility
+                    files = {"file": (uploaded_file.name, uploaded_file.getvalue(), "text/csv")}
+                    res = requests.post(f"{BACKEND_URL}/api/v1/index", files=files)
+                    log_to_ui(f"Upload response: {res.status_code} {res.text}", level="info")
+                    if res.status_code == 200:
+                        st.success("📁 File uploaded and indexed!")
+                    else:
+                        st.error(f"❌ Upload failed: {res.text}")
+                except Exception as e:
+                    log_exception_to_ui(e, context="File Upload Error")
 
 # --- Example Questions ---
 def get_example_questions(df=None):
@@ -142,7 +173,9 @@ def download_insights_pdf(insights):
     pdf.set_font('Arial', 'B', 16)
     pdf.cell(0, 10, 'AI Copilot Insights', ln=True, align='C')
     pdf.set_font('Arial', '', 12)
-    pdf.multi_cell(0, 10, insights)
+    # Replace problematic unicode with ascii equivalents for FPDF
+    safe_insights = insights.encode("latin1", "replace").decode("latin1")
+    pdf.multi_cell(0, 10, safe_insights)
     pdf_bytes = pdf.output(dest="S").encode("latin1")
     return io.BytesIO(pdf_bytes)
 
@@ -168,6 +201,7 @@ with st.container():
             with st.spinner('Querying Copilot...'):
                 try:
                     response = requests.post(f"{BACKEND_URL}/api/v1/query", json={"query": query})
+                    log_to_ui(f"Query response: {response.status_code} {response.text}", level="info")
                     result = response.json()
                     answer = result.get('answer')
                     if not answer or answer == 'No answer returned.':
@@ -179,14 +213,14 @@ with st.container():
                     st.session_state['last_evaluation'] = evaluation
                     st.success('✅ Query complete!')
                 except Exception as e:
-                    st.error('❌ Failed to query backend.')
+                    log_exception_to_ui(e, context="Query Error")
     # Show chat history
     if st.session_state['chat_history']:
         st.markdown('---')
         st.markdown('#### 🗨️ Chat History')
         for q, a in reversed(st.session_state['chat_history'][-6:]):
-            st.markdown(f"<div style='margin-bottom:8px;'><b>🧑‍💼 You:</b> {q}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div style='margin-bottom:16px; background:#e0e7ff; border-radius:8px; padding:8px; display:flex; align-items:center;'><img src='https://img.icons8.com/fluency/48/000000/robot-2.png' width='24' style='margin-right:8px;'/> <b>AI:</b> {a}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='chat-bubble-user'><b>🧑‍💼 You:</b> {q}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='chat-bubble-ai'><img src='https://img.icons8.com/fluency/48/000000/robot-2.png' width='24' style='margin-right:8px;'/><b>AI:</b> {a}</div>", unsafe_allow_html=True)
     # Show insights panel
     if st.session_state.get('last_insights'):
         st.markdown('---')
@@ -214,14 +248,6 @@ with st.container():
 # === Streamlit logging setup ===
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger("streamlit_app")
-
-# Helper to show logs in Streamlit UI
-if 'log_messages' not in st.session_state:
-    st.session_state['log_messages'] = []
-
-def log_to_ui(message, level="info"):
-    st.session_state['log_messages'].append((level, message))
-    logger.log(getattr(logging, level.upper(), logging.INFO), message)
 
 # Example: Log app start
 log_to_ui("Streamlit app started.", "info")
