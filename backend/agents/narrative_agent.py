@@ -2,19 +2,20 @@
 NarrativeAgent: Stub for agentic flow narrative step.
 """
 
-from typing import Any
+from backend.agents.base_agent import BaseAgent
+from typing import Any, Dict
 
-class NarrativeAgent:
-    @staticmethod
-    def summarize(analysis: Any, critique: Any, chart: Any) -> str:
-        """
-        Summarize the results of the analysis, critique, and chart into a narrative.
-        Args:
-            analysis (Any): The analysis result.
-            critique (Any): The critique result.
-            chart (Any): The chart result.
-        Returns:
-            str: Narrative summary (stubbed as string).
-        """
-        # TODO: Implement real narrative generation logic (e.g., LLM summarization)
-        return "[NarrativeAgent] Narrative summary (stub)"
+class NarrativeAgent(BaseAgent):
+    name = "NarrativeAgent"
+    description = "Summarizes the results of the analysis, critique, and chart into a narrative."
+
+    def run(self, query: str, data: Any = None, context=None, **kwargs) -> Dict[str, Any]:
+        analysis = context.get("SQLAgent", {}).get("output", None) if context else None
+        critique = context.get("CritiqueAgent", {}).get("output", None) if context else None
+        chart = context.get("ChartAgent", {}).get("output", None) if context else None
+        result = {
+            "agent": self.name,
+            "description": self.description,
+            "output": f"[NarrativeAgent] Narrative summary (stub)"
+        }
+        return result

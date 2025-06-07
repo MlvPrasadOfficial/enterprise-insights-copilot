@@ -1,10 +1,14 @@
+from backend.agents.base_agent import BaseAgent
 import pandas as pd
 import altair as alt
 from backend.core.logging import logger
-from typing import Tuple
+from typing import Tuple, Any, Dict
 
 
-class ChartAgent:
+class ChartAgent(BaseAgent):
+    name = "ChartAgent"
+    description = "Visualizes data as charts."
+
     def __init__(self, df: pd.DataFrame):
         """
         Initialize the ChartAgent with a DataFrame.
@@ -75,6 +79,28 @@ class ChartAgent:
         x = non_numeric_cols[0] if non_numeric_cols else self.df.columns[0]
         y = numeric_cols[0] if numeric_cols else self.df.columns[1]
         return x, y
+
+    def run(self, query: str, data: pd.DataFrame, context=None, **kwargs) -> Dict[str, Any]:
+        """
+        Execute the agent's logic: parse the query, guess chart type, and generate a chart.
+        Args:
+            query (str): The user's question.
+            data (pd.DataFrame): The data to visualize.
+        Returns:
+            Dict[str, Any]: Structured output with agent name, role, and result.
+        """
+        logger.info(f"[ChartAgent] run called with query: {query}")
+        chart_type = self.guess_chart(query)
+        x_axis, y_axis = self.guess_axes()
+        chart = self.render_chart(x_axis, y_axis, chart_type)
+        result = {
+            "agent": self.name,
+            "description": self.description,
+            "chart_type": chart_type,
+            "output": f"[ChartAgent] Chart result (stub)",
+        }
+        logger.info(f"[ChartAgent] run output: {result}")
+        return result
 
     @staticmethod
     def generate(user_query: str, docs: any, data: any) -> str:

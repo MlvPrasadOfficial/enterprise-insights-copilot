@@ -2,6 +2,7 @@
 InsightAgent: Generates natural language insights for a DataFrame using profiling and LLM.
 """
 
+from backend.agents.base_agent import BaseAgent
 import pandas as pd
 import json
 import os
@@ -9,12 +10,15 @@ from openai import OpenAI
 from config.settings import load_prompt
 from langsmith import traceable
 from backend.core.logging import logger
-from typing import Any
+from typing import Any, Dict
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
 
-class InsightAgent:
+class InsightAgent(BaseAgent):
+    name = "InsightAgent"
+    role = "Generates natural language insights for a DataFrame."
+
     def __init__(self, df: pd.DataFrame):
         """
         Initialize the InsightAgent with a DataFrame.
@@ -55,4 +59,27 @@ class InsightAgent:
             return response.choices[0].message.content.strip()
         except Exception as e:
             logger.error(f"[InsightAgent] Exception: {e}")
+            raise
+
+    def run(self, query: str, data: pd.DataFrame, **kwargs) -> Dict[str, Any]:
+        """
+        Run the InsightAgent to generate insights based on the query and data provided.
+        Args:
+            query (str): The query or task to perform.
+            data (pd.DataFrame): The data to analyze.
+        Returns:
+            Dict[str, Any]: A dictionary containing the agent name, role, and the result of the insight generation.
+        """
+        logger.info(f"[InsightAgent] run called with query: {query}")
+        try:
+            # For now, we just return a stub result
+            result = {
+                "agent": self.name,
+                "role": self.role,
+                "output": self.generate_summary(),  # Call the summary generation
+            }
+            logger.info(f"[InsightAgent] run result: {result}")
+            return result
+        except Exception as e:
+            logger.error(f"[InsightAgent] Exception in run: {e}")
             raise

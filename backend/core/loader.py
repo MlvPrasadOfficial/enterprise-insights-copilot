@@ -27,7 +27,7 @@ try:
         NotebookLoader,
     )
     from langchain_community.text_splitter import RecursiveCharacterTextSplitter
-    from langchain_community.schema import Document
+    from langchain_core.documents import Document
 except ImportError:
     # Fallback: define a minimal Document for CSV/TXT
     class Document:

@@ -1,19 +1,18 @@
+from backend.agents.base_agent import BaseAgent
+from typing import List, Dict, Any
 import os
 import json
 from openai import OpenAI
 from backend.core.logging import logger
-from typing import List, Dict, Any
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=openai_api_key)
 
-"""
-CritiqueAgent: Evaluates LLM answers for correctness, hallucinations, and dataset relevance.
-Adds confidence, flags, and advice using OpenAI GPT-4.
-"""
 
+class CritiqueAgent(BaseAgent):
+    name = "CritiqueAgent"
+    description = "Evaluates LLM answers for correctness, hallucinations, and dataset relevance."
 
-class CritiqueAgent:
     def __init__(self, data_columns: List[str]):
         """
         Initialize CritiqueAgent with dataset columns.
@@ -23,7 +22,7 @@ class CritiqueAgent:
         self.data_columns = data_columns
         logger.info(f"[CritiqueAgent] Initialized with columns: {data_columns}")
 
-    def evaluate(self, query: str, answer: str) -> Dict[str, Any]:
+    def run(self, query: str, data: Any, context=None, answer: str = None, **kwargs) -> Dict[str, Any]:
         """
         Evaluate an LLM answer for hallucinations, mistakes, and dataset relevance.
         Args:
@@ -32,18 +31,41 @@ class CritiqueAgent:
         Returns:
             Dict[str, Any]: Evaluation result with confidence, flags, issues, and advice.
         """
-        logger.info(f"[CritiqueAgent] evaluate called with query: {query}")
+        logger.info(f"[CritiqueAgent] run called with query: {query}")
+        available_columns = None
+        if context and answer is None:
+            sql_agent_output = context.get("SQLAgent", {})
+            answer = sql_agent_output.get("output", None)
+            available_columns = sql_agent_output.get("available_columns", None)
+        # Summarize the data for the LLM to check against
+        data_summary = ""
+        try:
+            import pandas as pd
+            if isinstance(data, pd.DataFrame):
+                # Show only the relevant columns and top 5 rows for context
+                data_summary = data.head(5).to_markdown()
+            elif isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
+                import pandas as pd
+                df = pd.DataFrame(data)
+                data_summary = df.head(5).to_markdown()
+        except Exception as e:
+            logger.warning(f"[CritiqueAgent] Could not summarize data for prompt: {e}")
+            data_summary = str(data)[:500]
         prompt = f"""
 You are an LLM evaluation agent.
 
 - Evaluate the following AI-generated answer for possible hallucinations or mistakes.
 - Check if it references columns not present in the dataset.
+- Check if the answer matches the actual data provided below. Only flag as hallucination if the answer does not match the data.
 - Estimate confidence level (High/Medium/Low) and add a short explanation.
 
 Available Columns: {self.data_columns}
 Original Query: {query}
 AI Response:
 {answer}
+
+Data (first 5 rows):
+{data_summary}
 
 Evaluation (JSON format):
 {{
@@ -66,24 +88,29 @@ Evaluation (JSON format):
                 if content.startswith("json"):
                     content = content[4:].strip()
             parsed = json.loads(content)
-            return parsed
+            logger.info(f"[CritiqueAgent] Evaluation result: {parsed}")
+            # If available_columns is present, append to advice
+            if available_columns:
+                advice = parsed.get("advice", "")
+                advice += f"\nAvailable columns in your data: {available_columns}"
+                parsed["advice"] = advice
+            return {
+                "agent": self.name,
+                "description": self.description,
+                "output": parsed
+            }
         except Exception as e:
             logger.error(f"[CritiqueAgent] Exception: {e}")
+            advice = "Check response manually"
+            if available_columns:
+                advice += f"\nAvailable columns in your data: {available_columns}"
             return {
-                "confidence": "Low",
-                "flagged": True,
-                "issues": ["Evaluation failed to parse"],
-                "advice": "Check response manually",
+                "agent": self.name,
+                "description": self.description,
+                "output": {
+                    "confidence": "Low",
+                    "flagged": True,
+                    "issues": ["Evaluation failed to parse"],
+                    "advice": advice,
+                }
             }
-
-    @staticmethod
-    def critique(analysis: Any) -> dict:
-        """
-        Critique the analysis result (stub for agentic flow).
-        Args:
-            analysis (Any): The analysis result to critique.
-        Returns:
-            dict: Critique result (stubbed as dict).
-        """
-        # TODO: Implement real critique logic (e.g., LLM evaluation)
-        return {"critique": "[CritiqueAgent] Critique result (stub)"}

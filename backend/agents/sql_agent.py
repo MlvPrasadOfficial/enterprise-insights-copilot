@@ -2,18 +2,23 @@
 SQLAgent: Generates and executes SQL queries on a DataFrame using LLMs and DuckDB.
 """
 
+from backend.agentic.base_agent import BaseAgent
 import pandas as pd
 import duckdb
 from openai import OpenAI
 import os
 from config.settings import load_prompt
 from backend.core.logging import logger
-from typing import Any
+from typing import Any, Dict
+import re
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
 
-class SQLAgent:
+class SQLAgent(BaseAgent):
+    name = "SQLAgent"
+    description = "Generates and executes SQL queries on a DataFrame."
+
     def __init__(self, df: pd.DataFrame):
         """
         Initialize SQLAgent with a DataFrame.
@@ -61,6 +66,12 @@ class SQLAgent:
             Exception: If SQL execution fails.
         """
         logger.info(f"[SQLAgent] run_sql called with query: {query}")
+        # Debug: print DataFrame columns before registering
+        logger.info(f"[SQLAgent] DataFrame columns before DuckDB registration: {list(self.df.columns)}")
+        # Ensure columns are stripped of whitespace
+        self.df.columns = self.df.columns.str.strip()
+        logger.info(f"[SQLAgent] DataFrame columns after strip: {list(self.df.columns)}")
+        logger.info(f"[SQLAgent] DataFrame head before DuckDB registration:\n{self.df.head()}\n")
         try:
             con = duckdb.connect()
             con.register("df", self.df)
@@ -86,3 +97,74 @@ class SQLAgent:
         """
         # TODO: Implement real analysis logic (e.g., SQL, LLM, DataFrame ops)
         return "[SQLAgent] Analysis result (stub)"
+
+    def extract_sql(self, text: str) -> str:
+        """Extract SQL code from LLM output, handling code blocks and plain text."""
+        match = re.search(r"```sql\s*(.*?)```", text, re.DOTALL | re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+        # Fallback: take all lines from the first SELECT onward
+        lines = text.strip().splitlines()
+        sql_lines = []
+        in_select = False
+        for line in lines:
+            if line.strip().lower().startswith("select"):
+                in_select = True
+            if in_select:
+                sql_lines.append(line)
+        if sql_lines:
+            return "\n".join(sql_lines).strip()
+        # Fallback: return None if not valid SQL
+        return None
+
+    def run(self, query: str, data: pd.DataFrame, context=None, **kwargs) -> Dict[str, Any]:
+        """
+        Execute the agent's logic: generate SQL from the query, run the SQL on the data,
+        and return the structured result.
+        Args:
+            query (str): The user's question in natural language.
+            data (pd.DataFrame): The DataFrame to query.
+        Returns:
+            Dict[str, Any]: Structured result containing agent name, role, and output.
+        """
+        logger.info(f"[SQLAgent] run called with query: {query}, data shape: {data.shape}")
+        self.df = data  # Update the DataFrame to the latest one provided
+        sql_query = self.generate_sql(query)
+        sql_query = self.extract_sql(sql_query)
+        if not sql_query or not sql_query.lower().startswith("select"):
+            logger.error(f"[SQLAgent] Invalid SQL generated: {sql_query}")
+            return {
+                "agent": self.name,
+                "description": self.description,
+                "output": "Failed to generate a valid SQL query. Please rephrase your question.",
+                "available_columns": list(self.df.columns),
+            }
+        try:
+            result_df = self.run_sql(sql_query)
+            # Map categorical values for user-friendly output
+            from backend.core.utils import map_categorical_values
+            records = result_df.to_dict(orient="records")
+            mapped_records = [map_categorical_values(r) for r in records]
+            result = {
+                "agent": self.name,
+                "description": self.description,
+                "output": mapped_records,
+            }
+            logger.info(f"[SQLAgent] run output: {result}")
+            return result
+        except Exception as e:
+            logger.error(f"[SQLAgent] SQL execution failed: {e}")
+            error_message = str(e)
+            # Detect column not found error (DuckDB error message)
+            if "Referenced column" in error_message and "not found" in error_message:
+                return {
+                    "agent": self.name,
+                    "description": self.description,
+                    "output": f"SQL execution error: {e}",
+                    "available_columns": list(self.df.columns),
+                }
+            return {
+                "agent": self.name,
+                "description": self.description,
+                "output": f"SQL execution error: {e}"
+            }

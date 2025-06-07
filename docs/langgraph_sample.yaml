@@ -1,0 +1,15 @@
+agents:
+  - planner
+  - retriever
+  - analyst
+  - critic
+  - debate
+flow:
+  entry: planner
+  planner: retriever
+  retriever: analyst
+  analyst: critic
+  critic:
+    - debate
+    - END
+  debate: critic  # Loop if debate triggers more critique

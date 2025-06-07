@@ -57,6 +57,8 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
 from starlette.responses import Response
+from langchain.callbacks.tracers import LangChainTracer
+from backend.agentic.graph_flow import build_graph
 
 # --- API Metadata ---
 app = FastAPI(
@@ -408,22 +410,18 @@ def generate_insights(req: InsightRequest):
     df = memory.df
     if df is None:
         logger.error("[INSIGHTS] No data uploaded in session.")
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=400, detail="No data uploaded in session.")
     try:
-        agent = InsightAgent(df)
-        result = agent.generate_summary()
-        logger.info(f"[INSIGHTS] Insights generated: {result}")
-        critique = CritiqueAgent(df.columns.tolist())
-        eval_report = critique.evaluate("insights", result)
-        logger.info(f"[INSIGHTS] Critique: {eval_report}")
-        return {"insights": result, "evaluation": eval_report}
+        # Use agentic orchestrator for insights
+        from backend.agentic.orchestrator import AgenticOrchestrator
+
+        orchestrator = AgenticOrchestrator()
+        results = orchestrator.run("insights", df)
+        logger.info(f"[INSIGHTS] Agentic orchestrator results: {results}")
+        return {"steps": results}
     except Exception as e:
         logger.error(f"[INSIGHTS] Exception: {e}")
         logger.error(traceback.format_exc())
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=500, detail=f"Insights failed: {str(e)}")
 
 
@@ -480,6 +478,8 @@ async def run_agentic_flow(request: Request):
     df = memory.df
     if df is None:
         raise HTTPException(status_code=400, detail="No data uploaded in session.")
+    from backend.agentic.orchestrator import agentic_flow
+    # LangChainTracer does not have start_trace; use as a callback if supported, else just call agentic_flow
     result = agentic_flow(user_query, df)
     return result
 
@@ -506,8 +506,6 @@ def run_graph(req: QueryInput):
     except Exception as e:
         logger.error(f"[LANGGRAPH] Exception: {e}")
         logger.error(traceback.format_exc())
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=500, detail=f"Langgraph failed: {str(e)}")
 
 
@@ -570,5 +568,46 @@ def debate_mode(req: QueryInput):
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Debate failed: {str(e)}")
 
+
+@api_v1.post("/multiagent-query")
+async def multiagent_query(request: Request):
+    """
+    Orchestrate planner, retriever, analyst, critic, and debate agents in a single pipeline using LangGraph.
+    Expects JSON: {"query": str, "session_id": str (optional)}
+    Returns: {"result": ...}
+    """
+    try:
+        data = await request.json()
+        query = data.get("query")
+        session_id = data.get("session_id", "default")
+        if not query:
+            raise HTTPException(status_code=400, detail="Missing 'query' in request body.")
+        # Use session memory for history if available
+        if session_id not in session_memory:
+            session_memory[session_id] = []
+        graph = build_graph()
+        state = graph.invoke({
+            "query": query,
+            "result": "",
+            "steps": [],
+            "history": session_memory[session_id],
+        })
+        session_memory[session_id] = state.get("history", [])
+        return {"steps": state.get("steps", []), "result": state.get("result", "")}
+    except Exception as e:
+        logger.error(f"[MULTIAGENT-QUERY] Exception: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Multiagent flow failed: {str(e)}")
+
+
+# --- LangSmith/LangChain Tracing Setup ---
+import os
+
+os.environ["LANGSMITH_TRACING"] = "true"
+os.environ["LANGSMITH_ENDPOINT"] = "https://api.smith.langchain.com"
+os.environ["LANGSMITH_API_KEY"] = "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"
+os.environ["LANGSMITH_PROJECT"] = "aiagent"
+
+tracer = LangChainTracer(project_name="EnterpriseInsightsCopilot")
 
 app.include_router(api_v1)

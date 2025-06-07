@@ -54,16 +54,22 @@ st.markdown(
 <style>
 body { background: linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%) !important; }
 section.main > div { background: #f8fafc !important; border-radius: 18px; box-shadow: 0 2px 16px #0001; padding: 2rem 2rem 1rem 2rem; }
-.stButton>button { background: linear-gradient(90deg, #4e8cff, #38bdf8); color: white; border-radius: 8px; font-weight: 600; font-size: 1.1rem; padding: 0.5rem 1.5rem; }
-.stTextInput>div>div>input { background: #f1f5f9; color: #222; border-radius: 6px; font-size: 1.1rem; }
+.stButton>button { background: linear-gradient(90deg, #4e8cff, #38bdf8); color: white; border-radius: 8px; font-weight: 600; font-size: 1.1rem; padding: 0.5rem 1.5rem; transition: box-shadow 0.2s; box-shadow: 0 2px 8px #4e8cff22; }
+.stButton>button:hover { box-shadow: 0 4px 16px #38bdf866; filter: brightness(1.08); }
+.stTextInput>div>div>input { background: #f1f5f9; color: #222; border-radius: 6px; font-size: 1.1rem; border: 1.5px solid #4e8cff33; padding: 0.5rem; }
 .stDataFrame { border-radius: 10px; overflow: hidden; }
-.stMarkdown h3 { color: #4e8cff; }
+.stMarkdown h3, .stMarkdown h2, .stMarkdown h1 { color: #4e8cff; font-weight: 700; letter-spacing: -1px; }
 footer { visibility: hidden; }
 /* Chat history styles */
-.chat-bubble-user { background: #e0e7ff; color: #222; border-radius: 8px; padding: 8px; margin-bottom: 8px; }
-.chat-bubble-ai { background: #232634; color: #f1f5f9; border-radius: 8px; padding: 8px; margin-bottom: 16px; display: flex; align-items: center; }
+.chat-bubble-user { background: #e0e7ff; color: #222; border-radius: 8px; padding: 8px; margin-bottom: 8px; border-left: 4px solid #4e8cff; }
+.chat-bubble-ai { background: #232634; color: #f1f5f9; border-radius: 8px; padding: 8px; margin-bottom: 16px; display: flex; align-items: center; border-left: 4px solid #38bdf8; }
 body.dark .chat-bubble-user { background: #232634 !important; color: #f1f5f9 !important; }
 body.dark .chat-bubble-ai { background: #181825 !important; color: #f1f5f9 !important; }
+/* Card styles */
+.card { background: #fff; border-radius: 14px; box-shadow: 0 2px 12px #4e8cff22; padding: 1.5rem 2rem; margin-bottom: 2rem; border: 1.5px solid #e0e7ff; }
+.card-title { font-size: 1.3rem; font-weight: 700; color: #4e8cff; margin-bottom: 0.5rem; }
+.card-subtitle { font-size: 1.05rem; color: #64748b; margin-bottom: 1rem; }
+.card-section { margin-bottom: 1.5rem; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -88,8 +94,13 @@ st.sidebar.info("Upload a CSV, ask a question, and get instant insights! 🚀")
 # === Header ===
 st.markdown(
     """
-# 📊 Enterprise Insights Copilot
-<small>Conversational BI with LLMs, RAG, and instant analytics for everyone.</small>
+<div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 0.5rem;">
+    <img src="https://img.icons8.com/fluency/48/000000/robot-2.png" width="48"/>
+    <div>
+        <h1 style="margin-bottom: 0; color: #4e8cff; font-weight: 800; letter-spacing: -2px;">Enterprise Insights Copilot</h1>
+        <div style="font-size:1.1rem; color:#64748b; font-weight:500;">Conversational BI with LLMs, RAG, and instant analytics for everyone.</div>
+    </div>
+</div>
 """,
     unsafe_allow_html=True,
 )
@@ -108,7 +119,7 @@ if "chat_history" not in st.session_state:
 
 # === File Upload Card ===
 with st.container():
-    st.markdown("### 📁 Upload CSV", unsafe_allow_html=True)
+    st.markdown('<div class="card"><div class="card-title">📁 Upload CSV</div><div class="card-subtitle">Upload your data to get started. Only CSV files are supported.</div>', unsafe_allow_html=True)
     uploaded_file = st.file_uploader("Drop your CSV file here", type=["csv"])
     if uploaded_file:
         try:
@@ -148,7 +159,7 @@ with st.container():
                         log_to_ui(f"Upload failed: {error_msg}", "error")
                 except Exception as e:
                     log_exception_to_ui(e, context="File Upload Error")
-
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # --- Example Questions ---
 def get_example_questions(df=None):
@@ -193,6 +204,15 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("**Settings**")
 chunk_size = st.sidebar.slider("Chunk Size", 128, 2048, 512, step=64)
 model = st.sidebar.selectbox("Model", ["gpt-4", "gpt-3.5-turbo"])
+
+# === Multi-Agent Mode Toggle ===
+st.sidebar.markdown("---")
+st.sidebar.markdown("**Multi-Agent Mode**")
+multiagent_mode = st.sidebar.selectbox(
+    "Choose Agentic Workflow",
+    ["Standard", "LangGraph", "CrewAI", "Debate"],
+    index=0,
+)
 
 # === Live Metrics ===
 if st.sidebar.button("🔄 Refresh Usage Metrics"):
@@ -267,8 +287,7 @@ def download_insights_csv(insights):
 
 # === Query Section Card (with Chat History & Insights) ===
 with st.container():
-    st.markdown("---")
-    st.markdown("### 💬 Ask a Question", unsafe_allow_html=True)
+    st.markdown('<div class="card"><div class="card-title">💬 Ask a Question</div><div class="card-subtitle">Type a question about your data and get instant insights from the AI Copilot.</div>', unsafe_allow_html=True)
     query = st.text_input(
         "GIVE SOME INSIGHTS", value=st.session_state.get("example_query", "")
     )
@@ -282,27 +301,41 @@ with st.container():
         else:
             with st.spinner("Querying Copilot..."):
                 try:
-                    response = requests.post(
-                        f"{BACKEND_URL}/api/v1/query", json={"query": query}
-                    )
+                    if multiagent_mode == "Standard":
+                        endpoint = f"{BACKEND_URL}/api/v1/query"
+                        payload = {"query": query}
+                    elif multiagent_mode == "LangGraph":
+                        endpoint = f"{BACKEND_URL}/api/v1/langgraph"
+                        payload = {"query": query}
+                    elif multiagent_mode == "CrewAI":
+                        endpoint = f"{BACKEND_URL}/api/v1/crewai"
+                        payload = {"query": query}
+                    elif multiagent_mode == "Debate":
+                        endpoint = f"{BACKEND_URL}/api/v1/debate"
+                        payload = {"query": query}
+                    else:
+                        endpoint = f"{BACKEND_URL}/api/v1/query"
+                        payload = {"query": query}
+                    response = requests.post(endpoint, json=payload)
                     log_to_ui(
                         f"Query response: {response.status_code} {response.text}",
                         level="info",
                     )
                     result = response.json()
-                    answer = result.get("answer")
+                    answer = result.get("result") or result.get("answer")
                     if not answer or answer == "No answer returned.":
                         answer = "No answer. Please try a different question or re-upload your data."
-                    st.session_state["chat_history"].append((query, answer))
+                    st.session_state["chat_history"].append((f"[{multiagent_mode}] {query}", answer))
                     log_to_ui(
-                        f"Query successful: {query} -> {answer[:50]}...", "info"
-                    )  # Log first 50 chars of answer
-                    # Fetch auto insights after query
-                    insights, evaluation = fetch_auto_insights(
-                        df if "df" in locals() else None
+                        f"Query successful: {query} -> {str(answer)[:50]}...", "info"
                     )
-                    st.session_state["last_insights"] = insights
-                    st.session_state["last_evaluation"] = evaluation
+                    # Fetch auto insights after query (only for Standard)
+                    if multiagent_mode == "Standard":
+                        insights, evaluation = fetch_auto_insights(
+                            df if "df" in locals() else None
+                        )
+                        st.session_state["last_insights"] = insights
+                        st.session_state["last_evaluation"] = evaluation
                     st.success("✅ Query complete!")
                 except Exception as e:
                     log_exception_to_ui(e, context="Query Error")
@@ -310,20 +343,19 @@ with st.container():
     # Show chat history
     if st.session_state["chat_history"]:
         st.markdown("---")
-        st.markdown("#### 🗨️ Chat History")
+        st.markdown("#### 🗨️ Chat History / Agentic Flow")
         for q, a in reversed(st.session_state["chat_history"][-6:]):
             st.markdown(
                 f"<div class='chat-bubble-user'><b>🧑‍💼 You:</b> {q}</div>",
                 unsafe_allow_html=True,
             )
             st.markdown(
-                f"<div class='chat-bubble-ai'><img src='https://img.icons8.com/fluency/48/000000/robot-2.png' width='24' style='margin-right:8px;'/><b>AI:</b> {a}</div>",
+                f"<div class='chat-bubble-ai'><img src='https://img.icons8.com/fluency/48/000000/robot-2.png' width='24' style='margin-right:8px;'/><b>Agent(s):</b> {a}</div>",
                 unsafe_allow_html=True,
             )
     # Show insights panel
     if st.session_state.get("last_insights"):
-        st.markdown("---")
-        st.markdown("### 📈 Auto Insights")
+        st.markdown('<div class="card"><div class="card-title">📈 Auto Insights</div>', unsafe_allow_html=True)
         st.info(st.session_state["last_insights"])
         if st.session_state.get("last_evaluation"):
             st.caption(f"Evaluation: {st.session_state['last_evaluation']}")
@@ -343,6 +375,7 @@ with st.container():
                 file_name="insights.csv",
                 mime="text/csv",
             )
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # === Log Dropdown Panel (Main Page) ===
 with st.expander("🪵 Show Session Logs (Dropdown)", expanded=False):

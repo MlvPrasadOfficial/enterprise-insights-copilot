@@ -2,11 +2,14 @@
 RetrievalAgent: Stub for agentic flow retrieval step.
 """
 
-from typing import Any
+from backend.agentic.base_agent import BaseAgent
+from typing import Any, Dict
 
-class RetrievalAgent:
-    @staticmethod
-    def retrieve(user_query: str, data: Any) -> Any:
+class RetrievalAgent(BaseAgent):
+    name = "RetrievalAgent"
+    description = "Retrieves relevant context for the user query."
+
+    def run(self, query: str, data: Any, context=None, **kwargs) -> Dict[str, Any]:
         """
         Retrieve relevant context for the user query from the data.
         Args:
@@ -16,4 +19,9 @@ class RetrievalAgent:
             Any: Retrieved context (stubbed as None).
         """
         # TODO: Implement real retrieval logic (e.g., semantic search, RAG)
-        return None
+        result = {
+            "agent": self.name,
+            "description": self.description,
+            "output": None
+        }
+        return result

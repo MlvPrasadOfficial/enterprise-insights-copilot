@@ -21,6 +21,22 @@ def clean_string_for_storing(string: str) -> str:
     return cleaned_string
 
 
+def map_categorical_values(record: dict) -> dict:
+    """
+    Map known categorical codes to human-friendly values in a record dict.
+    Currently supports 'Gender' (m/f -> Male/Female).
+    Args:
+        record (dict): The record to map.
+    Returns:
+        dict: The mapped record.
+    """
+    gender_map = {'m': 'Male', 'f': 'Female', 'M': 'Male', 'F': 'Female'}
+    if 'Gender' in record:
+        val = str(record['Gender']).strip().lower()
+        record['Gender'] = gender_map.get(val, record['Gender'])
+    return record
+
+
 # --- DataFrame and chart utilities for modularization ---
 # def profile_dataframe(df: pd.DataFrame) -> dict:
 #     """

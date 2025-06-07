@@ -1,3 +1,5 @@
+from typing import Any, Dict, List
+from backend.agentic.base_agent import BaseAgent
 from backend.agents.retrieval_agent import RetrievalAgent
 from backend.agents.sql_agent import SQLAgent as AnalysisAgent
 from backend.agents.chart_agent import ChartAgent
@@ -5,29 +7,41 @@ from backend.agents.critique_agent import CritiqueAgent
 from backend.agents.narrative_agent import NarrativeAgent
 
 
+class AgenticOrchestrator:
+    def __init__(self, data=None):
+        self.data = data
+        self.agents = [
+            RetrievalAgent(),
+            AnalysisAgent(data) if data is not None else AnalysisAgent,
+            ChartAgent(data) if data is not None else ChartAgent,
+            CritiqueAgent(data.columns.tolist()) if data is not None else CritiqueAgent,
+            NarrativeAgent(),
+        ]
+
+    def run(self, query: str, data: Any, **kwargs) -> List[Dict]:
+        context = {}
+        results = []
+        for agent in self.agents:
+            # If agent is a class, instantiate with data if needed
+            if isinstance(agent, type):
+                if agent == AnalysisAgent:
+                    agent_instance = agent(data)
+                elif agent == ChartAgent:
+                    agent_instance = agent(data)
+                elif agent == CritiqueAgent:
+                    agent_instance = agent(data.columns.tolist())
+                else:
+                    agent_instance = agent()
+                output = agent_instance.run(query, data, context=context)
+            else:
+                output = agent.run(query, data, context=context)
+            results.append(output)
+            context[getattr(agent, 'name', agent.__class__.__name__)] = output
+        return results
+
+
+# Legacy function for backward compatibility
+
 def agentic_flow(user_query, data):
-    """
-    Orchestrates a multi-agent pipeline for advanced Q&A.
-    Args:
-        user_query (str): The user's question.
-        data (pd.DataFrame): The current session DataFrame.
-    Returns:
-        dict: {answer, chart, critique}
-    """
-    # 1. Retrieve context
-    docs = RetrievalAgent.retrieve(user_query, data) if hasattr(RetrievalAgent, 'retrieve') else None
-    # 2. Analyze data
-    analysis = AnalysisAgent.analyze(user_query, docs, data) if hasattr(AnalysisAgent, 'analyze') else None
-    # 3. Optionally generate chart
-    chart = None
-    if "chart" in user_query.lower() or "visual" in user_query.lower():
-        chart = ChartAgent.generate(user_query, docs, data) if hasattr(ChartAgent, 'generate') else None
-    # 4. Critique result
-    critique = CritiqueAgent.critique(analysis) if hasattr(CritiqueAgent, 'critique') else None
-    # 5. Summarize
-    summary = NarrativeAgent.summarize(analysis, critique, chart) if hasattr(NarrativeAgent, 'summarize') else analysis
-    return {
-        "answer": summary,
-        "chart": chart,
-        "critique": critique
-    }
+    orchestrator = AgenticOrchestrator(data)
+    return orchestrator.run(user_query, data)
