@@ -5,8 +5,14 @@
 import React, { useState } from "react";
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
+type AgentStep = {
+  agent: string;
+  description: string;
+  output: string;
+};
+
 type Props = {
-  setTimeline: (steps: any[]) => void;
+  setTimeline: (steps: AgentStep[]) => void;
   setChartUrl: (url: string | undefined) => void;
 };
 type Message = { sender: "user" | "copilot"; text: string };
@@ -31,7 +37,7 @@ export default function ChatBox({ setTimeline, setChartUrl }: Props) {
         ...msgs,
         { sender: "copilot", text: data.result?.summary ?? "No answer." },
       ]);
-      setTimeline(data.result?.steps || []);
+      setTimeline((data.result?.steps as AgentStep[]) || []);
       setChartUrl(data.result?.chartUrl ?? undefined);
     } catch (err: any) {
       setMessages((msgs) => [

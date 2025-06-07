@@ -12,7 +12,12 @@ import { useState } from "react";
 
 export default function Home() {
   // State for agent timeline, chart, and chat messages
-  const [timeline, setTimeline] = useState<any[]>([]);
+  interface AgentStep {
+    agent: string;
+    description: string;
+    output: string;
+  }
+  const [timeline, setTimeline] = useState<AgentStep[]>([]);
   const [chartUrl, setChartUrl] = useState<string | undefined>(undefined);
 
   return (
