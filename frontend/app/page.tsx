@@ -17,6 +17,7 @@ export default function Home() {
     description: string;
     output: string;
   };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [timeline, setTimeline] = useState<AgentStep[]>([]);
   const [chartUrl, setChartUrl] = useState<string | undefined>(undefined);
 
