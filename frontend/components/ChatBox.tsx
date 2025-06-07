@@ -37,14 +37,22 @@ export default function ChatBox({ setTimeline, setChartUrl }: Props) {
         ...msgs,
         { sender: "copilot", text: data.result?.summary ?? "No answer." },
       ]);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setTimeline((data.result?.steps as AgentStep[]) || []);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setChartUrl(data.result?.chartUrl ?? undefined);
-    } catch (err: any) {
+      // Type-safe: steps is AgentStep[] | undefined
+      setTimeline(Array.isArray(data.result?.steps) ? data.result.steps as AgentStep[] : []);
+      setChartUrl(typeof data.result?.chartUrl === "string" ? data.result.chartUrl : undefined);
+    } catch (err: unknown) {
+      let errorMsg = "Error from copilot.";
+      if (
+        err &&
+        typeof err === "object" &&
+        "message" in err &&
+        typeof (err as { message?: unknown }).message === "string"
+      ) {
+        errorMsg = (err as { message: string }).message;
+      }
       setMessages((msgs) => [
         ...msgs,
-        { sender: "copilot", text: err.message || "Error from copilot." },
+        { sender: "copilot", text: errorMsg },
       ]);
     }
     setInput("");
