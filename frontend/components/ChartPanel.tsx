@@ -1,18 +1,19 @@
 import React from "react";
 
-interface ChartPanelProps {
-  chartUrl?: string;
-}
+type ChartDatum = { label: string; value: number };
+type Props = { chartData: ChartDatum[] };
 
-const ChartPanel: React.FC<ChartPanelProps> = ({ chartUrl }) => {
+const ChartPanel: React.FC<Props> = ({ chartData }) => {
+  if (!chartData || !Array.isArray(chartData)) return null;
   return (
-    <div className="p-4 border rounded bg-white shadow">
-      <h3 className="font-bold mb-2">Chart</h3>
-      {chartUrl ? (
-        <img src={chartUrl} alt="Chart" className="w-full h-64 object-contain" />
-      ) : (
-        <div className="text-gray-400 text-center py-12">No chart to display.</div>
-      )}
+    <div className="mb-6">
+      <h2 className="text-xl font-semibold mb-2">Chart</h2>
+      {/* Add recharts/plotly code here as needed */}
+      {chartData.map((d) => (
+        <div key={d.label}>
+          {d.label}: {d.value}
+        </div>
+      ))}
     </div>
   );
 };
