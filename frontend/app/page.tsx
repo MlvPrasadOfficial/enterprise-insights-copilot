@@ -10,13 +10,13 @@ import ChartPanel from "@/components/ChartPanel";
 import SettingsPanel from "@/components/SettingsPanel";
 import { useState } from "react";
 
+export type AgentStep = {
+  agent: string;
+  description: string;
+  output: string;
+};
+
 export default function Home() {
-  // State for agent timeline, chart, and chat messages
-  type AgentStep = {
-    agent: string;
-    description: string;
-    output: string;
-  };
   const [timeline, setTimeline] = useState<AgentStep[]>([]);
   const [chartUrl, setChartUrl] = useState<string | undefined>(undefined);
 
