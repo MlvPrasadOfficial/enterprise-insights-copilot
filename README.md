@@ -1,3 +1,5 @@
+# DUMMY SYNC LINE - 2025-06-07
+
 # 🧠 Enterprise Insights Copilot
 
 [![CI](https://github.com/MlvPrasadOfficial/enterprise-insights-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/MlvPrasadOfficial/enterprise-insights-copilot/actions/workflows/ci.yml)
@@ -192,7 +194,7 @@ Which city has the highest salary?
 
 ---
 
-## 📄 License
+## 📄 License eee
 
 MIT License
 
