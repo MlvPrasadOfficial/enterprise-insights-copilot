@@ -53,23 +53,23 @@ st.markdown(
     """
 <style>
 body { background: linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%) !important; }
-section.main > div { background: #f8fafc !important; border-radius: 18px; box-shadow: 0 2px 16px #0001; padding: 2rem 2rem 1rem 2rem; }
-.stButton>button { background: linear-gradient(90deg, #4e8cff, #38bdf8); color: white; border-radius: 8px; font-weight: 600; font-size: 1.1rem; padding: 0.5rem 1.5rem; transition: box-shadow 0.2s; box-shadow: 0 2px 8px #4e8cff22; }
-.stButton>button:hover { box-shadow: 0 4px 16px #38bdf866; filter: brightness(1.08); }
-.stTextInput>div>div>input { background: #f1f5f9; color: #222; border-radius: 6px; font-size: 1.1rem; border: 1.5px solid #4e8cff33; padding: 0.5rem; }
-.stDataFrame { border-radius: 10px; overflow: hidden; }
-.stMarkdown h3, .stMarkdown h2, .stMarkdown h1 { color: #4e8cff; font-weight: 700; letter-spacing: -1px; }
+section.main > div { background: #f8fafc !important; border-radius: 22px; box-shadow: 0 4px 32px #4e8cff33, 0 1.5px 8px #38bdf822; padding: 2.5rem 2.5rem 1.5rem 2.5rem; border: 1.5px solid #e0e7ff; }
+.stButton>button { background: linear-gradient(90deg, #4e8cff, #38bdf8); color: white; border-radius: 12px; font-weight: 700; font-size: 1.15rem; padding: 0.7rem 2rem; transition: box-shadow 0.2s, transform 0.1s; box-shadow: 0 4px 16px #4e8cff33; border: none; }
+.stButton>button:hover { box-shadow: 0 8px 32px #38bdf866; filter: brightness(1.10); transform: translateY(-2px) scale(1.03); }
+.stTextInput>div>div>input { background: #f1f5f9; color: #222; border-radius: 8px; font-size: 1.13rem; border: 2px solid #4e8cff44; padding: 0.6rem; box-shadow: 0 1.5px 6px #4e8cff11; }
+.stDataFrame { border-radius: 14px; overflow: hidden; border: 1.5px solid #e0e7ff; }
+.stMarkdown h3, .stMarkdown h2, .stMarkdown h1 { color: #4e8cff; font-weight: 800; letter-spacing: -1.5px; text-shadow: 0 2px 8px #4e8cff22; }
 footer { visibility: hidden; }
 /* Chat history styles */
-.chat-bubble-user { background: #e0e7ff; color: #222; border-radius: 8px; padding: 8px; margin-bottom: 8px; border-left: 4px solid #4e8cff; }
-.chat-bubble-ai { background: #232634; color: #f1f5f9; border-radius: 8px; padding: 8px; margin-bottom: 16px; display: flex; align-items: center; border-left: 4px solid #38bdf8; }
+.chat-bubble-user { background: linear-gradient(90deg, #e0e7ff 60%, #f8fafc 100%); color: #222; border-radius: 10px; padding: 10px; margin-bottom: 10px; border-left: 5px solid #4e8cff; box-shadow: 0 2px 8px #4e8cff11; }
+.chat-bubble-ai { background: linear-gradient(90deg, #232634 60%, #38bdf8 100%); color: #f1f5f9; border-radius: 10px; padding: 10px; margin-bottom: 18px; display: flex; align-items: center; border-left: 5px solid #38bdf8; box-shadow: 0 2px 8px #38bdf822; }
 body.dark .chat-bubble-user { background: #232634 !important; color: #f1f5f9 !important; }
 body.dark .chat-bubble-ai { background: #181825 !important; color: #f1f5f9 !important; }
 /* Card styles */
-.card { background: #fff; border-radius: 14px; box-shadow: 0 2px 12px #4e8cff22; padding: 1.5rem 2rem; margin-bottom: 2rem; border: 1.5px solid #e0e7ff; }
-.card-title { font-size: 1.3rem; font-weight: 700; color: #4e8cff; margin-bottom: 0.5rem; }
-.card-subtitle { font-size: 1.05rem; color: #64748b; margin-bottom: 1rem; }
-.card-section { margin-bottom: 1.5rem; }
+.card { background: linear-gradient(135deg, #f8fafc 80%, #e0e7ff 100%); border-radius: 18px; box-shadow: 0 4px 24px #4e8cff22; padding: 2rem 2.5rem; margin-bottom: 2.2rem; border: 2px solid #e0e7ff; }
+.card-title { font-size: 1.35rem; font-weight: 800; color: #4e8cff; margin-bottom: 0.6rem; letter-spacing: -1px; text-shadow: 0 2px 8px #4e8cff22; }
+.card-subtitle { font-size: 1.08rem; color: #64748b; margin-bottom: 1.1rem; font-weight: 500; }
+.card-section { margin-bottom: 1.7rem; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -429,7 +429,7 @@ st.markdown(
     """
 ---
 <center>
-<sub>Made with ❤️ by [Your Name](https://github.com/your-name) | Powered by OpenAI, Pinecone, FastAPI, and Streamlit</sub>
+<sub>Made with ❤️ by <a href='https://github.com/your-name' target='_blank'>your-name</a> | Powered by OpenAI, Pinecone, FastAPI, and Streamlit</sub>
 </center>
 """,
     unsafe_allow_html=True,
