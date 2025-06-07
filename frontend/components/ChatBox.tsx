@@ -3,13 +3,8 @@
  * ChatBox - Chat with copilot. Sends query to /multiagent. Receives agent steps and chart data.
  */
 import React, { useState } from "react";
+import type { AgentStep } from "@/app/page";
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-type AgentStep = {
-  agent: string;
-  description: string;
-  output: string;
-};
 
 type Props = {
   setTimeline: (steps: AgentStep[]) => void;
