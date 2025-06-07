@@ -1,8 +1,9 @@
+# DEMO SYNC LINE - 2025-06-07
 # Enterprise Insights Copilot - Next.js Frontend
 
 This is the frontend for the Enterprise Insights Copilot project. It provides a dashboard for CSV upload, chat, agent timeline, charting, and configuration panel. The frontend is built with Next.js, Tailwind CSS, and shadcn/ui for modern, production-grade UI components.
 
-## Features
+## Features aaaa
 
 - CSV file upload to backend
 - Chat interface with multi-agent backend
