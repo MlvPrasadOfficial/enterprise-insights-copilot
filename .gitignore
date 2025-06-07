@@ -23,3 +23,8 @@ Thumbs.db
 
 # Helper Files
 helper.txt
+
+# AI Book Reference Material
+AA BOOKS AI/
+enterprise_insights_copilot/data/*.pdf
+enterprise_insights_copilot/data/*.txt

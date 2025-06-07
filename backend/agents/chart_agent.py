@@ -3,11 +3,21 @@ import pandas as pd
 import altair as alt
 from backend.core.logging import logger
 from typing import Tuple, Any, Dict
+from config.agent_config import AgentConfig
+from config.constants import VERBOSE
 
 
 class ChartAgent(BaseAgent):
     name = "ChartAgent"
     description = "Visualizes data as charts."
+    config: AgentConfig = AgentConfig(
+        name="chart",
+        description="Visualizes data as charts.",
+        enabled=True,
+        model=None,
+        temperature=None,
+        max_tokens=None,
+    )
 
     def __init__(self, df: pd.DataFrame):
         """
@@ -80,7 +90,7 @@ class ChartAgent(BaseAgent):
         y = numeric_cols[0] if numeric_cols else self.df.columns[1]
         return x, y
 
-    def run(self, query: str, data: pd.DataFrame, context=None, **kwargs) -> Dict[str, Any]:
+    def run(self, query: str, data: Any, context=None, **kwargs) -> Dict[str, Any]:
         """
         Execute the agent's logic: parse the query, guess chart type, and generate a chart.
         Args:
@@ -89,6 +99,8 @@ class ChartAgent(BaseAgent):
         Returns:
             Dict[str, Any]: Structured output with agent name, role, and result.
         """
+        if VERBOSE:
+            print(f"[ChartAgent] Running with config: {self.config}")
         logger.info(f"[ChartAgent] run called with query: {query}")
         chart_type = self.guess_chart(query)
         x_axis, y_axis = self.guess_axes()
@@ -96,8 +108,8 @@ class ChartAgent(BaseAgent):
         result = {
             "agent": self.name,
             "description": self.description,
-            "chart_type": chart_type,
-            "output": f"[ChartAgent] Chart result (stub)",
+            "output": None,  # Replace with actual output
+            "config": self.config.__dict__,
         }
         logger.info(f"[ChartAgent] run output: {result}")
         return result

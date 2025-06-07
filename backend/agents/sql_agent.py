@@ -11,6 +11,8 @@ from config.settings import load_prompt
 from backend.core.logging import logger
 from typing import Any, Dict
 import re
+from config.agent_config import AgentConfig
+from config.constants import VERBOSE
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
@@ -18,6 +20,14 @@ openai_api_key = os.getenv("OPENAI_API_KEY")
 class SQLAgent(BaseAgent):
     name = "SQLAgent"
     description = "Generates and executes SQL queries on a DataFrame."
+    config: AgentConfig = AgentConfig(
+        name="analyst",
+        description="Generates and executes SQL queries on a DataFrame.",
+        enabled=True,
+        model=None,
+        temperature=None,
+        max_tokens=None,
+    )
 
     def __init__(self, df: pd.DataFrame):
         """
@@ -117,7 +127,7 @@ class SQLAgent(BaseAgent):
         # Fallback: return None if not valid SQL
         return None
 
-    def run(self, query: str, data: pd.DataFrame, context=None, **kwargs) -> Dict[str, Any]:
+    def run(self, query: str, data: Any, context=None, **kwargs) -> Dict[str, Any]:
         """
         Execute the agent's logic: generate SQL from the query, run the SQL on the data,
         and return the structured result.
@@ -127,6 +137,8 @@ class SQLAgent(BaseAgent):
         Returns:
             Dict[str, Any]: Structured result containing agent name, role, and output.
         """
+        if VERBOSE:
+            print(f"[SQLAgent] Running with config: {self.config}")
         logger.info(f"[SQLAgent] run called with query: {query}, data shape: {data.shape}")
         self.df = data  # Update the DataFrame to the latest one provided
         sql_query = self.generate_sql(query)
@@ -149,6 +161,7 @@ class SQLAgent(BaseAgent):
                 "agent": self.name,
                 "description": self.description,
                 "output": mapped_records,
+                "config": self.config.__dict__,
             }
             logger.info(f"[SQLAgent] run output: {result}")
             return result

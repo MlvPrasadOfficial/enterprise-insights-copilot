@@ -35,3 +35,6 @@ jobs:
       - name: Run tests
         run: |
           pytest tests/
+      - name: Smoke test agentic flow
+        run: |
+          pytest tests/agentic/test_agentic_edge_cases.py

@@ -4,6 +4,8 @@ import os
 import json
 from openai import OpenAI
 from backend.core.logging import logger
+from config.agent_config import AgentConfig
+from config.constants import VERBOSE
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=openai_api_key)
@@ -12,6 +14,14 @@ client = OpenAI(api_key=openai_api_key)
 class CritiqueAgent(BaseAgent):
     name = "CritiqueAgent"
     description = "Evaluates LLM answers for correctness, hallucinations, and dataset relevance."
+    config: AgentConfig = AgentConfig(
+        name="critic",
+        description="Evaluates LLM answers for correctness, hallucinations, and dataset relevance.",
+        enabled=True,
+        model=None,
+        temperature=None,
+        max_tokens=None,
+    )
 
     def __init__(self, data_columns: List[str]):
         """
@@ -23,6 +33,8 @@ class CritiqueAgent(BaseAgent):
         logger.info(f"[CritiqueAgent] Initialized with columns: {data_columns}")
 
     def run(self, query: str, data: Any, context=None, answer: str = None, **kwargs) -> Dict[str, Any]:
+        if VERBOSE:
+            print(f"[CritiqueAgent] Running with config: {self.config}")
         """
         Evaluate an LLM answer for hallucinations, mistakes, and dataset relevance.
         Args:
@@ -94,11 +106,13 @@ Evaluation (JSON format):
                 advice = parsed.get("advice", "")
                 advice += f"\nAvailable columns in your data: {available_columns}"
                 parsed["advice"] = advice
-            return {
+            result = {
                 "agent": self.name,
                 "description": self.description,
-                "output": parsed
+                "output": parsed,
+                "config": self.config.__dict__,
             }
+            return result
         except Exception as e:
             logger.error(f"[CritiqueAgent] Exception: {e}")
             advice = "Check response manually"

@@ -6,6 +6,8 @@ import logging
 import sys
 import uuid
 from typing import Optional, Dict, Any
+import os
+from datetime import datetime
 
 
 def create_logger(level: str = "DEBUG") -> logging.Logger:
@@ -72,3 +74,15 @@ class UsageTracker:
 
 
 usage_tracker = UsageTracker()
+
+
+def audit_log(event: str, user: str = None, details: dict = None):
+    log_entry = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "event": event,
+        "user": user,
+        "details": details or {},
+    }
+    log_path = os.getenv("AUDIT_LOG_PATH", "audit.log")
+    with open(log_path, "a", encoding="utf-8") as f:
+        f.write(str(log_entry) + "\n")

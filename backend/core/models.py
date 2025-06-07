@@ -8,6 +8,7 @@ import os
 import tiktoken
 from openai import OpenAI
 from config.constants import OPENAI_EMBEDDING_MODEL
+from config.config import get_env_var
 from backend.core.logging import logger
 
 
@@ -35,6 +36,9 @@ class MODELS:
 class EMBEDDINGS:
     OPENAI: str = OPENAI_EMBEDDING_MODEL
     # Add HuggingFace or other embeddings as needed
+
+
+OPENAI_API_KEY = get_env_var("OPENAI_API_KEY", required=True)
 
 
 def get_openai_client(api_key: Optional[str] = None) -> OpenAI:

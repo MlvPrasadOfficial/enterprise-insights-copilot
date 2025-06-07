@@ -4,6 +4,8 @@ agents:
   - analyst
   - critic
   - debate
+  - error
+  - escalate
 flow:
   entry: planner
   planner: retriever
@@ -12,4 +14,10 @@ flow:
   critic:
     - debate
     - END
-  debate: critic  # Loop if debate triggers more critique
+    - error
+  debate:
+    - critic
+    - END
+    - error
+  error: escalate
+  escalate: END

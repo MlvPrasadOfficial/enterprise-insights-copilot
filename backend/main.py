@@ -12,6 +12,7 @@ import traceback
 import logging
 from fastapi import status, HTTPException
 from typing import Any
+import time
 
 # Add project root to sys.path for cloud and local compatibility
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -44,11 +45,11 @@ from backend.core.debate_log import log_debate_entry
 from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from backend.core.loader import load_and_split
+from backend.core.loader import load_and_split, get_user_data_dir
 from backend.core.models import get_openai_client, get_tokenizer
 from backend.core.prompts import RAG_PROMPT, INSIGHT_PROMPT, SQL_PROMPT
 from backend.core.utils import clean_string_for_storing
-from backend.core.logging import usage_tracker, logger
+from backend.core.logging import usage_tracker, logger, audit_log
 from fastapi.responses import JSONResponse
 from fastapi.requests import Request as FastAPIRequest
 from fastapi.exception_handlers import RequestValidationError
@@ -59,6 +60,8 @@ from starlette.requests import Request as StarletteRequest
 from starlette.responses import Response
 from langchain.callbacks.tracers import LangChainTracer
 from backend.agentic.graph_flow import build_graph
+from backend.agentic.langgraph_flow import run_multiagent_flow
+from config.config import get_env_var
 
 # --- API Metadata ---
 app = FastAPI(
@@ -195,6 +198,36 @@ def get_user_id(request: Request) -> str:
         str: The user ID.
     """
     return request.headers.get("X-User-Id", "anonymous")
+
+
+OPENAI_API_KEY = get_env_var("OPENAI_API_KEY", required=True)
+
+
+try:
+    from prometheus_client import Counter, Histogram, start_http_server
+    import time
+
+    REQUEST_COUNT = Counter('api_requests_total', 'Total API Requests', ['endpoint'])
+    REQUEST_LATENCY = Histogram('api_request_latency_seconds', 'API Request Latency', ['endpoint'])
+    start_http_server(8001)  # Prometheus metrics on :8001
+
+    # Example FastAPI middleware for metrics
+    from fastapi import Request as FastAPIRequest
+    from starlette.middleware.base import BaseHTTPMiddleware
+
+    class MetricsMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request: FastAPIRequest, call_next):
+            endpoint = request.url.path
+            REQUEST_COUNT.labels(endpoint=endpoint).inc()
+            start = time.time()
+            response = await call_next(request)
+            latency = time.time() - start
+            REQUEST_LATENCY.labels(endpoint=endpoint).observe(latency)
+            return response
+
+    app.add_middleware(MetricsMiddleware)
+except ImportError:
+    print("[INFO] prometheus_client not installed, metrics disabled.")
 
 
 @api_v1.post("/index")
@@ -600,6 +633,16 @@ async def multiagent_query(request: Request):
         raise HTTPException(status_code=500, detail=f"Multiagent flow failed: {str(e)}")
 
 
+@app.post("/multiagent")
+async def multiagent_api(request: Request):
+    body = await request.json()
+    query = body["query"]
+    # For demo: use memory.df or pass dummy data
+    data = memory.df if hasattr(memory, 'df') and memory.df is not None else {}
+    result = run_multiagent_flow(query, data)
+    return result
+
+
 # --- LangSmith/LangChain Tracing Setup ---
 import os
 
@@ -611,3 +654,102 @@ os.environ["LANGSMITH_PROJECT"] = "aiagent"
 tracer = LangChainTracer(project_name="EnterpriseInsightsCopilot")
 
 app.include_router(api_v1)
+
+from fastapi import Depends
+from fastapi.security import APIKeyHeader
+API_KEY = os.getenv("API_KEY")
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+def get_api_key(api_key: str = Depends(api_key_header)):
+    if API_KEY and api_key != API_KEY:
+        raise HTTPException(status_code=403, detail="Invalid or missing API key.")
+
+# Example: protect sensitive endpoints
+@app.post("/secure-agentic")
+async def secure_agentic(request: Request, api_key: str = Depends(get_api_key)):
+    # ...existing agentic logic...
+    return {"status": "ok"}
+
+
+@app.post("/upload")
+async def upload_file(file: UploadFile = File(...), user: str = None):
+    """
+    Upload a file and log the upload event.
+    Args:
+        file (UploadFile): The file to upload.
+        user (str, optional): The user ID, extracted from request headers.
+    Returns:
+        dict: Status message.
+    Raises:
+        HTTPException: If file is empty or too large.
+    """
+    import time
+    import psutil
+
+    start_time = time.time()
+    process = psutil.Process(os.getpid())
+    try:
+        contents = await file.read()
+        file_size = len(contents)
+        logger.info(f"[UPLOAD] Received file: {file.filename}, size: {file_size} bytes")
+        if not contents:
+            raise HTTPException(
+                status_code=400, detail="Upload a valid file (file is empty)."
+            )
+        # File size limit (10MB)
+        MAX_SIZE = 10 * 1024 * 1024
+        if file_size > MAX_SIZE:
+            logger.warning(
+                f"[UPLOAD] File too large: {file_size} bytes > {MAX_SIZE} bytes"
+            )
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large (> {MAX_SIZE//1024//1024}MB). Please upload a smaller file.",
+            )
+        # Save uploaded file to a cross-platform temp path with original extension
+        import uuid
+
+        filename = file.filename or f"upload_{uuid.uuid4()}"
+        suffix = os.path.splitext(filename)[1] or ""
+        temp_dir = tempfile.gettempdir()
+        temp_path = os.path.join(temp_dir, f"upload_{uuid.uuid4()}{suffix}")
+        logger.info(f"[UPLOAD] Saving file to temp path: {temp_path}")
+        with open(temp_path, "wb") as f:
+            f.write(contents)
+        # Log the file upload to audit log
+        audit_log("file_upload", user=user, details={"filename": file.filename})
+        elapsed = time.time() - start_time
+        mem_mb = process.memory_info().rss / 1024 / 1024
+        logger.info(
+            f"[UPLOAD] File uploaded and logged in {elapsed:.2f}s, memory usage: {mem_mb:.2f} MB"
+        )
+        return {"status": "uploaded"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        elapsed = time.time() - start_time
+        mem_mb = process.memory_info().rss / 1024 / 1024
+        logger.error(
+            f"❌ Error in /upload: {str(e)} | Elapsed: {elapsed:.2f}s | Mem: {mem_mb:.2f} MB"
+        )
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
+
+
+@app.middleware("http")
+async def add_user_id_to_request(request: Request, call_next):
+    user_id = request.headers.get("X-User-Id", "anonymous")
+    request.state.user_id = user_id
+    response = await call_next(request)
+    return response
+
+
+@app.post("/user-upload")
+async def user_upload(file: UploadFile = File(...), request: Request = None):
+    user_id = request.state.user_id if request else "anonymous"
+    user_dir = get_user_data_dir(user_id)
+    file_path = os.path.join(user_dir, file.filename)
+    with open(file_path, "wb") as f:
+        f.write(await file.read())
+    audit_log("user_file_upload", user=user_id, details={"filename": file.filename})
+    return {"status": "uploaded", "user": user_id}

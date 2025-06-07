@@ -1,0 +1,38 @@
+# Example agent config in YAML for non-dev users
+agents:
+  - name: retriever
+    description: Retrieves relevant context for the user query.
+    enabled: true
+    model: gpt-3.5-turbo
+    temperature: 0.0
+    max_tokens: 256
+  - name: analyst
+    description: Generates and executes SQL queries on a DataFrame.
+    enabled: true
+    model: gpt-4
+    temperature: 0.2
+    max_tokens: 512
+  - name: critic
+    description: Evaluates LLM answers for correctness, hallucinations, and dataset relevance.
+    enabled: true
+    model: gpt-3.5-turbo
+    temperature: 0.1
+    max_tokens: 256
+  - name: debate
+    description: Presents multiple perspectives and debates answers.
+    enabled: true
+    model: gpt-4
+    temperature: 0.3
+    max_tokens: 256
+  - name: chart
+    description: Visualizes data as charts.
+    enabled: true
+    model: null
+    temperature: null
+    max_tokens: null
+  - name: narrative
+    description: Summarizes the results of the analysis, critique, and chart into a narrative.
+    enabled: true
+    model: gpt-3.5-turbo
+    temperature: 0.2
+    max_tokens: 256

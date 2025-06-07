@@ -26,7 +26,7 @@ try:
         UnstructuredPowerPointLoader,
         NotebookLoader,
     )
-    from langchain_community.text_splitter import RecursiveCharacterTextSplitter
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
     from langchain_core.documents import Document
 except ImportError:
     # Fallback: define a minimal Document for CSV/TXT
@@ -267,3 +267,10 @@ def load_and_split(
     """
     docs = load_document(file_path)
     return split_documents(docs, chunk_size, chunk_overlap_pct, splitter_type)
+
+
+def get_user_data_dir(user_id: str) -> str:
+    base = os.getenv("USER_DATA_BASE", "data/users")
+    path = os.path.join(base, user_id)
+    os.makedirs(path, exist_ok=True)
+    return path
