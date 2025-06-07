@@ -1,9 +1,12 @@
-# DEMO SYNC LINE - 2025-06-07
+# DUMMY PUSH TEST - 2025-06-07
+# DEMO SYNC
 # Enterprise Insights Copilot - Next.js Frontend
+
+DUMMY LINE FOR GIT SYNC TEST
 
 This is the frontend for the Enterprise Insights Copilot project. It provides a dashboard for CSV upload, chat, agent timeline, charting, and configuration panel. The frontend is built with Next.js, Tailwind CSS, and shadcn/ui for modern, production-grade UI components.
 
-## Features aaaa
+## Features aaaaa 
 
 - CSV file upload to backend
 - Chat interface with multi-agent backend
