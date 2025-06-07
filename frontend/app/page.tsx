@@ -16,9 +16,12 @@ export type AgentStep = {
   output: string;
 };
 
+// Add ChartDatum type for chartData state
+type ChartDatum = { label: string; value: number };
+
 export default function Home() {
   const [timeline, setTimeline] = useState<AgentStep[]>([]);
-  const [chartUrl, setChartUrl] = useState<string | undefined>(undefined);
+  const [chartData, setChartData] = useState<ChartDatum[]>([]);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -26,9 +29,9 @@ export default function Home() {
         <h1 className="text-4xl font-bold mb-6">Enterprise Insights Copilot</h1>
         <SettingsPanel />
         <div className="mb-6"><FileUploader onUpload={() => {}} /></div>
-        <div className="mb-6"><ChatBox setTimeline={setTimeline} setChartUrl={setChartUrl} /></div>
+        <div className="mb-6"><ChatBox setTimeline={setTimeline} setChartData={setChartData} /></div>
         <div className="mb-6"><AgentTimeline steps={timeline} /></div>
-        <ChartPanel chartUrl={chartUrl} />
+        <ChartPanel chartData={chartData} />
       </div>
     </main>
   );

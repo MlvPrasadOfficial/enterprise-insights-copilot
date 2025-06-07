@@ -8,11 +8,11 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 type Props = {
   setTimeline: (steps: AgentStep[]) => void;
-  setChartUrl: (url: string | undefined) => void;
+  setChartData: (data: { label: string; value: number }[]) => void;
 };
 type Message = { sender: "user" | "copilot"; text: string };
 
-export default function ChatBox({ setTimeline, setChartUrl }: Props) {
+export default function ChatBox({ setTimeline, setChartData }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,9 +32,8 @@ export default function ChatBox({ setTimeline, setChartUrl }: Props) {
         ...msgs,
         { sender: "copilot", text: data.result?.summary ?? "No answer." },
       ]);
-      // Type-safe: steps is AgentStep[] | undefined
       setTimeline(Array.isArray(data.result?.steps) ? data.result.steps as AgentStep[] : []);
-      setChartUrl(typeof data.result?.chartUrl === "string" ? data.result.chartUrl : undefined);
+      setChartData(Array.isArray(data.result?.chartData) ? data.result.chartData : []);
     } catch (err: unknown) {
       let errorMsg = "Error from copilot.";
       if (
