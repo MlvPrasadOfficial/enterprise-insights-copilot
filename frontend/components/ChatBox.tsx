@@ -37,7 +37,9 @@ export default function ChatBox({ setTimeline, setChartUrl }: Props) {
         ...msgs,
         { sender: "copilot", text: data.result?.summary ?? "No answer." },
       ]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setTimeline((data.result?.steps as AgentStep[]) || []);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setChartUrl(data.result?.chartUrl ?? undefined);
     } catch (err: any) {
       setMessages((msgs) => [
