@@ -1,38 +1,24 @@
 "use client";
-/**
- * Enterprise Insights Copilot - Main Dashboard Page
- * Combines CSV upload, chat UI, agent timeline, chart, and settings panel.
- */
-import FileUploader from "@/components/FileUploader";
-import ChatBox from "@/components/ChatBox";
-import AgentTimeline from "@/components/AgentTimeline";
-import ChartPanel from "@/components/ChartPanel";
-import SettingsPanel from "@/components/SettingsPanel";
-import { useState } from "react";
-
-export type AgentStep = {
-  agent: string;
-  description: string;
-  output: string;
-};
-
-// Add ChartDatum type for chartData state
-type ChartDatum = { label: string; value: number };
+import Chat from "@/components/Chat";
+import Upload from "@/components/Upload";
+import Link from "next/link";
 
 export default function Home() {
-  const [timeline, setTimeline] = useState<AgentStep[]>([]);
-  const [chartData, setChartData] = useState<ChartDatum[]>([]);
-
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="container mx-auto py-8 max-w-3xl">
-        <h1 className="text-4xl font-bold mb-6">Enterprise Insights Copilot</h1>
-        <SettingsPanel />
-        <div className="mb-6"><FileUploader onUpload={() => {}} /></div>
-        <div className="mb-6"><ChatBox setTimeline={setTimeline} setChartData={setChartData} /></div>
-        <div className="mb-6"><AgentTimeline steps={timeline} /></div>
-        <ChartPanel chartData={chartData} />
+    <div className="min-h-screen bg-zinc-100 dark:bg-zinc-900 py-8">
+      <h1 className="text-4xl font-bold text-center mb-8 text-blue-600 dark:text-blue-300">
+        Enterprise Insights Copilot
+      </h1>
+      <Upload />
+      <Chat />
+      <div className="text-center mt-6">
+        <Link
+          href="/reports"
+          className="text-blue-400 underline hover:text-blue-600"
+        >
+          View Reports & Charts
+        </Link>
       </div>
-    </main>
+    </div>
   );
 }

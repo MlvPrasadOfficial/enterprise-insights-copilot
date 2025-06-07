@@ -9,10 +9,11 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 type Props = {
   setTimeline: (steps: AgentStep[]) => void;
   setChartData: (data: { label: string; value: number }[]) => void;
+  handleChat: (query: string) => Promise<any>;
 };
 type Message = { sender: "user" | "copilot"; text: string };
 
-export default function ChatBox({ setTimeline, setChartData }: Props) {
+export default function ChatBox({ setTimeline, setChartData, handleChat }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,15 +23,10 @@ export default function ChatBox({ setTimeline, setChartData }: Props) {
     setMessages((msgs) => [...msgs, { sender: "user", text: input }]);
     setLoading(true);
     try {
-      const res = await fetch(`${BACKEND_URL}/multiagent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: input }),
-      });
-      const data = await res.json();
+      const data = await handleChat(input);
       setMessages((msgs) => [
         ...msgs,
-        { sender: "copilot", text: data.result?.summary ?? "No answer." },
+        { sender: "copilot", text: data.result?.summary ?? data.error ?? "No answer." },
       ]);
       setTimeline(Array.isArray(data.result?.steps) ? data.result.steps as AgentStep[] : []);
       setChartData(Array.isArray(data.result?.chartData) ? data.result.chartData : []);

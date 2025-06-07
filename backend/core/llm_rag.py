@@ -61,6 +61,15 @@ class VectorStore:
             vector=vector, top_k=top_k, include_metadata=include_metadata
         )
 
+    def clear(self):
+        """Delete all vectors in the index (for session reset or new upload)."""
+        if hasattr(self.index, 'delete_all'):
+            self.index.delete_all()
+        else:
+            # Pinecone v3.x: delete with filter to match all
+            self.index.delete(filter={})
+        logger.info("[llm_rag] Cleared all vectors from the vector store.")
+
 
 try:
     import tiktoken

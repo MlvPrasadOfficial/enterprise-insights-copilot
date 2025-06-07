@@ -753,3 +753,73 @@ async def user_upload(file: UploadFile = File(...), request: Request = None):
         f.write(await file.read())
     audit_log("user_file_upload", user=user_id, details={"filename": file.filename})
     return {"status": "uploaded", "user": user_id}
+
+
+from pydantic import BaseModel
+
+class QueryRequest(BaseModel):
+    query: str
+
+@app.post("/ask")
+def ask(query_req: QueryRequest):
+    # Use only the current in-memory DataFrame for context
+    import pandas as pd
+    from backend.core.models import get_openai_client
+    df = memory.df
+    if df is None or df.empty:
+        return {"answer": "No data uploaded."}
+    # For summary, show a sample of the data
+    context = df.head(10).to_csv(index=False)
+    prompt = f"You are an HR data assistant. Here is the data:\n{context}\n\nUser question: {query_req.query}\n\nAnswer:"
+    client = get_openai_client()
+    completion = client.chat.completions.create(
+        model="gpt-4", messages=[{"role": "user", "content": prompt}]
+    )
+    return {"answer": completion.choices[0].message.content.strip()}
+
+
+@app.get("/debug/memory_df")
+def debug_memory_df():
+    """Return the current in-memory DataFrame as JSON for debugging."""
+    if memory.df is not None:
+        return memory.df.to_dict(orient="records")
+    return {"error": "No data loaded."}
+
+
+@app.post("/reset_index")
+def reset_index():
+    """Clear the vector store (for new upload or debugging)."""
+    from backend.core.llm_rag import vector_store
+    vector_store.clear()
+    return {"status": "cleared"}
+
+
+class ChartRequest(BaseModel):
+    chart_type: str = "bar"
+    column: str = "Department"
+
+@app.post("/generate-report")
+def generate_report():
+    df = memory.df
+    if df is None or df.empty:
+        return {"report": "No data loaded.", "top_categorical": []}
+    # Find top 3 categorical columns by unique value count (excluding columns with too many unique values)
+    cat_cols = df.select_dtypes(include=["object", "category"]).columns
+    col_uniques = [(col, df[col].nunique()) for col in cat_cols]
+    # Exclude columns with too many unique values (e.g., > 30)
+    filtered = [(col, n) for col, n in col_uniques if n > 1 and n <= 30]
+    # Sort by unique count descending, then by column name
+    filtered.sort(key=lambda x: (-x[1], x[0]))
+    top_categorical = [col for col, _ in filtered[:3]]
+    return {
+        "report": f"Number of rows: {len(df)}, Columns: {', '.join(df.columns)}",
+        "top_categorical": top_categorical,
+    }
+
+@app.post("/generate-chart")
+def generate_chart(req: ChartRequest):
+    df = memory.df
+    if df is None or df.empty:
+        return {"labels": [], "values": []}
+    counts = df[req.column].value_counts().to_dict()
+    return {"labels": list(counts.keys()), "values": list(counts.values())}
