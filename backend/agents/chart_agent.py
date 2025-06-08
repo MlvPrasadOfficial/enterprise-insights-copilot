@@ -5,6 +5,10 @@ from backend.core.logging import logger
 from typing import Tuple, Any, Dict
 from config.agent_config import AgentConfig
 from config.constants import VERBOSE
+from backend.core.models import get_openai_client
+from config.settings import load_prompt
+import json
+import os
 
 
 class ChartAgent(BaseAgent):
@@ -48,22 +52,27 @@ class ChartAgent(BaseAgent):
             return "scatter"
         if "proportion" in query or "share" in query:
             return "pie"
-        return "table"
+        # fallback: never return 'table', default to 'bar'
+        return "bar"
 
-    def render_chart(self, x: str, y: str, chart_type: str = "line") -> alt.Chart:
+    def render_chart(self, x: str, y: str, chart_type: str = "line"):
         """
-        Render a chart using Altair based on the specified axes and chart type.
-        Args:
-            x (str): The column for the x-axis.
-            y (str): The column for the y-axis.
-            chart_type (str): The type of chart to render.
-        Returns:
-            alt.Chart: The Altair chart object.
+        Render a chart or return table data based on chart_type.
+        For 'table', return columns and records. For others, return Altair chart.
         """
         logger.info(
             f"[ChartAgent] render_chart called with x={x}, y={y}, chart_type={chart_type}"
         )
-        if chart_type == "line":
+        if chart_type == "table":
+            # Return plain table data for frontend rendering
+            records = self.df.to_dict(orient="records")
+            columns = list(self.df.columns)
+            return {
+                "chart_type": "table",
+                "columns": columns,
+                "data": records
+            }
+        elif chart_type == "line":
             return alt.Chart(self.df).mark_line().encode(x=x, y=y)
         elif chart_type == "bar":
             return alt.Chart(self.df).mark_bar().encode(x=x, y=y)
@@ -127,6 +136,39 @@ class ChartAgent(BaseAgent):
         """
         # TODO: Implement real chart generation logic
         return "[ChartAgent] Chart result (stub)"
+
+    def guess_chart_llm(self, query: str) -> str:
+        """
+        Use LLM to select the best chart type for the data and query, excluding 'table'.
+        Returns one of: line, bar, scatter, histogram, pie
+        """
+        logger.info(f"[ChartAgent] guess_chart_llm called with query: {query}")
+        try:
+            profile = {
+                "columns": list(self.df.columns),
+                "dtypes": self.df.dtypes.astype(str).to_dict(),
+                "sample": self.df.head(5).to_dict(orient="records"),
+            }
+            prompt_template = load_prompt("config/prompts/chart_type_prompt.txt")
+            # Remove 'table' from the prompt
+            prompt = prompt_template.replace("- table\n", "").replace("table, ", "").replace(", table", "")
+            prompt = prompt.format(profile=json.dumps(profile, indent=2), query=query)
+            client = get_openai_client()
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.0,
+                max_tokens=8,
+            )
+            chart_type = response.choices[0].message.content.strip().lower()
+            allowed = {"line", "bar", "scatter", "histogram", "pie"}
+            if chart_type in allowed:
+                return chart_type
+            logger.warning(f"[ChartAgent] LLM returned unexpected chart type: {chart_type}, falling back.")
+        except Exception as e:
+            logger.error(f"[ChartAgent] guess_chart_llm failed: {e}")
+        # fallback: never return 'table', default to 'bar'
+        return "bar"
 
 
 # --- Utility extraction candidates ---

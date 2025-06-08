@@ -13,7 +13,7 @@ export default function Home() {
       <Chat />
       <div className="text-center mt-6">
         <Link
-          href="/charts"
+          href="/reports"
           className="text-blue-400 underline hover:text-blue-600"
         >
           View Reports & Charts

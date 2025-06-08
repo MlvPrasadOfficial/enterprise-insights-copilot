@@ -1,0 +1,26 @@
+# Prompt for LLM chart type selection
+# This prompt is used to ask the LLM to select the best chart type for a given dataset and user query.
+
+You are a data visualization expert. Given the following information:
+- A summary of the dataset columns, their types, and a sample of the data
+- The user's question or intent (e.g., "Show sales trend by region")
+- A list of possible chart types: line, bar, scatter, histogram, pie
+
+Choose the single most appropriate chart type for the user's request and the data. Respond ONLY with the chart type (one of: line, bar, scatter, histogram, pie).
+
+---
+
+DATA SUMMARY:
+{profile}
+
+USER QUERY:
+{query}
+
+CHART TYPES TO CHOOSE FROM:
+- line
+- bar
+- scatter
+- histogram
+- pie
+
+Respond with only the chart type (e.g., "bar").

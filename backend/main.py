@@ -464,22 +464,29 @@ def auto_chart(req: QueryInput):
     if memory.df is None:
         logger.error("[AUTO-CHART] No data in session.")
         from fastapi import HTTPException
-
         raise HTTPException(status_code=400, detail="No data in session.")
     try:
         query = req.query
         df = memory.df
         agent = ChartAgent(df)
-        chart_type = agent.guess_chart(query)
+        chart_type = agent.guess_chart_llm(query)
         x, y = agent.guess_axes()
         chart = agent.render_chart(x, y, chart_type)
         logger.info(f"[AUTO-CHART] Chart generated: type={chart_type}, x={x}, y={y}")
-        return {
-            "chart_type": chart_type,
-            "x": x,
-            "y": y,
-            "chart": chart.to_json(),
-        }
+        if chart_type == "table":
+            # chart is already a dict with columns and data
+            return {
+                "chart_type": "table",
+                "columns": chart["columns"],
+                "data": chart["data"]
+            }
+        else:
+            return {
+                "chart_type": chart_type,
+                "x": x,
+                "y": y,
+                "chart": chart.to_json(),
+            }
     except Exception as e:
         logger.error(f"[AUTO-CHART] Exception: {e}")
         logger.error(traceback.format_exc())
@@ -803,16 +810,20 @@ def generate_report():
     df = memory.df
     if df is None or df.empty:
         return {"report": "No data loaded.", "top_categorical": []}
+    # Use InsightAgent to generate a summary/insight
+    from backend.agents.insight_agent import InsightAgent
+    try:
+        insight = InsightAgent(df).generate_summary()
+    except Exception as e:
+        insight = f"Auto-insight failed: {e}"
     # Find top 3 categorical columns by unique value count (excluding columns with too many unique values)
     cat_cols = df.select_dtypes(include=["object", "category"]).columns
     col_uniques = [(col, df[col].nunique()) for col in cat_cols]
-    # Exclude columns with too many unique values (e.g., > 30)
     filtered = [(col, n) for col, n in col_uniques if n > 1 and n <= 30]
-    # Sort by unique count descending, then by column name
     filtered.sort(key=lambda x: (-x[1], x[0]))
     top_categorical = [col for col, _ in filtered[:3]]
     return {
-        "report": f"Number of rows: {len(df)}, Columns: {', '.join(df.columns)}",
+        "report": insight,
         "top_categorical": top_categorical,
     }
 
