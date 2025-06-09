@@ -1,40 +1,39 @@
-[User]
-   │
-   ▼
-[Vercel Hosted Next.js Frontend]
-   │
-   ▼ (REST/API call)
-[Render Hosted FastAPI Backend]
-   │
-   │ Receives query/upload/report/chart request
-   │
-   │ If CSV Upload:
-   │   └─ Pandas: Clean & parse
-   │   └─ Embedder: Vectorize data
-   │   └─ Pinecone: Store vectors
-   │
-   │ If BI Question or Report/Chart Request:
-   │   └─ Retriever: Pull relevant data/chunks from Pinecone
-   │
-   │   └─ [LangGraph Multi-Agent Orchestrator]
-   │         │
-   │         ├─ [InsightAgent]: Reads data, produces analytic insights
-   │         ├─ [CritiqueAgent]: Evaluates and flags errors/hallucinations
-   │         ├─ [NarrativeAgent]: Converts insights to a narrative report
-   │         ├─ [DebateAgent]: (Optional) Resolves ambiguities via debate
-   │         └─ [MemoryAgent]: (Optional) Maintains conversation/session memory
-   │
-   │   └─ [Agent Collaboration]: Agents pass intermediate results, critique, and improve each other's outputs (Agentic AI)
-   │
-   │   └─ [LLM Calls]: Each agent can use OpenAI GPT-4o (or Anthropic, etc.) to reason/generate language
-   │
-   │   └─ [LangSmith Monitoring]: Logs and traces every agent, every LLM step
-   │
-   │   └─ Compose final API response (answer, report, chart)
-   │
-   ▼
-[Vercel Hosted Next.js Frontend]
-   │
-   ├─ Show answer in chat
-   ├─ Render charts/tables
-   └─ Download/share report
+# Project Flowchart
+
+```mermaid
+flowchart TD
+    A[User Uploads Data/Query] --> B[FastAPI Backend Receives Request]
+    B --> C[Session Memory / DataCleanerAgent]
+    C --> D[DataFrame Cleaned & Normalized]
+    D --> E[Agentic Orchestrator]
+    E --> F{Agent Selection}
+    F -->|Chart| G[ChartAgent]
+    F -->|SQL| H[SQLAgent]
+    F -->|Critique| I[CriticAgent]
+    F -->|Debate| J[DebateAgent]
+    F -->|Analyst| K[AnalystAgent]
+    F -->|Retriever| L[RetrieverAgent]
+    G --> M[Chart Rendered]
+    H --> M
+    I --> M
+    J --> M
+    K --> M
+    L --> M
+    M --> N[Response Returned to User]
+    N --> O[Frontend Displays Result]
+```
+
+## Directory Structure (Summary)
+
+- `backend/` — FastAPI backend, agents, orchestrator, core logic
+- `frontend/` — Frontend app (React or similar)
+- `tests/` — All test modules
+- `data/` — Sample datasets/uploads
+
+## Main Flow
+
+1. **User uploads data or submits a query via frontend.**
+2. **Backend receives request, stores session, and cleans data.**
+3. **Agentic orchestrator selects and runs the appropriate agent(s).**
+4. **Agent(s) process data and generate results (charts, answers, critiques, etc.).**
+5. **Backend returns the result to the frontend for display.**
