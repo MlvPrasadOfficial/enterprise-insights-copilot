@@ -15,7 +15,24 @@ class AgenticOrchestrator:
         self.data = data
         self.agent_configs = load_agent_configs()
         # Dynamically discover all agent classes
-        self.agents = [agent() for agent in discover_agents() if getattr(agent, 'config', None) is None or agent.config.enabled]
+        self.agents = []
+        for agent in discover_agents():
+            if isinstance(agent, type):
+                if agent.__name__ == 'SQLAgent':
+                    if self.data is not None:
+                        self.agents.append(agent(self.data))
+                elif agent.__name__ == 'ChartAgent':
+                    if self.data is not None:
+                        self.agents.append(agent(self.data))
+                elif agent.__name__ == 'CritiqueAgent':
+                    if self.data is not None:
+                        self.agents.append(agent(self.data.columns.tolist()))
+                else:
+                    try:
+                        self.agents.append(agent())
+                    except Exception as e:
+                        # Skip agents that require arguments
+                        continue
 
     def run(self, query: str, data: Any, **kwargs) -> List[Dict]:
         context = {}

@@ -13,5 +13,5 @@ def build_multiagent_graph():
 multiagent_flow = build_multiagent_graph()
 
 def run_multiagent_flow(query, data):
-    result, _ = multiagent_flow(query, context={})
+    result = multiagent_flow.invoke({"query": query, "data": data})
     return result

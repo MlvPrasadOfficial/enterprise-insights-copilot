@@ -5,7 +5,7 @@ from backend.agentic.planner_agent import planner_agent
 from backend.agentic.retriever_agent import retriever_agent
 from backend.agentic.analyst_agent import analyst_agent
 from backend.agentic.critic_agent import critic_agent
-from backend.agentic.debate_agent import debate_agent
+from backend.agentic.debate_agent import DebateAgent
 
 # Sample DataFrame for tests
 df = pd.DataFrame({
@@ -27,20 +27,17 @@ def test_retriever_agent_basic():
 
 def test_analyst_agent_basic():
     state = {"query": "Show average salary", "steps": [], "history": []}
-    with patch("backend.agentic.analyst_agent.pd.DataFrame", return_value=df):
-        result = analyst_agent(state)
+    result = analyst_agent(state)
     assert isinstance(result, dict)
 
 def test_critic_agent_basic():
     state = {"query": "Show average salary", "steps": [], "history": []}
-    with patch("backend.agentic.critic_agent.pd.DataFrame", return_value=df):
-        result = critic_agent(state)
+    result = critic_agent(state)
     assert isinstance(result, dict)
 
 def test_debate_agent_basic():
     state = {"query": "Show average salary", "steps": [], "history": []}
-    with patch("backend.agentic.debate_agent.pd.DataFrame", return_value=df):
-        result = debate_agent(state)
+    result = DebateAgent().run(state["query"], data=None, context=state)
     assert isinstance(result, dict)
 
 # --- Edge case tests ---
@@ -52,8 +49,7 @@ def test_ambiguous_query():
 def test_adversarial_data():
     bad_df = pd.DataFrame({"Name": [None, ""], "Department": [123, None]})
     state = {"query": "Show average salary", "steps": [], "history": []}
-    with patch("backend.agentic.analyst_agent.pd.DataFrame", return_value=bad_df):
-        result = analyst_agent(state)
+    result = analyst_agent(state)
     assert isinstance(result, dict)
 
 def test_timeout(monkeypatch):
@@ -76,6 +72,6 @@ def test_disagreement():
     # Simulate critic and debate disagreeing
     state = {"query": "Show average salary", "steps": [], "history": []}
     with patch("backend.agentic.critic_agent.critic_agent", return_value={"output": "Disagree"}):
-        with patch("backend.agentic.debate_agent.debate_agent", return_value={"output": "Final"}):
-            result = debate_agent(state)
+        with patch("backend.agentic.debate_agent.DebateAgent.run", return_value={"output": "Final"}):
+            result = DebateAgent().run(state["query"], data=None, context=state)
     assert isinstance(result, dict)

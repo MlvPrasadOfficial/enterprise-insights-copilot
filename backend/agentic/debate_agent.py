@@ -21,8 +21,8 @@ class DebateAgent:
         if VERBOSE:
             print(f"[DebateAgent] Running with config: {self.config}")
         # Example: Use LLM to arbitrate between two answers
-        answer_a = context.get("CritiqueAgent", {}).get("output", "A")
-        answer_b = context.get("SQLAgent", {}).get("output", "B")
+        answer_a = context.get("CritiqueAgent", {}).get("output", "A") if context else "A"
+        answer_b = context.get("SQLAgent", {}).get("output", "B") if context else "B"
         prompt = f"Debate between two answers:\nA: {answer_a}\nB: {answer_b}\nWho is more correct and why?"
         try:
             response = client.chat.completions.create(

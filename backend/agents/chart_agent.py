@@ -72,16 +72,71 @@ class ChartAgent(BaseAgent):
                 "columns": columns,
                 "data": records
             }
-        elif chart_type == "line":
-            return alt.Chart(self.df).mark_line().encode(x=x, y=y)
-        elif chart_type == "bar":
-            return alt.Chart(self.df).mark_bar().encode(x=x, y=y)
-        elif chart_type == "scatter":
-            return alt.Chart(self.df).mark_circle().encode(x=x, y=y)
-        elif chart_type == "hist":
-            return alt.Chart(self.df).mark_bar().encode(alt.X(x, bin=True), y="count()")
         else:
-            return alt.Chart(self.df).mark_text().encode(text=x)
+            # Generate axis labels and title
+            x_label = str(x).replace("_", " ").title() if x else "X"
+            y_label = str(y).replace("_", " ").title() if y else "Y"
+            if chart_type == "line":
+                title = f"{y_label} Over {x_label}"
+                chart = alt.Chart(self.df, title=title).mark_line().encode(
+                    x=alt.X(x, title=x_label),
+                    y=alt.Y(y, title=y_label)
+                )
+            elif chart_type == "bar":
+                title = f"{y_label} by {x_label}"
+                chart = alt.Chart(self.df, title=title).mark_bar().encode(
+                    x=alt.X(x, title=x_label),
+                    y=alt.Y(y, title=y_label)
+                )
+            elif chart_type == "scatter":
+                title = f"{y_label} vs {x_label}"
+                chart = alt.Chart(self.df, title=title).mark_circle().encode(
+                    x=alt.X(x, title=x_label),
+                    y=alt.Y(y, title=y_label)
+                )
+            elif chart_type == "hist":
+                title = f"Distribution of {x_label}"
+                chart = alt.Chart(self.df, title=title).mark_bar().encode(
+                    x=alt.X(x, bin=True, title=x_label),
+                    y=alt.Y('count()', title='Count')
+                )
+            elif chart_type == "pie":
+                title = f"{y_label} by {x_label} (Pie Chart)"
+                chart = alt.Chart(self.df, title=title).mark_arc().encode(
+                    theta=alt.Theta(y, title=y_label),
+                    color=alt.Color(x, title=x_label)
+                )
+            else:
+                title = f"{y_label} by {x_label}"
+                chart = alt.Chart(self.df, title=title).mark_text().encode(text=x)
+
+            chart_dict = chart.to_dict()
+            # Overwrite/inject with data.values for robust parsing:
+            try:
+                if chart_type == "hist":
+                    chart_dict["data"] = {"values": self.df[[x]].to_dict(orient="records")}
+                    data_values = self.df[[x]].to_dict(orient="records")
+                elif chart_type == "pie":
+                    chart_dict["data"] = {"values": self.df[[x, y]].to_dict(orient="records")}
+                    data_values = self.df[[x, y]].to_dict(orient="records")
+                else:
+                    chart_dict["data"] = {"values": self.df[[x, y]].to_dict(orient="records")}
+                    data_values = self.df[[x, y]].to_dict(orient="records")
+            except Exception as e:
+                logger.warning(f"[ChartAgent] Could not extract data_values for chart: {e}")
+                chart_dict["data"] = {"values": []}
+                data_values = []
+            # Add title, x, y to top-level dict for frontend
+            return {
+                "chart_type": chart_type,
+                "x": x,
+                "y": y,
+                "title": title,
+                "x_label": x_label,
+                "y_label": y_label,
+                "chart": chart_dict,
+                "data_values": data_values
+            }
 
     def guess_axes(self) -> Tuple[str, str]:
         """
@@ -91,9 +146,7 @@ class ChartAgent(BaseAgent):
         """
         logger.info("[ChartAgent] guess_axes called.")
         numeric_cols = self.df.select_dtypes(include=["float", "int"]).columns.tolist()
-        non_numeric_cols = self.df.select_dtypes(
-            exclude=["float", "int"]
-        ).columns.tolist()
+        non_numeric_cols = self.df.select_dtypes(exclude=["float", "int"]).columns.tolist()
 
         x = non_numeric_cols[0] if non_numeric_cols else self.df.columns[0]
         y = numeric_cols[0] if numeric_cols else self.df.columns[1]
@@ -117,7 +170,7 @@ class ChartAgent(BaseAgent):
         result = {
             "agent": self.name,
             "description": self.description,
-            "output": None,  # Replace with actual output
+            "output": chart,
             "config": self.config.__dict__,
         }
         logger.info(f"[ChartAgent] run output: {result}")
@@ -125,15 +178,6 @@ class ChartAgent(BaseAgent):
 
     @staticmethod
     def generate(user_query: str, docs: any, data: any) -> str:
-        """
-        Generate a chart for the agentic flow (stub for now).
-        Args:
-            user_query (str): The user's question.
-            docs (Any): Retrieved context (if any).
-            data (Any): The data to visualize.
-        Returns:
-            str: Chart result (stubbed as string).
-        """
         # TODO: Implement real chart generation logic
         return "[ChartAgent] Chart result (stub)"
 
@@ -169,7 +213,3 @@ class ChartAgent(BaseAgent):
             logger.error(f"[ChartAgent] guess_chart_llm failed: {e}")
         # fallback: never return 'table', default to 'bar'
         return "bar"
-
-
-# --- Utility extraction candidates ---
-# Consider moving guess_chart, guess_axes, and chart rendering logic to backend/core/utils.py or a new services/chart_utils.py for modularity and reuse.

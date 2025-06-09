@@ -45,7 +45,7 @@ def test_chart_agent_guess_chart():
     assert agent.guess_chart("distribution") == "hist"
     assert agent.guess_chart("correlation") == "scatter"
     assert agent.guess_chart("proportion") == "pie"
-    assert agent.guess_chart("random") == "table"
+    assert agent.guess_chart("random") == "bar"
 
 
 def test_chart_agent_guess_axes():

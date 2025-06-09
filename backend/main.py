@@ -474,19 +474,14 @@ def auto_chart(req: QueryInput):
         chart = agent.render_chart(x, y, chart_type)
         logger.info(f"[AUTO-CHART] Chart generated: type={chart_type}, x={x}, y={y}")
         if chart_type == "table":
-            # chart is already a dict with columns and data
             return {
                 "chart_type": "table",
                 "columns": chart["columns"],
                 "data": chart["data"]
             }
         else:
-            return {
-                "chart_type": chart_type,
-                "x": x,
-                "y": y,
-                "chart": chart.to_json(),
-            }
+            # chart is already a dict with all required fields
+            return chart
     except Exception as e:
         logger.error(f"[AUTO-CHART] Exception: {e}")
         logger.error(traceback.format_exc())
