@@ -17,9 +17,7 @@ openai_api_key = os.getenv("OPENAI_API_KEY")
 
 class InsightAgent(BaseAgent):
     name = "InsightAgent"
-    role = "Generates natural language insights for a DataFrame."
-
-    def __init__(self, df: pd.DataFrame):
+    role = "Generates natural language insights for a DataFrame."    def __init__(self, df: pd.DataFrame):
         """
         Initialize the InsightAgent with a DataFrame.
         Args:
@@ -27,13 +25,12 @@ class InsightAgent(BaseAgent):
         """
         self.df = df
         logger.info(f"[InsightAgent] Initialized with DataFrame shape: {df.shape}")
-        
-    @traceable(name="generate_insights")
+          @traceable(name="generate_insights")
     def generate_summary(self, query: str = "") -> str:
         """
         Generate a summary of the DataFrame using profiling and LLM.
         Args:
-            query (str, optional): The user''s query to guide the insight generation.
+            query (str, optional): The user's query to guide the insight generation.
         Returns:
             str: The generated summary from the LLM.
         Raises:
@@ -50,7 +47,7 @@ class InsightAgent(BaseAgent):
             }
             
             template = load_prompt("config/prompts/insight_prompt.txt")
-            # Pass the user''s query or a default instruction if no query is provided
+            # Pass the user's query or a default instruction if no query is provided
             prompt = template.format(
                 profile=json.dumps(profile, indent=2),
                 query=query if query else "Generate general insights about this data."
@@ -65,9 +62,7 @@ class InsightAgent(BaseAgent):
             return response.choices[0].message.content.strip()
         except Exception as e:
             logger.error(f"[InsightAgent] Exception: {e}")
-            raise
-
-    def run(self, query: str, data: pd.DataFrame, **kwargs) -> Dict[str, Any]:
+            raise    def run(self, query: str, data: pd.DataFrame, **kwargs) -> Dict[str, Any]:
         """
         Run the InsightAgent to generate insights based on the query and data provided.
         Args:

@@ -1,8 +1,7 @@
 from langgraph.graph import StateGraph, END
 from typing import Dict, Any, Tuple, List
 from backend.core.logging import logger
-import pandas as pd
-
+from backend.core.logging import logger
 try:
     from backend.core.agent_status import update_agent_status
 except ImportError:
@@ -63,9 +62,9 @@ def chart_node(state: Dict[str, Any]) -> Dict[str, Any]:
         from backend.core.session_memory import memory
         
         query = state.get('query', '')
-        df = state.get('data') if state.get('data') is not None else memory.df
+        df = state.get('data') or memory.df
         
-        if isinstance(df, pd.DataFrame) and not df.empty:
+        if df is not None:
             agent = ChartAgent(df)
             # Try to determine best axes for the chart
             x, y = agent.guess_axes(query)
@@ -134,9 +133,9 @@ def sql_node(state: Dict[str, Any]) -> Dict[str, Any]:
         from backend.core.session_memory import memory
         
         query = state.get('query', '')
-        df = state.get('data') if state.get('data') is not None else memory.df
+        df = state.get('data') or memory.df
         
-        if isinstance(df, pd.DataFrame) and not df.empty:
+        if df is not None:
             agent = SQLAgent(df)
             # Generate SQL from the query
             sql = agent.generate_sql(query)
@@ -193,10 +192,10 @@ def insight_node(state: Dict[str, Any]) -> Dict[str, Any]:
         agent_type="insight",
         message="Analyzing data and generating insights"
     )
-    
-    try:
+      try:
         from backend.agents.insight_agent import InsightAgent
         from backend.core.session_memory import memory
+        import pandas as pd
         
         query = state.get('query', '')
         df = state.get('data') if state.get('data') is not None else memory.df
@@ -253,9 +252,7 @@ def build_multiagent_graph():
     graph.add_node("insight", insight_node)
     
     # Set entry point
-    graph.set_entry_point("planner")
-    
-    # Add conditional edges from planner based on the planner's decision
+    graph.set_entry_point("planner")    # Add conditional edges from planner based on the planner's decision
     graph.add_conditional_edges(
         "planner",
         # This function routes based on the next_node key set by the planner

@@ -1,23 +1,18 @@
-ID,Name,Age,Gender,Department,Joining_Date,Salary,City,Performance_Score,Status
-1,MLV,29,F,HR,2020-01-15,50000,New York,85,Active
-2,Bob,35,M,Engineering,2019-03-22,85000,San Francisco,92,Active
-3,Charlie,28,M,Marketing,2021-06-10,60000,Los Angeles,78,Active
-4,Diana,32,F,Finance,2018-11-05,72000,Chicago,88,Active
-5,Ethan,45,M,Engineering,2015-09-17,95000,Seattle,95,Inactive
-6,Fiona,26,F,HR,2022-01-10,48000,Boston,82,Active
-7,George,39,M,Sales,2017-04-12,67000,Austin,75,Active
-8,Hannah,31,F,Marketing,2020-08-03,62000,Denver,80,Active
-9,Ian,27,M,Support,2021-02-25,52000,Phoenix,77,Active
-10,Jane,34,F,Engineering,2016-07-19,88000,San Diego,90,Inactive
-11,Kevin,30,M,HR,2021-05-20,54000,Miami,83,Active
-12,Linda,38,F,Finance,2016-02-15,78000,Orlando,89,Active
-13,Michael,33,M,Engineering,2017-08-30,91000,Atlanta,91,Active
-14,Nina,29,F,Marketing,2022-03-10,61000,Seattle,84,Active
-15,Oscar,41,M,Sales,2014-11-25,70000,Portland,76,Active
-16,Paula,36,F,HR,2019-07-05,56000,Las Vegas,88,Active
-17,Quentin,42,M,Engineering,2013-12-01,94000,San Jose,93,Inactive
-18,Rachel,30,F,Marketing,2020-04-15,63000,Boston,81,Active
-19,Steve,34,M,Support,2018-09-10,50000,Denver,79,Active
-20,Tina,37,F,Finance,2015-06-20,77000,Chicago,87,Active
-21,Uma,28,F,HR,2021-01-05,49000,New York,80,Active
-22,Vincent,40,M,Sales,2016-03-15,68000,Los Angeles,74,Active
+Name,Age,Gender,Department,Joining_Date,Salary,City,Performance_Score,Status
+amit Sharma,29,M,Engineering,2018-07-01,1200000,Delhi,95,Active
+Priya Singh,32,F,Finance,2017-03-15,950000,Mumbai,88,Active
+Rahul Verma,28,M,HR,2019-11-20,700000,Bangalore,80,Active
+Sneha Patel,27,F,Marketing,2020-01-10,850000,Ahmedabad,92,Active
+Vikram Rao,35,M,Sales,2016-09-05,780000,Hyderabad,85,Active
+Neha Gupta,30,F,Engineering,2018-05-23,1150000,Pune,94,Active
+Rohan Das,31,M,Finance,2017-12-01,900000,Kolkata,87,Active
+Anjali Mehta,26,F,HR,2021-02-18,720000,Chennai,78,Active
+Suresh Kumar,34,M,Marketing,2015-08-30,800000,Delhi,86,Active
+Pooja Nair,29,F,Sales,2019-06-12,760000,Bangalore,90,Active
+Arjun Menon,33,M,Support,2018-09-10,650000,Trivandrum,82,Active
+Meera Joshi,38,F,Finance,2016-02-15,980000,Jaipur,89,Active
+Michael Roy,33,M,Engineering,2017-08-30,910000,Indore,91,Active
+Nina Rao,29,F,Marketing,2022-03-10,610000,Surat,84,Active
+Oscar Singh,41,M,Sales,2014-11-25,700000,Patna,76,Active
+Paula Dey,36,F,HR,2019-07-05,560000,Goa,88,Active
+Quentin Paul,42,M,Engineering,2013-12-01,940000,Noida,93,Inactive

@@ -13,16 +13,23 @@ class AgentState(TypedDict):
 
 
 # Define agent functions
-def planner(state: AgentState) -> str:
+def planner(state: AgentState) -> AgentState:
     query = state["query"].lower()
-    if "trend" in query or "chart" in query:
-        return "chart"
-    elif "insight" in query or "summary" in query:
-        return "insight"
-    elif "sql" in query or "group by" in query:
-        return "sql"
-    else:
-        return "insight"
+    next_step = "insight"  # Default
+    
+    if "trend" in query or "chart" in query or "plot" in query or "visualization" in query:
+        next_step = "chart"
+    elif "insight" in query or "summary" in query or "analyze" in query:
+        next_step = "insight"
+    elif "sql" in query or "group by" in query or "data" in query or "table" in query or "query" in query:
+        next_step = "sql"
+    
+    # Add the decision to the state
+    return {
+        **state,
+        "next_step": next_step,
+        "steps": state.get("steps", []) + ["planner"],
+    }
 
 
 def insight_node(state: AgentState) -> AgentState:

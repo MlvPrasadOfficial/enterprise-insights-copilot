@@ -10,7 +10,7 @@ langgraph==0.0.38
 tiktoken
 
 # Vector DB
-pinecone-client>=3.2.2,<4.0.0
+pinecone>=3.2.2,<4.0.0
 
 # Backend
 fastapi==0.110.1

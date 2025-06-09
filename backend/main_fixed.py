@@ -237,15 +237,6 @@ def health_check():
     return {"status": "ok"}
 
 
-@app.get('/healthcheck')
-async def healthcheck():
-    """
-    Simple health check endpoint to verify that the server is running.
-    Returns: {"status": "healthy", "timestamp": current_time}
-    """
-    return {"status": "healthy", "timestamp": int(time.time())}
-
-
 @app.get("/ready")
 def ready():
     # Optionally check vector DB, LLM, etc.
@@ -714,39 +705,23 @@ async def multiagent_query(request: Request):
     Returns: {"result": ...}
     """
     try:
-        from backend.core.agent_status import clear_agent_statuses, update_agent_status
-        from backend.agentic.langgraph_flow import run_multiagent_flow
-        
         data = await request.json()
         query = data.get("query")
         session_id = data.get("session_id", "default")
         if not query:
             raise HTTPException(status_code=400, detail="Missing 'query' in request body.")
-        
-        # Reset agent statuses for this session
-        clear_agent_statuses(session_id)
-        
-        # Initialize planning agent status
-        update_agent_status(
-            session_id=session_id,
-            agent_name="Planning Agent",
-            status="working",
-            agent_type="planner",
-            message="Analyzing query and deciding which agents to invoke"
-        )
-        
         # Use session memory for history if available
         if session_id not in session_memory:
             session_memory[session_id] = []
-            
-        # Use the multi-agent flow directly instead of rebuilding the graph
-        result = run_multiagent_flow(
-            query=query,
-            data=memory.df if hasattr(memory, "df") else None,
-            session_id=session_id
-        )
-        
-        return {"steps": result.get("steps", []), "result": result.get("result", "")}
+        graph = build_graph()
+        state = graph.invoke({
+            "query": query,
+            "result": "",
+            "steps": [],
+            "history": session_memory[session_id],
+        })
+        session_memory[session_id] = state.get("history", [])
+        return {"steps": state.get("steps", []), "result": state.get("result", "")}
     except Exception as e:
         logger.error(f"[MULTIAGENT-QUERY] Exception: {e}")
         logger.error(traceback.format_exc())
@@ -757,9 +732,8 @@ async def multiagent_query(request: Request):
 async def multiagent_api(request: Request):
     body = await request.json()
     query = body["query"]
-    # For demo: use memory.df or pass an empty DataFrame
-    import pandas as pd
-    data = memory.df if hasattr(memory, 'df') and memory.df is not None else pd.DataFrame()
+    # For demo: use memory.df or pass dummy data
+    data = memory.df if hasattr(memory, 'df') and memory.df is not None else {}
     result = run_multiagent_flow(query, data)
     return result
 
@@ -950,44 +924,3 @@ def generate_chart(req: ChartRequest):
         return {"labels": [], "values": []}
     counts = df[req.column].value_counts().to_dict()
     return {"labels": list(counts.keys()), "values": list(counts.values())}
-
-
-@api_v1.get("/agent-status")
-async def get_agent_status(request: Request):
-    """
-    Get the current status of all agents for a particular session.
-    Optional query param: session_id (defaults to "default")
-    Returns: {"agents": List[Dict]}
-    """
-    try:
-        from backend.core.agent_status import get_agent_statuses
-        
-        session_id = request.query_params.get("session_id", "default")
-        agent_statuses = get_agent_statuses(session_id)
-        
-        return {"agents": agent_statuses}
-    except Exception as e:
-        logger.error(f"[AGENT-STATUS] Exception: {e}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve agent status: {str(e)}")
-
-
-@api_v1.post("/reset-agent-status")
-async def reset_agent_status(request: Request):
-    """
-    Reset/clear agent status for a particular session.
-    Expects JSON: {"session_id": str (optional)}
-    Returns: {"status": "success"}
-    """
-    try:
-        from backend.core.agent_status import clear_agent_statuses
-        
-        data = await request.json()
-        session_id = data.get("session_id", "default")
-        clear_agent_statuses(session_id)
-        
-        return {"status": "success", "message": f"Agent statuses cleared for session {session_id}"}
-    except Exception as e:
-        logger.error(f"[RESET-AGENT-STATUS] Exception: {e}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Failed to reset agent status: {str(e)}")

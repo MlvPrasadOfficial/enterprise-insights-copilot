@@ -1,4 +1,4 @@
-from langgraph.graph import StateGraph
+from langgraph.graph import StateGraph, END
 from backend.agentic.nodes import (
     planner,
     insight_node,
@@ -16,14 +16,25 @@ def build_graph():
     builder.add_node("insight", insight_node)
     builder.add_node("chart", chart_node)
     builder.add_node("sql", sql_node)
-    # builder.set_entry_point("planner")  # Not supported in this version
-    # Instead, ensure 'planner' is the first node added and used as entry point by convention
-    builder.add_edge("planner", "chart")
-    builder.add_edge("planner", "insight")
-    builder.add_edge("planner", "sql")
-    builder.add_edge("chart", "chart")  # Self-loop to avoid dead-end error
-    builder.add_edge("insight", "insight")  # Self-loop to avoid dead-end error
-    builder.add_edge("sql", "sql")  # Self-loop to avoid dead-end error
+    
+    # Set entry point properly
+    builder.set_entry_point("planner")
+    
+    # Add conditional edges from the planner to the appropriate node
+    builder.add_conditional_edges(
+        "planner",
+        lambda state: state.get("next_step", "insight"),  # Default to insight if no decision
+        {
+            "chart": "chart",
+            "insight": "insight",
+            "sql": "sql",
+        }
+    )
+    
+    # Add edges from each specialist node to END
+    builder.add_edge("chart", END)
+    builder.add_edge("insight", END) 
+    builder.add_edge("sql", END)
 
     return builder.compile()
 
