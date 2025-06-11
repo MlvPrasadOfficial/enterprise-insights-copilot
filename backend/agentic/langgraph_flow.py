@@ -3,12 +3,8 @@ from typing import Dict, Any, Tuple, List
 from backend.core.logging import logger
 import pandas as pd
 
-try:
-    from backend.core.agent_status import update_agent_status
-except ImportError:
-    # Fallback for testing environments
-    def update_agent_status(session_id, agent_name, status, agent_type, message):
-        logger.warning(f"Agent status tracking not available: {agent_name}, {status}, {message}")
+# Import the agent status tracking module directly
+from backend.core.agent_status import update_agent_status
 
 def planner_node(state: Dict[str, Any]) -> Dict[str, Any]:
     """

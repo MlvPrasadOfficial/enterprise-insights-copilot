@@ -29,7 +29,7 @@ const AgentDashboard: React.FC<AgentDashboardProps> = ({ currentQuery, activeAge
   
   const getStatusColor = (status: AgentStatus['status']) => {
     switch (status) {
-      case 'working': return 'bg-yellow-400';
+      case 'working': return 'bg-yellow-400 animate-pulse';
       case 'complete': return 'bg-green-400';
       case 'error': return 'bg-red-400';
       default: return 'bg-gray-300';
@@ -48,6 +48,15 @@ const AgentDashboard: React.FC<AgentDashboardProps> = ({ currentQuery, activeAge
     }
   };
   
+  const getStatusText = (status: AgentStatus['status']) => {
+    switch (status) {
+      case 'working': return 'Working...';
+      case 'complete': return 'Completed';
+      case 'error': return 'Error';
+      default: return 'Idle';
+    }
+  };
+  
   return (
     <div className="p-4 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl mt-4">
       <h3 className="text-lg font-semibold mb-4">Agent Activity Dashboard</h3>
@@ -63,11 +72,10 @@ const AgentDashboard: React.FC<AgentDashboardProps> = ({ currentQuery, activeAge
         {activeAgents.map((agent, idx) => (
           <div key={idx} className="flex items-start border rounded-lg p-3 bg-gray-50 dark:bg-zinc-800">
             <div className="flex-shrink-0 text-2xl mr-3">{getAgentIcon(agent.type)}</div>
-            <div className="flex-grow">
-              <div className="flex justify-between">
+            <div className="flex-grow">              <div className="flex justify-between">
                 <div className="font-medium">{agent.name}</div>
                 <div className={`px-2 py-1 text-xs rounded-full ${getStatusColor(agent.status)}`}>
-                  {agent.status.charAt(0).toUpperCase() + agent.status.slice(1)}
+                  {getStatusText(agent.status)}
                 </div>
               </div>
               <div className="text-sm text-gray-500 dark:text-gray-400">

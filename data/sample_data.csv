@@ -1,0 +1,11 @@
+product_id,product_name,category,price,stock,sales
+1,Laptop Pro,Electronics,1299.99,45,125
+2,Smart Phone X,Electronics,799.99,120,350
+3,Wireless Headphones,Electronics,149.99,89,210
+4,Coffee Maker,Home Appliances,89.99,60,85
+5,Blender Elite,Home Appliances,129.99,35,42
+6,Fitness Tracker,Electronics,79.99,150,320
+7,LED TV 55",Electronics,599.99,28,68
+8,Robot Vacuum,Home Appliances,249.99,22,36
+9,Gaming Console,Electronics,399.99,30,75
+10,Smartwatch,Electronics,199.99,65,150

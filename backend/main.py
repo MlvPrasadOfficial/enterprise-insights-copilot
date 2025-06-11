@@ -131,6 +131,8 @@ from backend.agents.report_generator import ReportGenerator
 from fastapi.responses import FileResponse
 from backend.agents.debate_agent import DebateAgent
 from backend.core.debate_log import log_debate_entry
+# Use the fixed langgraph flow
+from backend.agentic.langgraph_flow_fixed import run_multiagent_flow
 from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -149,7 +151,8 @@ from starlette.requests import Request as StarletteRequest
 from starlette.responses import Response
 from langchain.callbacks.tracers import LangChainTracer
 from backend.agentic.graph_flow import build_graph
-from backend.agentic.langgraph_flow import run_multiagent_flow
+# Use our fixed langgraph flow file
+from backend.agentic.langgraph_flow_fixed import run_multiagent_flow
 from config.config import get_env_var
 
 # --- API Metadata ---
@@ -160,69 +163,122 @@ app = FastAPI(
 )
 
 # --- CORS & Security ---
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+ALLOWED_ORIGINS = get_env_var("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8501").split(",")
+# Remove any empty strings and strip whitespace
+ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS if origin.strip()]
+
+# More restrictive CORS for production security
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-API-Key"],
+    expose_headers=["X-Total-Count", "X-Request-ID"],
 )
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: StarletteRequest, call_next):
         response: Response = await call_next(request)
+        # Enhanced security headers
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+        response.headers["X-Request-ID"] = f"req-{int(time.time())}-{hash(request.url)}"
         return response
 
 
 app.add_middleware(SecurityHeadersMiddleware)
 
 # --- Logging Configuration ---
+LOG_LEVEL = get_env_var("LOG_LEVEL", "INFO")
 logger = logging.getLogger("fastapi_app")
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL.upper()),
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
 
 
 # --- Request/Response Logging Middleware ---
 @app.middleware("http")
 async def log_requests(request: FastAPIRequest, call_next):
-    logger.info(f"Request: {request.method} {request.url}")
+    start_time = time.time()
+    request_id = f"req-{int(start_time)}-{hash(str(request.url))}"
+    logger.info(f"[{request_id}] {request.method} {request.url}")
+    
     try:
         response = await call_next(request)
-        logger.info(f"Response status: {response.status_code}")
+        process_time = time.time() - start_time
+        logger.info(f"[{request_id}] Response: {response.status_code} ({process_time:.3f}s)")
+        response.headers["X-Request-ID"] = request_id
         return response
     except Exception as e:
+        process_time = time.time() - start_time
         tb = traceback.format_exc()
-        logger.error(f"[EXCEPTION] {e}\n{tb}")
+        logger.error(f"[{request_id}] EXCEPTION ({process_time:.3f}s): {e}\n{tb}")
         return JSONResponse(
-            status_code=500, content={"detail": f"Internal server error: {e}"}
+            status_code=500, 
+            content={
+                "error": "Internal Server Error",
+                "message": "An unexpected error occurred",
+                "request_id": request_id,
+                "timestamp": int(time.time())
+            }
         )
 
 
 @app.exception_handler(FastAPIRequestValidationError)
 async def validation_exception_handler(request, exc):
-    logger.error(f"[VALIDATION ERROR] {exc}")
-    return JSONResponse(status_code=422, content={"detail": str(exc)})
+    logger.warning(f"Validation error on {request.method} {request.url}: {exc}")
+    return JSONResponse(
+        status_code=422, 
+        content={
+            "error": "Validation Error",
+            "message": "Request validation failed",
+            "details": str(exc),
+            "timestamp": int(time.time())
+        }
+    )
 
 
 # --- Centralized Exception Handling ---
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Unhandled error: {exc}")
+    request_id = getattr(request.state, 'request_id', 'unknown')
+    logger.error(f"[{request_id}] Unhandled error on {request.method} {request.url}: {exc}")
+    logger.error(traceback.format_exc())
+    
+    # Don't expose internal error details in production
+    is_debug = get_env_var("DEBUG", "false").lower() == "true"
+    error_detail = str(exc) if is_debug else "An internal server error occurred"
+    
     return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={"detail": str(exc)}
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+        content={
+            "error": "Internal Server Error",
+            "message": error_detail,
+            "request_id": request_id,
+            "timestamp": int(time.time())
+        }
     )
 
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    logger.warning(f"Validation error: {exc}")
+    logger.warning(f"Request validation error on {request.method} {request.url}: {exc.errors()}")
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={"detail": exc.errors()},
+        content={
+            "error": "Request Validation Error",
+            "message": "Invalid request data",
+            "details": exc.errors(),
+            "timestamp": int(time.time())
+        },
     )
 
 
@@ -255,7 +311,49 @@ def ready():
 # --- API Versioning Helper ---
 from fastapi import APIRouter
 
+# Define API v1 router
 api_v1 = APIRouter(prefix="/api/v1")
+
+# Register the API endpoints with the router
+@api_v1.get("/agent-status")
+async def get_agent_status(request: Request):
+    """
+    Get the current status of all agents for a particular session.
+    Optional query param: session_id (defaults to "default")
+    Returns: {"agents": List[Dict]}
+    """
+    try:
+        from backend.core.agent_status import get_agent_statuses
+        
+        session_id = request.query_params.get("session_id", "default")
+        agent_statuses = get_agent_statuses(session_id)
+        
+        return {"agents": agent_statuses}
+    except Exception as e:
+        logger.error(f"[AGENT-STATUS] Exception: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve agent status: {str(e)}")
+
+
+@api_v1.post("/reset-agent-status")
+async def reset_agent_status(request: Request):
+    """
+    Reset/clear agent status for a particular session.
+    Expects JSON: {"session_id": str (optional)}
+    Returns: {"status": "success"}
+    """
+    try:
+        from backend.core.agent_status import clear_agent_statuses
+        
+        data = await request.json()
+        session_id = data.get("session_id", "default")
+        clear_agent_statuses(session_id)
+        
+        return {"status": "success", "message": f"Agent statuses cleared for session {session_id}"}
+    except Exception as e:
+        logger.error(f"[RESET-AGENT-STATUS] Exception: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Failed to reset agent status: {str(e)}")
 
 
 class QueryInput(BaseModel):
@@ -334,8 +432,7 @@ async def index_csv(file: UploadFile = File(...)) -> Any:
     Args:
         file (UploadFile): The uploaded CSV file.
     Returns:
-        dict: Status and indexing info.
-    Raises:
+        dict: Status and indexing info.    Raises:
         HTTPException: If file is empty, too large, or processing fails.
     """
     import time
@@ -351,15 +448,16 @@ async def index_csv(file: UploadFile = File(...)) -> Any:
             raise HTTPException(
                 status_code=400, detail="Upload a valid CSV file (file is empty)."
             )
-        # File size limit (10MB)
-        MAX_SIZE = 10 * 1024 * 1024
+        # File size limit from environment variable (default 10MB)
+        MAX_SIZE_MB = int(get_env_var("MAX_FILE_SIZE_MB", "10"))
+        MAX_SIZE = MAX_SIZE_MB * 1024 * 1024
         if file_size > MAX_SIZE:
             logger.warning(
                 f"[UPLOAD] File too large: {file_size} bytes > {MAX_SIZE} bytes"
             )
             raise HTTPException(
                 status_code=413,
-                detail=f"File too large (> {MAX_SIZE//1024//1024}MB). Please upload a smaller file.",
+                detail=f"File too large (> {MAX_SIZE_MB}MB). Please upload a smaller file.",
             )
         # Save uploaded file to a cross-platform temp path with original extension
         import uuid
@@ -757,33 +855,76 @@ async def multiagent_query(request: Request):
 async def multiagent_api(request: Request):
     body = await request.json()
     query = body["query"]
+    session_id = body.get("session_id", "default")
     # For demo: use memory.df or pass an empty DataFrame
     import pandas as pd
     data = memory.df if hasattr(memory, 'df') and memory.df is not None else pd.DataFrame()
-    result = run_multiagent_flow(query, data)
+    
+    # Clear and initialize agent status
+    try:
+        from backend.core.agent_status import clear_agent_statuses, update_agent_status
+        clear_agent_statuses(session_id)
+        update_agent_status(
+            session_id=session_id,
+            agent_name="Planning Agent",
+            status="working",
+            agent_type="planner",
+            message="Analyzing query and deciding which agents to invoke"
+        )
+    except Exception as e:
+        logger.error(f"Failed to initialize agent status: {e}")
+    
+    result = run_multiagent_flow(query, data, session_id)
     return result
 
 
 # --- LangSmith/LangChain Tracing Setup ---
-import os
+# Configure LangSmith tracing from environment variables
+LANGSMITH_TRACING = get_env_var("LANGSMITH_TRACING", "false").lower() == "true"
+if LANGSMITH_TRACING:
+    LANGSMITH_ENDPOINT = get_env_var("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com")
+    LANGSMITH_API_KEY = get_env_var("LANGSMITH_API_KEY", required=False)
+    LANGSMITH_PROJECT = get_env_var("LANGSMITH_PROJECT", "enterprise-insights-copilot")
+    
+    if LANGSMITH_API_KEY:
+        os.environ["LANGSMITH_TRACING"] = "true"
+        os.environ["LANGSMITH_ENDPOINT"] = LANGSMITH_ENDPOINT
+        os.environ["LANGSMITH_API_KEY"] = LANGSMITH_API_KEY
+        os.environ["LANGSMITH_PROJECT"] = LANGSMITH_PROJECT
+        
+        tracer = LangChainTracer(project_name=LANGSMITH_PROJECT)
+        logger.info(f"[INIT] LangSmith tracing enabled for project: {LANGSMITH_PROJECT}")
+    else:
+        logger.warning("[INIT] LangSmith tracing requested but API key not provided")
+else:
+    logger.info("[INIT] LangSmith tracing disabled")
 
-os.environ["LANGSMITH_TRACING"] = "true"
-os.environ["LANGSMITH_ENDPOINT"] = "https://api.smith.langchain.com"
-os.environ["LANGSMITH_API_KEY"] = "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"
-os.environ["LANGSMITH_PROJECT"] = "aiagent"
-
-tracer = LangChainTracer(project_name="EnterpriseInsightsCopilot")
-
+# Include the API v1 router
 app.include_router(api_v1)
 
+# --- API Key Security Configuration ---
 from fastapi import Depends
 from fastapi.security import APIKeyHeader
-API_KEY = os.getenv("API_KEY")
+
+API_KEY = get_env_var("API_KEY", required=False)
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 def get_api_key(api_key: str = Depends(api_key_header)):
+    """
+    Validate API key for protected endpoints.
+    If API_KEY is not set in environment, endpoints are unprotected.
+    """
     if API_KEY and api_key != API_KEY:
-        raise HTTPException(status_code=403, detail="Invalid or missing API key.")
+        logger.warning(f"[SECURITY] Invalid API key attempt: {api_key[:8]}...")
+        raise HTTPException(
+            status_code=403, 
+            detail={
+                "error": "Forbidden",
+                "message": "Invalid or missing API key",
+                "timestamp": int(time.time())
+            }
+        )
+    return api_key
     return api_key
 
 
@@ -804,8 +945,7 @@ async def upload_file(file: UploadFile = File(...), user: str = None):
     Returns:
         dict: Status message.
     Raises:
-        HTTPException: If file is empty or too large.
-    """
+        HTTPException: If file is empty or too large.    """
     import time
     import psutil
 
@@ -819,15 +959,16 @@ async def upload_file(file: UploadFile = File(...), user: str = None):
             raise HTTPException(
                 status_code=400, detail="Upload a valid file (file is empty)."
             )
-        # File size limit (10MB)
-        MAX_SIZE = 10 * 1024 * 1024
+        # File size limit from environment variable (default 10MB)
+        MAX_SIZE_MB = int(get_env_var("MAX_FILE_SIZE_MB", "10"))
+        MAX_SIZE = MAX_SIZE_MB * 1024 * 1024
         if file_size > MAX_SIZE:
             logger.warning(
                 f"[UPLOAD] File too large: {file_size} bytes > {MAX_SIZE} bytes"
             )
             raise HTTPException(
                 status_code=413,
-                detail=f"File too large (> {MAX_SIZE//1024//1024}MB). Please upload a smaller file.",
+                detail=f"File too large (> {MAX_SIZE_MB}MB). Please upload a smaller file.",
             )
         # Save uploaded file to a cross-platform temp path with original extension
         import uuid
@@ -952,42 +1093,45 @@ def generate_chart(req: ChartRequest):
     return {"labels": list(counts.keys()), "values": list(counts.values())}
 
 
-@api_v1.get("/agent-status")
-async def get_agent_status(request: Request):
+@app.post("/load_csv_memory")
+async def load_csv_memory(file: UploadFile = File(...)):
     """
-    Get the current status of all agents for a particular session.
-    Optional query param: session_id (defaults to "default")
-    Returns: {"agents": List[Dict]}
-    """
-    try:
-        from backend.core.agent_status import get_agent_statuses
+    Load a CSV file directly into memory without saving it to disk
+    
+    Args:
+        file (UploadFile): The CSV file to load
         
-        session_id = request.query_params.get("session_id", "default")
-        agent_statuses = get_agent_statuses(session_id)
-        
-        return {"agents": agent_statuses}
-    except Exception as e:
-        logger.error(f"[AGENT-STATUS] Exception: {e}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve agent status: {str(e)}")
-
-
-@api_v1.post("/reset-agent-status")
-async def reset_agent_status(request: Request):
-    """
-    Reset/clear agent status for a particular session.
-    Expects JSON: {"session_id": str (optional)}
-    Returns: {"status": "success"}
+    Returns:
+        dict: Status message with row count
     """
     try:
-        from backend.core.agent_status import clear_agent_statuses
+        contents = await file.read()
+        if not contents:
+            raise HTTPException(status_code=400, detail="Empty file")
+            
+        # Parse CSV with pandas
+        import pandas as pd
+        import io
         
-        data = await request.json()
-        session_id = data.get("session_id", "default")
-        clear_agent_statuses(session_id)
-        
-        return {"status": "success", "message": f"Agent statuses cleared for session {session_id}"}
+        # Try to decode the CSV
+        try:
+            df = pd.read_csv(io.BytesIO(contents))
+            logger.info(f"[LOAD_CSV] Successfully loaded DataFrame with shape: {df.shape}")
+            
+            # Store in memory for the agents to use
+            from backend.core.session_memory import memory
+            memory.df = df
+            
+            return {
+                "status": "success",
+                "rows": len(df),
+                "columns": list(df.columns)
+            }
+        except Exception as e:
+            logger.error(f"[LOAD_CSV] Failed to parse CSV: {e}")
+            raise HTTPException(status_code=400, detail=f"Failed to parse CSV: {str(e)}")
+            
     except Exception as e:
-        logger.error(f"[RESET-AGENT-STATUS] Exception: {e}")
+        logger.error(f"[LOAD_CSV] Error: {e}")
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Failed to reset agent status: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"CSV loading failed: {str(e)}")

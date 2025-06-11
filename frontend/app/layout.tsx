@@ -1,24 +1,18 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
+import MainNavigation from "../components/MainNavigation";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Configure Inter font
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "700"],
-  display: "swap",
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-  weight: ["400", "700"],
+  variable: "--font-inter",
   display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "Enterprise Insights Copilot",
-  description: "GenAI Insights Dashboard",
+  description: "AI-Powered Data Analytics Platform",
 };
 
 export default function RootLayout({
@@ -27,11 +21,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className="dark bg-background text-white font-heading min-h-screen">
-        {/* Hex Background Overlay */}
-        <div className="fixed inset-0 -z-10 opacity-30 pointer-events-none" style={{ background: "url('/hex-bg.svg') repeat" }} />
-        {children}
+    <html lang="en" className={inter.variable}>
+      <body className="min-h-screen text-white antialiased" style={{
+        fontFamily: 'Inter, sans-serif',
+        background: 'linear-gradient(135deg, #000000 0%, #0a0a0a 25%, #1a0d2e 50%, #2d1b3d 75%, #000000 100%)'
+      }}>
+        {/* Navigation Header */}
+        <MainNavigation />
+        
+        {/* Main Content with padding for fixed header */}
+        <main className="pt-20">
+          {children}
+        </main>
       </body>
     </html>
   );

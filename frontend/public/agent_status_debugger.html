@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Status API Debugger</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 40px auto;
+            max-width: 800px;
+            padding: 0 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+        h1, h2, h3 {
+            color: #0366d6;
+        }
+        pre {
+            background-color: #f6f8fa;
+            border-radius: 3px;
+            padding: 16px;
+            overflow: auto;
+        }
+        button {
+            background-color: #0366d6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 8px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #0255b3;
+        }
+        .error {
+            color: #d73a49;
+            background-color: #ffeef0;
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #22863a;
+            background-color: #f0fff4;
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+        }
+        input[type="text"] {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            min-width: 300px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+        }
+        .control-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Agent Status API Debugger</h1>
+    
+    <div class="control-panel">
+        <div>
+            <label for="sessionId">Session ID:</label>
+            <input type="text" id="sessionId" value="test-session-12345" />
+        </div>
+        <div>
+            <button id="createStatusBtn">Create Test Agents</button>
+            <button id="fetchStatusBtn">Fetch Agent Status</button>
+            <button id="resetStatusBtn">Reset Status</button>
+        </div>
+    </div>
+    
+    <h2>API Response</h2>
+    <div id="status"></div>
+    <pre id="output"></pre>
+    
+    <h2>Agent Visualization Test</h2>
+    <p>Test the visualization of agent statuses with different combinations.</p>
+    <div>
+        <button id="idleAgentsBtn">Idle Agents</button>
+        <button id="plannerWorkingBtn">Planner Working</button>
+        <button id="sqlWorkingBtn">SQL Working</button>
+        <button id="chartWorkingBtn">Chart Working</button>
+        <button id="allCompleteBtn">All Complete</button>
+        <button id="someErrorBtn">Some With Error</button>
+    </div>
+    
+    <script>
+        const API_URL = 'http://localhost:8000';
+        const statusDiv = document.getElementById('status');
+        const outputPre = document.getElementById('output');
+        const sessionIdInput = document.getElementById('sessionId');
+        
+        // Helper function to set status message
+        function setStatus(message, isError = false) {
+            statusDiv.innerHTML = `<div class="${isError ? 'error' : 'success'}">${message}</div>`;
+        }
+        
+        // Helper function to prettify JSON output
+        function prettyJson(obj) {
+            return JSON.stringify(obj, null, 2);
+        }
+        
+        // Fetch agent status
+        document.getElementById('fetchStatusBtn').addEventListener('click', async () => {
+            try {
+                const sessionId = sessionIdInput.value;
+                setStatus('Fetching agent status...');
+                
+                const response = await fetch(`${API_URL}/api/v1/agent-status?session_id=${sessionId}`);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(`API returned error: ${data.detail || response.status}`);
+                }
+                
+                setStatus('Agent status fetched successfully!');
+                outputPre.textContent = prettyJson(data);
+            } catch (error) {
+                setStatus(`Error: ${error.message}`, true);
+                console.error('Error fetching agent status:', error);
+            }
+        });
+        
+        // Reset agent status
+        document.getElementById('resetStatusBtn').addEventListener('click', async () => {
+            try {
+                const sessionId = sessionIdInput.value;
+                setStatus('Resetting agent status...');
+                
+                const response = await fetch(`${API_URL}/api/v1/reset-agent-status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ session_id: sessionId }),
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(`API returned error: ${data.detail || response.status}`);
+                }
+                
+                setStatus('Agent status reset successfully!');
+                outputPre.textContent = prettyJson(data);
+            } catch (error) {
+                setStatus(`Error: ${error.message}`, true);
+                console.error('Error resetting agent status:', error);
+            }
+        });
+        
+        // Create test agents
+        document.getElementById('createStatusBtn').addEventListener('click', async () => {
+            try {
+                const sessionId = sessionIdInput.value;
+                setStatus('Creating test agents...');
+                
+                // First reset the status
+                await fetch(`${API_URL}/api/v1/reset-agent-status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ session_id: sessionId }),
+                });
+                
+                // Now make a mock query to create agents
+                const response = await fetch(`${API_URL}/api/v1/multiagent-query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: 'Show me a chart of sales by region',
+                        session_id: sessionId
+                    }),
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(`API returned error: ${data.detail || response.status}`);
+                }
+                
+                // Now fetch the agent status to show it
+                const statusResponse = await fetch(`${API_URL}/api/v1/agent-status?session_id=${sessionId}`);
+                const statusData = await statusResponse.json();
+                
+                setStatus('Test agents created successfully!');
+                outputPre.textContent = prettyJson(statusData);
+            } catch (error) {
+                setStatus(`Error: ${error.message}`, true);
+                console.error('Error creating test agents:', error);
+            }
+        });
+        
+        // Test different agent states
+        async function simulateAgentState(agentSetup) {
+            try {
+                const sessionId = sessionIdInput.value;
+                setStatus('Setting up test agent state...');
+                
+                // First reset the status
+                await fetch(`${API_URL}/api/v1/reset-agent-status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ session_id: sessionId }),
+                });
+                
+                // Now create a mock multi-agent query that would create different agent states
+                // We'll simulate this by directly making a POST request to your test endpoint
+                const response = await fetch(`${API_URL}/api/v1/multiagent-query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: agentSetup.query || 'Test query',
+                        session_id: sessionId,
+                        _test_state: agentSetup.state // This would need backend support for test states
+                    }),
+                });
+                
+                // Now fetch the agent status to show it
+                const statusResponse = await fetch(`${API_URL}/api/v1/agent-status?session_id=${sessionId}`);
+                const statusData = await statusResponse.json();
+                
+                setStatus(`Test "${agentSetup.name}" applied successfully!`);
+                outputPre.textContent = prettyJson(statusData);
+                
+                return statusData;
+            } catch (error) {
+                setStatus(`Error: ${error.message}`, true);
+                console.error('Error setting up test agent state:', error);
+            }
+        }
+        
+        // Add event listeners for the test buttons
+        document.getElementById('idleAgentsBtn').addEventListener('click', () => {
+            simulateAgentState({
+                name: 'Idle Agents',
+                query: 'Initialize agents only',
+                state: 'idle'
+            });
+        });
+        
+        document.getElementById('plannerWorkingBtn').addEventListener('click', () => {
+            simulateAgentState({
+                name: 'Planner Working',
+                query: 'Start planning process',
+                state: 'planner_working'
+            });
+        });
+        
+        document.getElementById('sqlWorkingBtn').addEventListener('click', () => {
+            simulateAgentState({
+                name: 'SQL Working',
+                query: 'Run SQL query on data',
+                state: 'sql_working'
+            });
+        });
+        
+        document.getElementById('chartWorkingBtn').addEventListener('click', () => {
+            simulateAgentState({
+                name: 'Chart Working',
+                query: 'Create a visualization',
+                state: 'chart_working'
+            });
+        });
+        
+        document.getElementById('allCompleteBtn').addEventListener('click', () => {
+            simulateAgentState({
+                name: 'All Complete',
+                query: 'Finish all agent tasks',
+                state: 'all_complete'
+            });
+        });
+        
+        document.getElementById('someErrorBtn').addEventListener('click', () => {
+            simulateAgentState({
+                name: 'Some With Error',
+                query: 'Generate an error condition',
+                state: 'some_error'
+            });
+        });
+        
+        // Initial status message
+        setStatus('Ready. Use the buttons above to interact with the agent status API.', false);
+    </script>
+</body>
+</html>

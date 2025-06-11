@@ -1,0 +1,370 @@
+from langgraph.graph import StateGraph, END
+from typing import Dict, Any, Tuple, List
+from backend.core.logging import logger
+import pandas as pd
+
+# Import the agent status tracking module directly
+from backend.core.agent_status import update_agent_status
+
+def planner_node(state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Simple planner node that makes decisions based on the query
+    Returns the state with next_node set, which the conditional router will use
+    """
+    query = state.get("query", "").lower()
+    state["plan"] = "Analyzing request and routing to appropriate agent"
+    
+    # Make a decision based on the query and store it in the state
+    if any(word in query for word in ["chart", "plot", "graph", "visualization", "trend"]):
+        state["next_node"] = "chart"
+    elif any(word in query for word in ["sql", "query", "table", "data", "group by", "filter"]):
+        state["next_node"] = "sql"
+    elif any(word in query for word in ["insight", "summary", "analyze", "explain", "statistics"]):
+        state["next_node"] = "insight"
+    else:
+        # Default to insight if we can't determine
+        state["next_node"] = "insight"
+    
+    logger.info(f"Planner decided to route query to: {state['next_node']}")
+    state["steps"] = state.get("steps", []) + ["planner"]
+    
+    # Update agent status
+    session_id = state.get("session_id", "default")
+    update_agent_status(
+        session_id=session_id,
+        agent_name="Planning Agent",
+        status="complete",
+        agent_type="planner",
+        message=f"Routed query to {state['next_node']} agent"
+    )
+    
+    # Simply return the state - no string needed, as we're not using a standard node return type
+    return state
+
+def chart_node(state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Chart generation node that uses the ChartAgent to create visualizations
+    """
+    session_id = state.get("session_id", "default")
+    update_agent_status(
+        session_id=session_id,
+        agent_name="Chart Generator",
+        status="working",
+        agent_type="chart",
+        message="Generating visualization from data"
+    )
+    
+    try:
+        from backend.agents.chart_agent import ChartAgent
+        from backend.core.session_memory import memory
+        
+        query = state.get('query', '')
+        df = state.get('data')
+          # Try to get data from memory if not provided
+        if df is None or (isinstance(df, pd.DataFrame) and df.empty):
+            df = memory.df
+            if df is None or (isinstance(df, pd.DataFrame) and df.empty):
+                # Create a clear error response if no data is available
+                state["result"] = {
+                    "error": "No data is available. Please upload a dataset before generating charts.",
+                    "message": "No data is available. Please upload a dataset before generating charts."
+                }
+                update_agent_status(
+                    session_id=session_id,
+                    agent_name="Chart Generator",
+                    status="error",  # Changed from complete to error for better UI feedback
+                    agent_type="chart",
+                    message="No data available for chart generation"
+                )
+                state["steps"] = state.get("steps", []) + ["chart"]
+                return state
+        
+        if isinstance(df, pd.DataFrame):
+            agent = ChartAgent(df)
+            # Try to determine best axes for the chart
+            x, y = agent.guess_axes(query)
+            chart_type = agent.guess_chart(query)
+            
+            # Generate the chart
+            chart = agent.render_chart(x, y, chart_type)
+            
+            # Convert to a format that can be returned to the frontend
+            chart_spec = chart.to_dict()
+            
+            state["result"] = {
+                "chart_spec": chart_spec,
+                "chart_type": chart_type,
+                "x_axis": x,
+                "y_axis": y,
+                "message": f"Generated {chart_type} chart with {x} on x-axis and {y} on y-axis."
+            }
+            
+            update_agent_status(
+                session_id=session_id,
+                agent_name="Chart Generator",
+                status="complete",
+                agent_type="chart",
+                message=f"Generated {chart_type} chart with {x} and {y} axes"
+            )
+        else:
+            state["result"] = {"error": "Invalid data format for chart generation."}
+            update_agent_status(
+                session_id=session_id,
+                agent_name="Chart Generator",
+                status="error",
+                agent_type="chart",
+                message="Invalid data format for chart generation"            )
+    except Exception as e:
+        logger.error(f"Error in chart_node: {str(e)}")
+        state["result"] = {"error": f"Failed to generate chart: {str(e)}"}
+        update_agent_status(
+            session_id=session_id,
+            agent_name="Chart Generator",
+            status="error",
+            agent_type="chart",
+            message=f"Failed to generate chart: {str(e)}"
+        )
+    
+    state["steps"] = state.get("steps", []) + ["chart"]
+    logger.info(f"Chart agent processed query: {state.get('query', '')}")
+    return state
+
+def sql_node(state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    SQL generation and execution node that uses the SQLAgent
+    """
+    session_id = state.get("session_id", "default")
+    update_agent_status(
+        session_id=session_id,
+        agent_name="SQL Query Agent",
+        status="working",
+        agent_type="sql",
+        message="Generating and executing SQL query"
+    )
+    
+    try:
+        from backend.agents.sql_agent import SQLAgent
+        from backend.core.session_memory import memory
+        
+        query = state.get('query', '')
+        df = state.get('data')
+        
+        # Try to get data from memory if not provided
+        if df is None or (isinstance(df, pd.DataFrame) and df.empty):
+            df = memory.df
+            if df is None or (isinstance(df, pd.DataFrame) and df.empty):
+                # Create a simple response if no data is available
+                state["result"] = {
+                    "message": "No data is available. Please upload a dataset before running SQL queries."
+                }
+                update_agent_status(
+                    session_id=session_id,
+                    agent_name="SQL Query Agent",
+                    status="complete",
+                    agent_type="sql",
+                    message="No data available for SQL execution"
+                )
+                state["steps"] = state.get("steps", []) + ["sql"]
+                return state
+        
+        if isinstance(df, pd.DataFrame):
+            agent = SQLAgent(df)
+            # Generate SQL from the query
+            sql = agent.generate_sql(query)
+            # Execute the SQL
+            result_df = agent.run_sql(sql)
+            
+            state["result"] = {
+                "sql": sql,
+                "table_data": result_df.to_dict(orient="records"),
+                "columns": result_df.columns.tolist(),
+                "message": f"SQL query executed successfully with {len(result_df)} results."
+            }
+            
+            update_agent_status(
+                session_id=session_id,
+                agent_name="SQL Query Agent",
+                status="complete",
+                agent_type="sql",
+                message=f"Generated and executed SQL query with {len(result_df)} results"
+            )
+        else:
+            state["result"] = {"error": "Invalid data format for SQL execution."}
+            update_agent_status(
+                session_id=session_id,
+                agent_name="SQL Query Agent",
+                status="error",
+                agent_type="sql",
+                message="Invalid data format for SQL execution"
+            )
+    except Exception as e:
+        logger.error(f"Error in sql_node: {str(e)}")
+        state["result"] = {"error": f"Failed to execute SQL: {str(e)}"}
+        update_agent_status(
+            session_id=session_id,
+            agent_name="SQL Query Agent",
+            status="error",
+            agent_type="sql",
+            message=f"Failed to execute SQL: {str(e)}"
+        )
+    
+    state["steps"] = state.get("steps", []) + ["sql"]
+    logger.info(f"SQL agent processed query: {state.get('query', '')}")
+    return state
+
+def insight_node(state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Insight generation node that uses the InsightAgent
+    """
+    session_id = state.get("session_id", "default")
+    update_agent_status(
+        session_id=session_id,
+        agent_name="Insight Generator",
+        status="working",
+        agent_type="insight",
+        message="Analyzing data and generating insights"
+    )
+    
+    try:
+        from backend.agents.insight_agent import InsightAgent
+        from backend.core.session_memory import memory
+        
+        query = state.get('query', '')
+        df = state.get('data')
+        
+        # Try to get data from memory if not provided
+        if df is None or (isinstance(df, pd.DataFrame) and df.empty):
+            df = memory.df
+            if df is None or (isinstance(df, pd.DataFrame) and df.empty):
+                # Create a simple response if no data is available
+                state["result"] = {
+                    "insights": "No data is available. Please upload a dataset before requesting insights.",
+                    "message": "No data available for analysis"
+                }
+                update_agent_status(
+                    session_id=session_id,
+                    agent_name="Insight Generator", 
+                    status="complete",
+                    agent_type="insight",
+                    message="No data available for insight generation"
+                )
+                state["steps"] = state.get("steps", []) + ["insight"]
+                return state
+        
+        if isinstance(df, pd.DataFrame):
+            agent = InsightAgent(df)
+            # Generate insights based on the query
+            insights = agent.generate_summary(query)
+            
+            state["result"] = {
+                "insights": insights,
+                "message": "Generated insights from data."
+            }
+            
+            update_agent_status(
+                session_id=session_id,
+                agent_name="Insight Generator",
+                status="complete",
+                agent_type="insight",
+                message="Successfully analyzed data and generated insights"
+            )
+        else:
+            state["result"] = {"error": "Invalid data format for insight generation."}
+            update_agent_status(
+                session_id=session_id,
+                agent_name="Insight Generator",
+                status="error", 
+                agent_type="insight",
+                message="Invalid data format for insight generation"
+            )
+    except Exception as e:
+        logger.error(f"Error in insight_node: {str(e)}")
+        state["result"] = {"error": f"Failed to generate insights: {str(e)}"}
+        update_agent_status(
+            session_id=session_id,
+            agent_name="Insight Generator",
+            status="error",
+            agent_type="insight",
+            message=f"Failed to generate insights: {str(e)}"
+        )
+    
+    state["steps"] = state.get("steps", []) + ["insight"]
+    logger.info(f"Insight agent processed query: {state.get('query', '')}")
+    return state
+
+def build_multiagent_graph():
+    # Create a state graph with dictionary state
+    graph = StateGraph(dict)
+    
+    # Add our nodes
+    graph.add_node("planner", planner_node)
+    graph.add_node("chart", chart_node)
+    graph.add_node("sql", sql_node)
+    graph.add_node("insight", insight_node)
+    
+    # Set entry point
+    graph.set_entry_point("planner")
+    
+    # Add conditional edges from planner based on the planner's decision
+    graph.add_conditional_edges(
+        "planner",
+        # This function routes based on the next_node key set by the planner
+        lambda state: state.get("next_node", "insight"),  # Default to insight if not set
+        {
+            "chart": "chart",
+            "sql": "sql",
+            "insight": "insight"
+        }
+    )
+    
+    # Add edges to END
+    graph.add_edge("chart", END)
+    graph.add_edge("sql", END)
+    graph.add_edge("insight", END)
+    
+    # Compile the graph
+    return graph.compile()
+
+# Build the graph once at module level
+multiagent_flow = build_multiagent_graph()
+
+def run_multiagent_flow(query, data=None, session_id="default"):
+    """
+    Run the multiagent flow with the given query and data
+    
+    Args:
+        query (str): The user's query
+        data (Any, optional): Data to process (e.g., DataFrame)
+        session_id (str, optional): Session identifier for tracking agent status
+        
+    Returns:
+        Dict: Results from the agent flow including steps and result
+    """
+    try:
+        logger.info(f"Starting multiagent flow with query: {query}")
+        
+        # Initialize the state
+        initial_state = {
+            "query": query,
+            "data": data,
+            "result": "",
+            "steps": [],
+            "history": [],
+            "session_id": session_id
+        }
+        
+        # Invoke the graph with the initial state
+        result = multiagent_flow.invoke(initial_state)
+        
+        logger.info(f"Completed multiagent flow. Steps: {result.get('steps', [])}")
+        
+        return {
+            "status": "success", 
+            "result": result.get("result", ""),
+            "steps": result.get("steps", [])
+        }
+    except Exception as e:
+        logger.error(f"Error in multiagent flow: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return {"status": "error", "message": str(e)}

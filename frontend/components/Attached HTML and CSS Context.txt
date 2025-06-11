@@ -1,0 +1,696 @@
+Attached HTML and CSS Context
+
+<div data-nextjs-dialog-backdrop="true"></div>
+
+
+/* Matched Rule from user-agent */
+div {
+  display: block;
+}
+
+/* Matched Rule from user-agent */
+address, blockquote, center, div, figure, figcaption, footer, form, header, hr, legend, listing, main, p, plaintext, pre, summary, xmp, article, aside, h1, h2, h3, h4, h5, h6, hgroup, nav, section, search, table, caption, colgroup, col, thead, tbody, tfoot, tr, td, th, dir, dd, dl, dt, menu, ol, ul, li, bdi, output, [dir="ltr" i], [dir="rtl" i], [dir="auto" i] {
+  unicode-bidi: isolate;
+}
+
+/* Matched Rule from regular */
+*, *::before, *::after {
+  box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+/* Matched Rule from regular */
+[data-nextjs-dialog-backdrop] {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-color: var(--color-backdrop);
+  backdrop-filter: blur(10px);
+  pointer-events: all;
+  z-index: -1;
+  position: fixed;
+  top: 0px;
+  right: 0px;
+  bottom: 0px;
+  left: 0px;
+  background-color: var(--color-backdrop);
+  backdrop-filter: blur(10px);
+  pointer-events: all;
+  z-index: -1;
+}
+
+/* Matched Rule from regular */
+[data-nextjs-dialog-backdrop] {
+  opacity: 0;
+  transition: opacity var(--transition-duration) var(--timing-overlay);
+  opacity: 0;
+}
+
+/* Matched Rule from regular */
+[data-nextjs-dialog-overlay][data-rendered='true'] [data-nextjs-dialog-backdrop] {
+  opacity: 1;
+  opacity: 1;
+}
+
+/* Inherited from ancestor level 1 (user-agent) */
+div {
+  display: block;
+}
+
+/* Inherited from ancestor level 1 (user-agent) */
+address, blockquote, center, div, figure, figcaption, footer, form, header, hr, legend, listing, main, p, plaintext, pre, summary, xmp, article, aside, h1, h2, h3, h4, h5, h6, hgroup, nav, section, search, table, caption, colgroup, col, thead, tbody, tfoot, tr, td, th, dir, dd, dl, dt, menu, ol, ul, li, bdi, output, [dir="ltr" i], [dir="rtl" i], [dir="auto" i] {
+  unicode-bidi: isolate;
+}
+
+/* Inherited from ancestor level 1 (regular) */
+*, *::before, *::after {
+  box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+/* Inherited from ancestor level 1 (regular) */
+[data-nextjs-dialog-overlay] {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 9000;
+  display: flex;
+  align-content: center;
+  align-items: center;
+  flex-direction: column;
+  padding: 10vh 15px 0;
+  position: fixed;
+  top: 0px;
+  right: 0px;
+  bottom: 0px;
+  left: 0px;
+  z-index: 9000;
+  display: flex;
+  align-content: center;
+  align-items: center;
+  flex-direction: column;
+  padding-top: 10vh;
+  padding-right: 15px;
+  padding-bottom: 0px;
+  padding-left: 15px;
+}
+
+/* Inherited from ancestor level 1 (regular) */
+[data-nextjs-dialog-overlay] {
+  padding: 15px 15px 0;
+  padding-top: 15px;
+  padding-right: 15px;
+  padding-bottom: 0px;
+  padding-left: 15px;
+}
+
+/* Inherited from ancestor level 1 (regular) */
+[data-nextjs-dialog-overlay] {
+  max-height: calc(100% - 15px);
+  max-height: calc(100% - 15px);
+}
+
+/* Inherited from ancestor level 1 (regular) */
+[data-nextjs-dialog-overlay] {
+  padding: initial;
+  top: 10vh;
+  padding-top: initial;
+  padding-right: initial;
+  padding-bottom: initial;
+  padding-left: initial;
+  top: 10vh;
+}
+
+/* Inherited from ancestor level 2 (regular) */
+:host {
+  all: initial;
+  direction: ltr;
+  all: initial;
+  direction: ltr;
+}
+
+/* Inherited from ancestor level 2 (regular) */
+:host {
+  font-family: sans-serif;
+  line-height: 1.15;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: rgba(0,0,0,0);
+  font-family: sans-serif;
+  line-height: 1.15;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+}
+
+/* Inherited from ancestor level 2 (regular) */
+:host {
+  margin: 0;
+  font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans',sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol','Noto Color Emoji';
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--color-font);
+  text-align: left;
+  margin-top: 0px;
+  margin-right: 0px;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--color-font);
+  text-align: left;
+}
+
+/* Inherited from ancestor level 2 (regular) */
+:host {
+  position: absolute;
+  --color-font: #757575;
+  --color-backdrop: rgba(250,250,250,0.8);
+  --color-border-shadow: rgba(0,0,0,0.145);
+  --color-title-color: #1f1f1f;
+  --color-stack-notes: #777;
+  --color-accents-1: #808080;
+  --color-accents-2: #222222;
+  --color-accents-3: #404040;
+  --font-stack-monospace: '__nextjs-Geist Mono','Geist Mono','SFMono-Regular',Consolas,'Liberation Mono',Menlo,Courier,monospace;
+  --font-stack-sans: '__nextjs-Geist','Geist',-apple-system,'Source Sans Pro',sans-serif;
+  font-family: var(--font-stack-sans);
+  font-variant-ligatures: none;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1),0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1),0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1),0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1),0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+  --shadow-none: 0 0 #0000;
+  --shadow-small: 0px 2px 2px rgba(0,0,0,0.04);
+  --shadow-menu: 0px 1px 1px rgba(0,0,0,0.02),0px 4px 8px -4px rgba(0,0,0,0.04),0px 16px 24px -8px rgba(0,0,0,0.06);
+  --focus-color: var(--color-blue-800);
+  --focus-ring: 2px solid var(--focus-color);
+  --timing-swift: cubic-bezier(0.23,0.88,0.26,0.92);
+  --timing-overlay: cubic-bezier(0.175,0.885,0.32,1.1);
+  --rounded-none: 0px;
+  --rounded-sm: 2px;
+  --rounded-md: 4px;
+  --rounded-md-2: 6px;
+  --rounded-lg: 8px;
+  --rounded-xl: 12px;
+  --rounded-2xl: 16px;
+  --rounded-3xl: 24px;
+  --rounded-4xl: 32px;
+  --rounded-full: 9999px;
+  --nextjs-dev-tools-scale: 1;
+  --size-1: calc(1px / var(--nextjs-dev-tools-scale));
+  --size-2: calc(2px / var(--nextjs-dev-tools-scale));
+  --size-3: calc(3px / var(--nextjs-dev-tools-scale));
+  --size-4: calc(4px / var(--nextjs-dev-tools-scale));
+  --size-5: calc(5px / var(--nextjs-dev-tools-scale));
+  --size-6: calc(6px / var(--nextjs-dev-tools-scale));
+  --size-7: calc(7px / var(--nextjs-dev-tools-scale));
+  --size-8: calc(8px / var(--nextjs-dev-tools-scale));
+  --size-9: calc(9px / var(--nextjs-dev-tools-scale));
+  --size-10: calc(10px / var(--nextjs-dev-tools-scale));
+  --size-11: calc(11px / var(--nextjs-dev-tools-scale));
+  --size-12: calc(12px / var(--nextjs-dev-tools-scale));
+  --size-13: calc(13px / var(--nextjs-dev-tools-scale));
+  --size-14: calc(14px / var(--nextjs-dev-tools-scale));
+  --size-15: calc(15px / var(--nextjs-dev-tools-scale));
+  --size-16: calc(16px / var(--nextjs-dev-tools-scale));
+  --size-17: calc(17px / var(--nextjs-dev-tools-scale));
+  --size-18: calc(18px / var(--nextjs-dev-tools-scale));
+  --size-20: calc(20px / var(--nextjs-dev-tools-scale));
+  --size-22: calc(22px / var(--nextjs-dev-tools-scale));
+  --size-24: calc(24px / var(--nextjs-dev-tools-scale));
+  --size-26: calc(26px / var(--nextjs-dev-tools-scale));
+  --size-28: calc(28px / var(--nextjs-dev-tools-scale));
+  --size-30: calc(30px / var(--nextjs-dev-tools-scale));
+  --size-32: calc(32px / var(--nextjs-dev-tools-scale));
+  --size-34: calc(34px / var(--nextjs-dev-tools-scale));
+  --size-36: calc(36px / var(--nextjs-dev-tools-scale));
+  --size-38: calc(38px / var(--nextjs-dev-tools-scale));
+  --size-40: calc(40px / var(--nextjs-dev-tools-scale));
+  --size-42: calc(42px / var(--nextjs-dev-tools-scale));
+  --size-44: calc(44px / var(--nextjs-dev-tools-scale));
+  --size-46: calc(46px / var(--nextjs-dev-tools-scale));
+  --size-48: calc(48px / var(--nextjs-dev-tools-scale));
+  position: absolute;
+  --color-font: #757575;
+  --color-backdrop: rgba(250,250,250,0.8);
+  --color-border-shadow: rgba(0,0,0,0.145);
+  --color-title-color: #1f1f1f;
+  --color-stack-notes: #777;
+  --color-accents-1: #808080;
+  --color-accents-2: #222222;
+  --color-accents-3: #404040;
+  --font-stack-monospace: '__nextjs-Geist Mono','Geist Mono','SFMono-Regular',Consolas,'Liberation Mono',Menlo,Courier,monospace;
+  --font-stack-sans: '__nextjs-Geist','Geist',-apple-system,'Source Sans Pro',sans-serif;
+  font-family: var(--font-stack-sans);
+  font-variant-ligatures: none;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1),0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1),0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1),0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1),0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+  --shadow-none: 0 0 #0000;
+  --shadow-small: 0px 2px 2px rgba(0,0,0,0.04);
+  --shadow-menu: 0px 1px 1px rgba(0,0,0,0.02),0px 4px 8px -4px rgba(0,0,0,0.04),0px 16px 24px -8px rgba(0,0,0,0.06);
+  --focus-color: var(--color-blue-800);
+  --focus-ring: 2px solid var(--focus-color);
+  --timing-swift: cubic-bezier(0.23,0.88,0.26,0.92);
+  --timing-overlay: cubic-bezier(0.175,0.885,0.32,1.1);
+  --rounded-none: 0px;
+  --rounded-sm: 2px;
+  --rounded-md: 4px;
+  --rounded-md-2: 6px;
+  --rounded-lg: 8px;
+  --rounded-xl: 12px;
+  --rounded-2xl: 16px;
+  --rounded-3xl: 24px;
+  --rounded-4xl: 32px;
+  --rounded-full: 9999px;
+  --nextjs-dev-tools-scale: 1;
+  --size-1: calc(1px / var(--nextjs-dev-tools-scale));
+  --size-2: calc(2px / var(--nextjs-dev-tools-scale));
+  --size-3: calc(3px / var(--nextjs-dev-tools-scale));
+  --size-4: calc(4px / var(--nextjs-dev-tools-scale));
+  --size-5: calc(5px / var(--nextjs-dev-tools-scale));
+  --size-6: calc(6px / var(--nextjs-dev-tools-scale));
+  --size-7: calc(7px / var(--nextjs-dev-tools-scale));
+  --size-8: calc(8px / var(--nextjs-dev-tools-scale));
+  --size-9: calc(9px / var(--nextjs-dev-tools-scale));
+  --size-10: calc(10px / var(--nextjs-dev-tools-scale));
+  --size-11: calc(11px / var(--nextjs-dev-tools-scale));
+  --size-12: calc(12px / var(--nextjs-dev-tools-scale));
+  --size-13: calc(13px / var(--nextjs-dev-tools-scale));
+  --size-14: calc(14px / var(--nextjs-dev-tools-scale));
+  --size-15: calc(15px / var(--nextjs-dev-tools-scale));
+  --size-16: calc(16px / var(--nextjs-dev-tools-scale));
+  --size-17: calc(17px / var(--nextjs-dev-tools-scale));
+  --size-18: calc(18px / var(--nextjs-dev-tools-scale));
+  --size-20: calc(20px / var(--nextjs-dev-tools-scale));
+  --size-22: calc(22px / var(--nextjs-dev-tools-scale));
+  --size-24: calc(24px / var(--nextjs-dev-tools-scale));
+  --size-26: calc(26px / var(--nextjs-dev-tools-scale));
+  --size-28: calc(28px / var(--nextjs-dev-tools-scale));
+  --size-30: calc(30px / var(--nextjs-dev-tools-scale));
+  --size-32: calc(32px / var(--nextjs-dev-tools-scale));
+  --size-34: calc(34px / var(--nextjs-dev-tools-scale));
+  --size-36: calc(36px / var(--nextjs-dev-tools-scale));
+  --size-38: calc(38px / var(--nextjs-dev-tools-scale));
+  --size-40: calc(40px / var(--nextjs-dev-tools-scale));
+  --size-42: calc(42px / var(--nextjs-dev-tools-scale));
+  --size-44: calc(44px / var(--nextjs-dev-tools-scale));
+  --size-46: calc(46px / var(--nextjs-dev-tools-scale));
+  --size-48: calc(48px / var(--nextjs-dev-tools-scale));
+}
+
+/* Inherited from ancestor level 2 (regular) */
+:host {
+  --color-ansi-cyan: var(--color-syntax-keyword);
+  --color-ansi-yellow: var(--color-syntax-function);
+  --color-ansi-magenta: var(--color-syntax-keyword);
+  --color-ansi-green: var(--color-syntax-string);
+  --color-ansi-bright-black: var(--color-syntax-comment);
+  --color-ansi-selection: var(--color-gray-alpha-300);
+  --color-ansi-bg: var(--color-background-200);
+  --color-ansi-fg: var(--color-gray-1000);
+  --color-ansi-white: var(--color-gray-700);
+  --color-ansi-black: var(--color-gray-200);
+  --color-ansi-blue: var(--color-blue-700);
+  --color-ansi-red: var(--color-red-700);
+  --color-ansi-bright-white: var(--color-gray-1000);
+  --color-ansi-bright-blue: var(--color-blue-800);
+  --color-ansi-bright-cyan: var(--color-blue-800);
+  --color-ansi-bright-green: var(--color-green-800);
+  --color-ansi-bright-magenta: var(--color-blue-800);
+  --color-ansi-bright-red: var(--color-red-800);
+  --color-ansi-bright-yellow: var(--color-amber-900);
+  --color-background-100: #ffffff;
+  --color-background-200: #fafafa;
+  --color-syntax-comment: #545454;
+  --color-syntax-constant: #171717;
+  --color-syntax-function: #0054ad;
+  --color-syntax-keyword: #a51850;
+  --color-syntax-link: #066056;
+  --color-syntax-parameter: #8f3e00;
+  --color-syntax-punctuation: #171717;
+  --color-syntax-string: #036157;
+  --color-syntax-string-expression: #066056;
+  --color-gray-100: #f2f2f2;
+  --color-gray-200: #ebebeb;
+  --color-gray-300: #e6e6e6;
+  --color-gray-400: #eaeaea;
+  --color-gray-500: #c9c9c9;
+  --color-gray-600: #a8a8a8;
+  --color-gray-700: #8f8f8f;
+  --color-gray-800: #7d7d7d;
+  --color-gray-900: #666666;
+  --color-gray-1000: #171717;
+  --color-gray-alpha-100: rgba(0,0,0,0.05);
+  --color-gray-alpha-200: rgba(0,0,0,0.081);
+  --color-gray-alpha-300: rgba(0,0,0,0.1);
+  --color-gray-alpha-400: rgba(0,0,0,0.08);
+  --color-gray-alpha-500: rgba(0,0,0,0.21);
+  --color-gray-alpha-600: rgba(0,0,0,0.34);
+  --color-gray-alpha-700: rgba(0,0,0,0.44);
+  --color-gray-alpha-800: rgba(0,0,0,0.51);
+  --color-gray-alpha-900: rgba(0,0,0,0.605);
+  --color-gray-alpha-1000: rgba(0,0,0,0.91);
+  --color-blue-100: #f0f7ff;
+  --color-blue-200: #edf6ff;
+  --color-blue-300: #e1f0ff;
+  --color-blue-400: #cde7ff;
+  --color-blue-500: #99ceff;
+  --color-blue-600: #52aeff;
+  --color-blue-700: #0070f3;
+  --color-blue-800: #0060d1;
+  --color-blue-900: #0067d6;
+  --color-blue-1000: #0025ad;
+  --color-red-100: #fff0f0;
+  --color-red-200: #ffebeb;
+  --color-red-300: #ffe5e5;
+  --color-red-400: #fdd8d8;
+  --color-red-500: #f8baba;
+  --color-red-600: #f87274;
+  --color-red-700: #e5484d;
+  --color-red-800: #da3036;
+  --color-red-900: #ca2a30;
+  --color-red-1000: #381316;
+  --color-amber-100: #fff6e5;
+  --color-amber-200: #fff4d5;
+  --color-amber-300: #fef0cd;
+  --color-amber-400: #ffddbf;
+  --color-amber-500: #ffc96b;
+  --color-amber-600: #f5b047;
+  --color-amber-700: #ffb224;
+  --color-amber-800: #ff990a;
+  --color-amber-900: #a35200;
+  --color-amber-1000: #4e2009;
+  --color-green-100: #effbef;
+  --color-green-200: #eafaea;
+  --color-green-300: #dcf6dc;
+  --color-green-400: #c8f1c9;
+  --color-green-500: #99e59f;
+  --color-green-600: #6cda76;
+  --color-green-700: #46a758;
+  --color-green-800: #388e4a;
+  --color-green-900: #297c3b;
+  --color-green-1000: #18311e;
+  --color-turbopack-text-red: #ff1e56;
+  --color-turbopack-text-blue: #0096ff;
+  --color-turbopack-border-red: #f0adbe;
+  --color-turbopack-border-blue: #adccea;
+  --color-turbopack-background-red: #fff7f9;
+  --color-turbopack-background-blue: #f6fbff;
+  --color-ansi-cyan: var(--color-syntax-keyword);
+  --color-ansi-yellow: var(--color-syntax-function);
+  --color-ansi-magenta: var(--color-syntax-keyword);
+  --color-ansi-green: var(--color-syntax-string);
+  --color-ansi-bright-black: var(--color-syntax-comment);
+  --color-ansi-selection: var(--color-gray-alpha-300);
+  --color-ansi-bg: var(--color-background-200);
+  --color-ansi-fg: var(--color-gray-1000);
+  --color-ansi-white: var(--color-gray-700);
+  --color-ansi-black: var(--color-gray-200);
+  --color-ansi-blue: var(--color-blue-700);
+  --color-ansi-red: var(--color-red-700);
+  --color-ansi-bright-white: var(--color-gray-1000);
+  --color-ansi-bright-blue: var(--color-blue-800);
+  --color-ansi-bright-cyan: var(--color-blue-800);
+  --color-ansi-bright-green: var(--color-green-800);
+  --color-ansi-bright-magenta: var(--color-blue-800);
+  --color-ansi-bright-red: var(--color-red-800);
+  --color-ansi-bright-yellow: var(--color-amber-900);
+  --color-background-100: #ffffff;
+  --color-background-200: #fafafa;
+  --color-syntax-comment: #545454;
+  --color-syntax-constant: #171717;
+  --color-syntax-function: #0054ad;
+  --color-syntax-keyword: #a51850;
+  --color-syntax-link: #066056;
+  --color-syntax-parameter: #8f3e00;
+  --color-syntax-punctuation: #171717;
+  --color-syntax-string: #036157;
+  --color-syntax-string-expression: #066056;
+  --color-gray-100: #f2f2f2;
+  --color-gray-200: #ebebeb;
+  --color-gray-300: #e6e6e6;
+  --color-gray-400: #eaeaea;
+  --color-gray-500: #c9c9c9;
+  --color-gray-600: #a8a8a8;
+  --color-gray-700: #8f8f8f;
+  --color-gray-800: #7d7d7d;
+  --color-gray-900: #666666;
+  --color-gray-1000: #171717;
+  --color-gray-alpha-100: rgba(0,0,0,0.05);
+  --color-gray-alpha-200: rgba(0,0,0,0.081);
+  --color-gray-alpha-300: rgba(0,0,0,0.1);
+  --color-gray-alpha-400: rgba(0,0,0,0.08);
+  --color-gray-alpha-500: rgba(0,0,0,0.21);
+  --color-gray-alpha-600: rgba(0,0,0,0.34);
+  --color-gray-alpha-700: rgba(0,0,0,0.44);
+  --color-gray-alpha-800: rgba(0,0,0,0.51);
+  --color-gray-alpha-900: rgba(0,0,0,0.605);
+  --color-gray-alpha-1000: rgba(0,0,0,0.91);
+  --color-blue-100: #f0f7ff;
+  --color-blue-200: #edf6ff;
+  --color-blue-300: #e1f0ff;
+  --color-blue-400: #cde7ff;
+  --color-blue-500: #99ceff;
+  --color-blue-600: #52aeff;
+  --color-blue-700: #0070f3;
+  --color-blue-800: #0060d1;
+  --color-blue-900: #0067d6;
+  --color-blue-1000: #0025ad;
+  --color-red-100: #fff0f0;
+  --color-red-200: #ffebeb;
+  --color-red-300: #ffe5e5;
+  --color-red-400: #fdd8d8;
+  --color-red-500: #f8baba;
+  --color-red-600: #f87274;
+  --color-red-700: #e5484d;
+  --color-red-800: #da3036;
+  --color-red-900: #ca2a30;
+  --color-red-1000: #381316;
+  --color-amber-100: #fff6e5;
+  --color-amber-200: #fff4d5;
+  --color-amber-300: #fef0cd;
+  --color-amber-400: #ffddbf;
+  --color-amber-500: #ffc96b;
+  --color-amber-600: #f5b047;
+  --color-amber-700: #ffb224;
+  --color-amber-800: #ff990a;
+  --color-amber-900: #a35200;
+  --color-amber-1000: #4e2009;
+  --color-green-100: #effbef;
+  --color-green-200: #eafaea;
+  --color-green-300: #dcf6dc;
+  --color-green-400: #c8f1c9;
+  --color-green-500: #99e59f;
+  --color-green-600: #6cda76;
+  --color-green-700: #46a758;
+  --color-green-800: #388e4a;
+  --color-green-900: #297c3b;
+  --color-green-1000: #18311e;
+  --color-turbopack-text-red: #ff1e56;
+  --color-turbopack-text-blue: #0096ff;
+  --color-turbopack-border-red: #f0adbe;
+  --color-turbopack-border-blue: #adccea;
+  --color-turbopack-background-red: #fff7f9;
+  --color-turbopack-background-blue: #f6fbff;
+}
+
+/* Inherited from ancestor level 2 (regular) */
+:host(:not(.light)) {
+  --color-font: white;
+  --color-backdrop: rgba(0,0,0,0.8);
+  --color-border-shadow: rgba(255,255,255,0.145);
+  --color-title-color: #fafafa;
+  --color-stack-notes: #a9a9a9;
+  --color-background-100: #0a0a0a;
+  --color-background-200: #000000;
+  --color-syntax-comment: #a0a0a0;
+  --color-syntax-constant: #ededed;
+  --color-syntax-function: #52a9ff;
+  --color-syntax-keyword: #f76e99;
+  --color-syntax-link: #0ac5b2;
+  --color-syntax-parameter: #f1a10d;
+  --color-syntax-punctuation: #ededed;
+  --color-syntax-string: #0ac5b2;
+  --color-syntax-string-expression: #0ac5b2;
+  --color-gray-100: #1a1a1a;
+  --color-gray-200: #1f1f1f;
+  --color-gray-300: #292929;
+  --color-gray-400: #2e2e2e;
+  --color-gray-500: #454545;
+  --color-gray-600: #878787;
+  --color-gray-700: #8f8f8f;
+  --color-gray-800: #7d7d7d;
+  --color-gray-900: #a0a0a0;
+  --color-gray-1000: #ededed;
+  --color-gray-alpha-100: rgba(255,255,255,0.066);
+  --color-gray-alpha-200: rgba(255,255,255,0.087);
+  --color-gray-alpha-300: rgba(255,255,255,0.125);
+  --color-gray-alpha-400: rgba(255,255,255,0.145);
+  --color-gray-alpha-500: rgba(255,255,255,0.239);
+  --color-gray-alpha-600: rgba(255,255,255,0.506);
+  --color-gray-alpha-700: rgba(255,255,255,0.54);
+  --color-gray-alpha-800: rgba(255,255,255,0.47);
+  --color-gray-alpha-900: rgba(255,255,255,0.61);
+  --color-gray-alpha-1000: rgba(255,255,255,0.923);
+  --color-blue-100: #0f1b2d;
+  --color-blue-200: #10243e;
+  --color-blue-300: #0f3058;
+  --color-blue-400: #0d3868;
+  --color-blue-500: #0a4481;
+  --color-blue-600: #0091ff;
+  --color-blue-700: #0070f3;
+  --color-blue-800: #0060d1;
+  --color-blue-900: #52a9ff;
+  --color-blue-1000: #eaf6ff;
+  --color-red-100: #2a1314;
+  --color-red-200: #3d1719;
+  --color-red-300: #551a1e;
+  --color-red-400: #671e22;
+  --color-red-500: #822025;
+  --color-red-600: #e5484d;
+  --color-red-700: #e5484d;
+  --color-red-800: #da3036;
+  --color-red-900: #ff6369;
+  --color-red-1000: #ffecee;
+  --color-amber-100: #271700;
+  --color-amber-200: #341c00;
+  --color-amber-300: #4a2900;
+  --color-amber-400: #573300;
+  --color-amber-500: #693f05;
+  --color-amber-600: #e79c13;
+  --color-amber-700: #ffb224;
+  --color-amber-800: #ff990a;
+  --color-amber-900: #f1a10d;
+  --color-amber-1000: #fef3dd;
+  --color-green-100: #0b2211;
+  --color-green-200: #0f2c17;
+  --color-green-300: #11351b;
+  --color-green-400: #0c461b;
+  --color-green-500: #126427;
+  --color-green-600: #1a9338;
+  --color-green-700: #46a758;
+  --color-green-800: #388e4a;
+  --color-green-900: #63c174;
+  --color-green-1000: #e5fbeb;
+  --color-turbopack-text-red: #ff6d92;
+  --color-turbopack-text-blue: #45b2ff;
+  --color-turbopack-border-red: #6e293b;
+  --color-turbopack-border-blue: #284f80;
+  --color-turbopack-background-red: #250d12;
+  --color-turbopack-background-blue: #0a1723;
+  --color-font: white;
+  --color-backdrop: rgba(0,0,0,0.8);
+  --color-border-shadow: rgba(255,255,255,0.145);
+  --color-title-color: #fafafa;
+  --color-stack-notes: #a9a9a9;
+  --color-background-100: #0a0a0a;
+  --color-background-200: #000000;
+  --color-syntax-comment: #a0a0a0;
+  --color-syntax-constant: #ededed;
+  --color-syntax-function: #52a9ff;
+  --color-syntax-keyword: #f76e99;
+  --color-syntax-link: #0ac5b2;
+  --color-syntax-parameter: #f1a10d;
+  --color-syntax-punctuation: #ededed;
+  --color-syntax-string: #0ac5b2;
+  --color-syntax-string-expression: #0ac5b2;
+  --color-gray-100: #1a1a1a;
+  --color-gray-200: #1f1f1f;
+  --color-gray-300: #292929;
+  --color-gray-400: #2e2e2e;
+  --color-gray-500: #454545;
+  --color-gray-600: #878787;
+  --color-gray-700: #8f8f8f;
+  --color-gray-800: #7d7d7d;
+  --color-gray-900: #a0a0a0;
+  --color-gray-1000: #ededed;
+  --color-gray-alpha-100: rgba(255,255,255,0.066);
+  --color-gray-alpha-200: rgba(255,255,255,0.087);
+  --color-gray-alpha-300: rgba(255,255,255,0.125);
+  --color-gray-alpha-400: rgba(255,255,255,0.145);
+  --color-gray-alpha-500: rgba(255,255,255,0.239);
+  --color-gray-alpha-600: rgba(255,255,255,0.506);
+  --color-gray-alpha-700: rgba(255,255,255,0.54);
+  --color-gray-alpha-800: rgba(255,255,255,0.47);
+  --color-gray-alpha-900: rgba(255,255,255,0.61);
+  --color-gray-alpha-1000: rgba(255,255,255,0.923);
+  --color-blue-100: #0f1b2d;
+  --color-blue-200: #10243e;
+  --color-blue-300: #0f3058;
+  --color-blue-400: #0d3868;
+  --color-blue-500: #0a4481;
+  --color-blue-600: #0091ff;
+  --color-blue-700: #0070f3;
+  --color-blue-800: #0060d1;
+  --color-blue-900: #52a9ff;
+  --color-blue-1000: #eaf6ff;
+  --color-red-100: #2a1314;
+  --color-red-200: #3d1719;
+  --color-red-300: #551a1e;
+  --color-red-400: #671e22;
+  --color-red-500: #822025;
+  --color-red-600: #e5484d;
+  --color-red-700: #e5484d;
+  --color-red-800: #da3036;
+  --color-red-900: #ff6369;
+  --color-red-1000: #ffecee;
+  --color-amber-100: #271700;
+  --color-amber-200: #341c00;
+  --color-amber-300: #4a2900;
+  --color-amber-400: #573300;
+  --color-amber-500: #693f05;
+  --color-amber-600: #e79c13;
+  --color-amber-700: #ffb224;
+  --color-amber-800: #ff990a;
+  --color-amber-900: #f1a10d;
+  --color-amber-1000: #fef3dd;
+  --color-green-100: #0b2211;
+  --color-green-200: #0f2c17;
+  --color-green-300: #11351b;
+  --color-green-400: #0c461b;
+  --color-green-500: #126427;
+  --color-green-600: #1a9338;
+  --color-green-700: #46a758;
+  --color-green-800: #388e4a;
+  --color-green-900: #63c174;
+  --color-green-1000: #e5fbeb;
+  --color-turbopack-text-red: #ff6d92;
+  --color-turbopack-text-blue: #45b2ff;
+  --color-turbopack-border-red: #6e293b;
+  --color-turbopack-border-blue: #284f80;
+  --color-turbopack-background-red: #250d12;
+  --color-turbopack-background-blue: #0a1723;
+}
+
+/* Inherited from ancestor level 3 (user-agent) */
+body {
+  display: block;
+  margin-top: 8px;
+  margin-right: 8px;
+  margin-bottom: 8px;
+  margin-left: 8px;
+}
+
+/* Inherited from ancestor level 4 (user-agent) */
+html {
+  display: block;
+}
+
+/* Inherited from ancestor level 4 (user-agent) */
+:root {
+  view-transition-name: root;
+}

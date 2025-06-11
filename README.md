@@ -30,6 +30,28 @@
 
 ---
 
+## 🏗️ **System Architecture**
+
+📋 **[View Complete System Architecture](./docs/SYSTEM_ARCHITECTURE.md)** - Comprehensive flowchart covering frontend, backend, agents, data flow, orchestration, and CI/CD pipeline.
+
+**Quick Architecture Overview:**
+```mermaid
+flowchart TD
+    A[👤 User Interface] --> B[🌐 FastAPI Backend]
+    B --> C[🎯 Agent Orchestrator]
+    C --> D1[🧠 Planning Agent]
+    D1 --> E1[💡 Insight Agent]
+    D1 --> E2[🔍 SQL Agent]
+    D1 --> E3[📊 Chart Agent]
+    C --> F[🗄️ Data Store]
+    C --> G[🤖 LLM API]
+    E1 --> H[💻 Frontend UI]
+    E2 --> H
+    E3 --> H
+```
+
+---
+
 ## ⚙️ Tech Stack
 
 | Layer          | Stack                                |
@@ -216,6 +238,40 @@ uvicorn backend.main:app --host 0.0.0.0 --port $PORT
 
 - Place your `.env` file in the project root and set environment variables in the Render dashboard (Settings > Environment) as needed.
 - If deploying frontend, deploy Streamlit separately or use a static site host. Ensure backend and frontend URLs are set correctly in both environments.
+
+---
+
+## 📚 **Documentation & Architecture**
+
+### **📋 System Architecture**
+- **[Complete System Architecture](./docs/SYSTEM_ARCHITECTURE.md)** - Comprehensive MAANG-level architecture documentation
+- **[Mermaid Flowcharts](./docs/MERMAID_ARCHITECTURE.md)** - Interactive diagrams for all system components
+- **[Interactive Architecture View](http://localhost:3000/architecture)** - Live frontend architecture explorer
+
+### **🔗 Key Architecture Components**
+| Component | Description | Documentation |
+|-----------|-------------|---------------|
+| 🤖 **Multi-Agent System** | LangGraph orchestrated agents for specialized tasks | [Agent Workflows](./docs/agentic_workflows.md) |
+| 🌐 **FastAPI Backend** | Python 3.12 + Pydantic with REST API endpoints | [Backend Guide](./backend/README.md) |
+| ⚛️ **Next.js Frontend** | React 19 + TypeScript with glassmorphic design | [Frontend Guide](./frontend/README.md) |
+| 🗄️ **Data Pipeline** | Pandas + Pinecone for data processing and RAG | [Data Flow](./docs/SYSTEM_ARCHITECTURE.md#data-flow-process) |
+| 🔄 **CI/CD Pipeline** | GitHub Actions + Docker for automated deployment | [Deployment](./render.yaml) |
+
+### **🚀 Quick Architecture Overview**
+```mermaid
+flowchart TD
+    A[👤 User Interface] --> B[🌐 FastAPI Backend]
+    B --> C[🎯 Agent Orchestrator]
+    C --> D1[🧠 Planning Agent]
+    D1 --> E1[💡 Insight Agent]
+    D1 --> E2[🔍 SQL Agent]
+    D1 --> E3[📊 Chart Agent]
+    C --> F[🗄️ Data Store]
+    C --> G[🤖 LLM API]
+    E1 --> H[💻 Frontend UI]
+    E2 --> H
+    E3 --> H
+```
 
 ---
 

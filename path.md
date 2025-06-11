@@ -1,39 +1,57 @@
-# Project Flowchart
+# Enterprise Insights Copilot – Architecture
 
-```mermaid
-flowchart TD
-    A[User Uploads Data/Query] --> B[FastAPI Backend Receives Request]
-    B --> C[Session Memory / DataCleanerAgent]
-    C --> D[DataFrame Cleaned & Normalized]
-    D --> E[Agentic Orchestrator]
-    E --> F{Agent Selection}
-    F -->|Chart| G[ChartAgent]
-    F -->|SQL| H[SQLAgent]
-    F -->|Critique| I[CriticAgent]
-    F -->|Debate| J[DebateAgent]
-    F -->|Analyst| K[AnalystAgent]
-    F -->|Retriever| L[RetrieverAgent]
-    G --> M[Chart Rendered]
-    H --> M
-    I --> M
-    J --> M
-    K --> M
-    L --> M
-    M --> N[Response Returned to User]
-    N --> O[Frontend Displays Result]
-```
+A production-ready, agentic GenAI platform for conversational BI:  
+- Upload CSVs, ask business/data questions, auto-generate insights and visualizations, and download reports—all powered by multi-agent orchestration and LLMs.
 
-## Directory Structure (Summary)
+---
 
-- `backend/` — FastAPI backend, agents, orchestrator, core logic
-- `frontend/` — Frontend app (React or similar)
-- `tests/` — All test modules
-- `data/` — Sample datasets/uploads
+## **System Flow Chart**
 
-## Main Flow
+```text
+[User]
+  │
+  ▼
+[Next.js Frontend UI]
+  │   ├─ Upload CSV/Data
+  │   ├─ Chat Input (Ask Questions)
+  │   ├─ View Insights (summary)
+  │   ├─ View/Customize Charts
+  │   └─ Download/Share Reports
+  │
+  ▼ REST/API calls
+[FastAPI Backend]
+  │
+  ├─ /index: CSV Upload → DataCleanerAgent → Cleaned DataFrame in memory
+  ├─ /columns: Return columns/types for chart building
+  ├─ /auto-chart: ChartAgent
+  │       └─ Suggests & builds best chart (auto, or by user axes)
+  ├─ /chart: ChartAgent (custom axes/chart-type)
+  ├─ /insights: InsightAgent (textual summary/stats)
+  ├─ /query: RAG/QA pipeline (Retriever → LLM)
+  ├─ /sql: SQLAgent (NL → SQL → Table)
+  ├─ /report: Generate downloadable PDF/HTML of insights + charts
+  ├─ /debate: DebateAgent (optional, advanced)
+  └─ /multiagent, /langgraph: Multi-agent orchestration (Planner → [various agents])
+  │
+  ▼
+[Agent Layer (LangGraph/LangChain)]
+   │
+   ├─ DataCleanerAgent (schema/units)
+   ├─ ChartAgent (visualization)
+   ├─ InsightAgent (narrative/stats)
+   ├─ SQLAgent (NL → SQL)
+   ├─ CritiqueAgent (self-eval)
+   ├─ DebateAgent (optional)
+   └─ Planner/Orchestrator
+   │
+   ▼
+[OpenAI LLM / Pinecone Vector DB / LangSmith Tracing]
+   │
+   └─ Embedding, Retrieval, Reasoning, Tracing
 
-1. **User uploads data or submits a query via frontend.**
-2. **Backend receives request, stores session, and cleans data.**
-3. **Agentic orchestrator selects and runs the appropriate agent(s).**
-4. **Agent(s) process data and generate results (charts, answers, critiques, etc.).**
-5. **Backend returns the result to the frontend for display.**
+---
+
+[User] ─► [Frontend UI] ─► [Backend API] ─► [Agents] ─► [LLM/Vector/Tracing]
+   ▲            ▲             │
+   └────────────┴─────────────┘
+    (All results rendered back to user: answers, charts, tables, downloads)
