@@ -912,88 +912,88 @@ export default function ArchitecturePage() {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Integration & Communication */}
-        <div className="mt-8 bg-gray-800/50 rounded-xl p-6 border border-white/20">
-          <h4 className="text-xl font-semibold text-orange-400 mb-6 text-center">Integration & Communication Layer</h4>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="bg-gradient-to-r from-blue-500 to-cyan-500 w-16 h-16 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mx-auto mb-3">
-                🌐
-              </div>
-              <h5 className="text-white font-medium mb-2">API Layer</h5>
-              <p className="text-gray-400 text-sm">RESTful APIs, WebSocket connections, Real-time communication</p>
+      {/* Integration & Communication */}
+      <div className="mt-8 bg-gray-800/50 rounded-xl p-6 border border-white/20">
+        <h4 className="text-xl font-semibold text-orange-400 mb-6 text-center">Integration & Communication Layer</h4>
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="text-center">
+            <div className="bg-gradient-to-r from-blue-500 to-cyan-500 w-16 h-16 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mx-auto mb-3">
+              🌐
             </div>
-            <div className="text-center">
-              <div className="bg-gradient-to-r from-green-500 to-emerald-500 w-16 h-16 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mx-auto mb-3">
-                🔒
-              </div>
-              <h5 className="text-white font-medium mb-2">Security</h5>
-              <p className="text-gray-400 text-sm">API key management, CORS protection, Data encryption</p>
+            <h5 className="text-white font-medium mb-2">API Layer</h5>
+            <p className="text-gray-400 text-sm">RESTful APIs, WebSocket connections, Real-time communication</p>
+          </div>
+          <div className="text-center">
+            <div className="bg-gradient-to-r from-green-500 to-emerald-500 w-16 h-16 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mx-auto mb-3">
+              🔒
             </div>
-            <div className="text-center">
-              <div className="bg-gradient-to-r from-purple-500 to-pink-500 w-16 h-16 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mx-auto mb-3">
-                📊
-              </div>
-              <h5 className="text-white font-medium mb-2">Monitoring</h5>
-              <p className="text-gray-400 text-sm">Performance metrics, Error tracking, Usage analytics</p>
+            <h5 className="text-white font-medium mb-2">Security</h5>
+            <p className="text-gray-400 text-sm">API key management, CORS protection, Data encryption</p>
+          </div>
+          <div className="text-center">
+            <div className="bg-gradient-to-r from-purple-500 to-pink-500 w-16 h-16 rounded-xl flex items-center justify-center text-white text-xl shadow-lg mx-auto mb-3">
+              📊
             </div>
+            <h5 className="text-white font-medium mb-2">Monitoring</h5>
+            <p className="text-gray-400 text-sm">Performance metrics, Error tracking, Usage analytics</p>
           </div>
         </div>
+      </div>
 
-        {/* Technology Comparison Table */}
-        <div className="mt-8 bg-gray-800/50 rounded-xl p-6 border border-white/20">
-          <h4 className="text-xl font-semibold text-green-400 mb-6 text-center">Technology Selection Rationale</h4>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/20">
-                  <th className="text-left px-4 py-3 text-blue-400 font-semibold">Technology</th>
-                  <th className="text-left px-4 py-3 text-green-400 font-semibold">Category</th>
-                  <th className="text-left px-4 py-3 text-purple-400 font-semibold">Key Benefit</th>
-                  <th className="text-left px-4 py-3 text-orange-400 font-semibold">Alternatives Considered</th>
-                </tr>
-              </thead>
-              <tbody className="text-gray-300 text-sm">
-                <tr className="border-b border-white/10">
-                  <td className="px-4 py-3 font-medium text-cyan-400">FastAPI</td>
-                  <td className="px-4 py-3">Backend Framework</td>
-                  <td className="px-4 py-3">Auto-generated docs, Type hints, High performance</td>
-                  <td className="px-4 py-3">Django, Flask, Express.js</td>
-                </tr>
-                <tr className="border-b border-white/10">
-                  <td className="px-4 py-3 font-medium text-cyan-400">Next.js 15</td>
-                  <td className="px-4 py-3">Frontend Framework</td>
-                  <td className="px-4 py-3">SSR, App router, Built-in optimization</td>
-                  <td className="px-4 py-3">Create React App, Vite, Gatsby</td>
-                </tr>
-                <tr className="border-b border-white/10">
-                  <td className="px-4 py-3 font-medium text-cyan-400">LangGraph</td>
-                  <td className="px-4 py-3">AI Orchestration</td>
-                  <td className="px-4 py-3">Complex workflows, State management, Agent coordination</td>
-                  <td className="px-4 py-3">LangChain, Crew AI, AutoGen</td>
-                </tr>
-                <tr className="border-b border-white/10">
-                  <td className="px-4 py-3 font-medium text-cyan-400">Pinecone</td>
-                  <td className="px-4 py-3">Vector Database</td>
-                  <td className="px-4 py-3">Managed service, Fast similarity search, Scalability</td>
-                  <td className="px-4 py-3">Chroma, Weaviate, Qdrant</td>
-                </tr>
-                <tr className="border-b border-white/10">
-                  <td className="px-4 py-3 font-medium text-cyan-400">Tailwind CSS</td>
-                  <td className="px-4 py-3">CSS Framework</td>
-                  <td className="px-4 py-3">Utility-first, Customizable, Developer experience</td>
-                  <td className="px-4 py-3">Bootstrap, Material-UI, Styled Components</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 font-medium text-cyan-400">GitHub Actions</td>
-                  <td className="px-4 py-3">CI/CD</td>
-                  <td className="px-4 py-3">Integrated with repository, Free tier, Easy setup</td>
-                  <td className="px-4 py-3">Jenkins, GitLab CI, CircleCI</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+      {/* Technology Comparison Table */}
+      <div className="mt-8 bg-gray-800/50 rounded-xl p-6 border border-white/20">
+        <h4 className="text-xl font-semibold text-green-400 mb-6 text-center">Technology Selection Rationale</h4>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-white/20">
+                <th className="text-left px-4 py-3 text-blue-400 font-semibold">Technology</th>
+                <th className="text-left px-4 py-3 text-green-400 font-semibold">Category</th>
+                <th className="text-left px-4 py-3 text-purple-400 font-semibold">Key Benefit</th>
+                <th className="text-left px-4 py-3 text-orange-400 font-semibold">Alternatives Considered</th>
+              </tr>
+            </thead>
+            <tbody className="text-gray-300 text-sm">
+              <tr className="border-b border-white/10">
+                <td className="px-4 py-3 font-medium text-cyan-400">FastAPI</td>
+                <td className="px-4 py-3">Backend Framework</td>
+                <td className="px-4 py-3">Auto-generated docs, Type hints, High performance</td>
+                <td className="px-4 py-3">Django, Flask, Express.js</td>
+              </tr>
+              <tr className="border-b border-white/10">
+                <td className="px-4 py-3 font-medium text-cyan-400">Next.js 15</td>
+                <td className="px-4 py-3">Frontend Framework</td>
+                <td className="px-4 py-3">SSR, App router, Built-in optimization</td>
+                <td className="px-4 py-3">Create React App, Vite, Gatsby</td>
+              </tr>
+              <tr className="border-b border-white/10">
+                <td className="px-4 py-3 font-medium text-cyan-400">LangGraph</td>
+                <td className="px-4 py-3">AI Orchestration</td>
+                <td className="px-4 py-3">Complex workflows, State management, Agent coordination</td>
+                <td className="px-4 py-3">LangChain, Crew AI, AutoGen</td>
+              </tr>
+              <tr className="border-b border-white/10">
+                <td className="px-4 py-3 font-medium text-cyan-400">Pinecone</td>
+                <td className="px-4 py-3">Vector Database</td>
+                <td className="px-4 py-3">Managed service, Fast similarity search, Scalability</td>
+                <td className="px-4 py-3">Chroma, Weaviate, Qdrant</td>
+              </tr>
+              <tr className="border-b border-white/10">
+                <td className="px-4 py-3 font-medium text-cyan-400">Tailwind CSS</td>
+                <td className="px-4 py-3">CSS Framework</td>
+                <td className="px-4 py-3">Utility-first, Customizable, Developer experience</td>
+                <td className="px-4 py-3">Bootstrap, Material-UI, Styled Components</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 font-medium text-cyan-400">GitHub Actions</td>
+                <td className="px-4 py-3">CI/CD</td>
+                <td className="px-4 py-3">Integrated with repository, Free tier, Easy setup</td>
+                <td className="px-4 py-3">Jenkins, GitLab CI, CircleCI</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -1022,29 +1022,32 @@ export default function ArchitecturePage() {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex flex-wrap justify-center gap-2 mb-8">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 ${
-                activeTab === tab.id
-                  ? "bg-blue-600/80 text-white shadow-lg border border-blue-500/50"
-                  : "bg-white/10 text-gray-300 hover:text-white hover:bg-white/20 border border-white/20 hover:border-white/40"
-              }`}
-            >
-              <span>{tab.icon}</span>
-              <span>{tab.title}</span>
-            </button>
-          ))}
+        <div className="glass-card-3d p-2 mb-8">
+          <div className="flex flex-wrap gap-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 ${
+                  activeTab === tab.id
+                    ? "button-glossy-3d text-white"
+                    : "text-gray-300 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.title}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Content */}
         <div className="mb-8">
           {getTabContent()}
-        </div>        {/* Footer */}
-        <div className="text-center mt-12 p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10">
-          <p className="text-gray-400 text-sm">
+        </div>
+        {/* Footer */}
+        <div className="glass-card-3d p-6 mt-12">
+          <p className="text-gray-300 text-center leading-relaxed">
             The architecture demonstrates a <strong className="text-blue-400">modern microservices approach</strong> with 
             clear separation between frontend presentation, backend orchestration, and AI agent processing. 
             The <strong className="text-green-400">LangGraph-based agent system</strong> provides flexibility 

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import CSVUpload from "../components/CSVUpload";
 import ProcessVisualizer from "../components/ProcessVisualizer";
 import DataQualityAnalyzer from "../components/DataQualityAnalyzer";
@@ -7,6 +7,11 @@ import SmartSuggestions from "../components/SmartSuggestions";
 import DataExport from "../components/DataExport";
 import MultiFileUpload from "../components/MultiFileUpload";
 import EnhancedAgentStatus from "../components/EnhancedAgentStatus";
+import AgentGraphVisualizer from "../components/AgentGraphVisualizer";
+
+// Define types for better type safety
+type AgentStatusType = "idle" | "working" | "complete" | "error" | "running" | "success";
+type WorkflowStageType = "idle" | "progress" | "uploaded" | "question" | "complete";
 
 // Enhanced logging utility
 const logger = {
@@ -24,15 +29,67 @@ const logger = {
   }
 };
 
+// Toast component for feedback
+function Toast({ message, type, onClose }: { message: string; type: 'success' | 'error'; onClose: () => void }) {
+  return (
+    <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-xl shadow-lg text-base font-semibold transition-all duration-300
+      ${type === 'success' ? 'bg-green-600/90 text-white border border-green-300/40' : 'bg-red-600/90 text-white border border-red-300/40'}`}
+      role="alert"
+      >
+      <span>{type === 'success' ? '✅' : '❌'} {message}</span>
+      <button onClick={onClose} className="ml-4 text-white/80 hover:text-white font-bold">×</button>
+    </div>
+  );
+}
+
+// Agent node definitions for reference in handleNodeClick
+const AGENTS = [
+  { id: "planner", name: "Planning Agent", icon: "🧠", color: "from-blue-500 to-cyan-500" },
+  { id: "query", name: "Query Agent", icon: "🔎", color: "from-indigo-500 to-blue-500" },
+  { id: "cleaner", name: "Data Cleaner", icon: "🧹", color: "from-green-500 to-emerald-500" },
+  { id: "sql", name: "SQL Agent", icon: "🗃️", color: "from-green-500 to-teal-500" },
+  { id: "insight", name: "Insight Agent", icon: "💡", color: "from-amber-500 to-orange-500" },
+  { id: "chart", name: "Chart Agent", icon: "📊", color: "from-purple-500 to-pink-500" },
+  { id: "critique", name: "Critique Agent", icon: "📝", color: "from-pink-500 to-rose-500" },
+  { id: "debate", name: "Debate Agent", icon: "🤔", color: "from-yellow-500 to-orange-500" },
+  { id: "narrative", name: "Narrative Agent", icon: "📖", color: "from-blue-400 to-purple-400" },
+  { id: "report", name: "Report Generator", icon: "📄", color: "from-indigo-500 to-blue-500" },
+  { id: "retrieval", name: "Retrieval Agent", icon: "🔗", color: "from-cyan-500 to-blue-500" },
+  { id: "data", name: "Data Agent", icon: "📂", color: "from-gray-500 to-gray-700" }
+];
+
 export default function HomePage() {
+  // Main state
   const [query, setQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);  const [messages, setMessages] = useState([
+  const [isLoading, setIsLoading] = useState(false);
+  const [messages, setMessages] = useState([
     {
       role: "assistant",
       content: "Welcome! Upload your CSV data and I'll help you analyze it with natural language queries.",
       timestamp: new Date().toLocaleTimeString('en-US', { hour12: false })
     }
-  ]);  const [fileUploaded, setFileUploaded] = useState(false);
+  ]);
+  const [fileUploaded, setFileUploaded] = useState(false);
+  
+  // Agent workflow state
+  const [workflowStage, setWorkflowStage] = useState<WorkflowStageType>("idle");
+  const [agentStatus, setAgentStatus] = useState<Record<string, AgentStatusType>>({
+    planner: "idle",
+    query: "idle",
+    cleaner: "idle",
+    sql: "idle", 
+    insight: "idle",
+    chart: "idle",
+    critique: "idle",
+    debate: "idle",
+    narrative: "idle",
+    report: "idle",
+    retrieval: "idle",
+    data: "idle"
+  });
+  const [activeAgentId, setActiveAgentId] = useState<string | undefined>(undefined);
+  
+  // Historical state structure
   const [agentData, setAgentData] = useState({
     activeAgents: [
       { 
@@ -74,6 +131,17 @@ export default function HomePage() {
   const [columns, setColumns] = useState<string[]>([]);
   const [showAllRows, setShowAllRows] = useState(false);  const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
   const [activeFileId, setActiveFileId] = useState<string | null>(null);  const [useMultiUpload, setUseMultiUpload] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const toastTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  // Toast auto-dismiss
+  useEffect(() => {
+    if (toast) {
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+      toastTimeout.current = setTimeout(() => setToast(null), 3500);
+    }
+    return () => { if (toastTimeout.current) clearTimeout(toastTimeout.current); };
+  }, [toast]);
 
   // Handle file selection from multi-upload (moved before handleMultiFileUpload)
   const handleFileSelection = useCallback((file: any) => {
@@ -117,6 +185,8 @@ export default function HomePage() {
     // Store data
     (window as any).uploadedData = file.data;
     (window as any).uploadedColumns = file.columns;
+
+    setToast({ message: `Switched to file "${file.name}" successfully!`, type: 'success' });
   }, []);
 
   // Handle multi-file upload
@@ -143,7 +213,7 @@ export default function HomePage() {
       agentCount: agentData.activeAgents.length,
       sampleDataSize: sampleData.length
     });
-  }, [agentData.sessionId, agentData.activeAgents.length, sampleData.length, fileUploaded]);// Handle real CSV file upload
+  }, [agentData.sessionId, agentData.activeAgents.length, sampleData.length, fileUploaded]);  // Handle real CSV file upload
   const handleRealFileUpload = useCallback((fileName: string, data: any[], fileColumns: string[]) => {
     logger.info("Real CSV file uploaded", { fileName, rowCount: data.length, columns: fileColumns });
     
@@ -152,6 +222,7 @@ export default function HomePage() {
     setAllData(data); // Store all data
     setColumns(fileColumns);
     setShowAllRows(false); // Reset to preview mode
+    setWorkflowStage("uploaded"); // Set workflow stage to uploaded
     
     setAgentData(prev => ({
       ...prev,
@@ -181,6 +252,8 @@ export default function HomePage() {
       timestamp: new Date().toLocaleTimeString('en-US', { hour12: false })
     }]);
 
+    setToast({ message: `File "${fileName}" uploaded successfully!`, type: 'success' });
+
     // Store full dataset for analysis (in real app, this would go to backend)
     (window as any).uploadedData = data;
     (window as any).uploadedColumns = fileColumns;
@@ -194,12 +267,23 @@ export default function HomePage() {
 
     logger.info("Starting agent workflow simulation", { query });
     
+    // Update workflow stage to show progress
+    setWorkflowStage("progress");
+    
     const stages = [
       { delay: 500, agentType: "planner", status: "working", message: "Planning analysis strategy..." },
       { delay: 1200, agentType: "insight", status: "working", message: "Extracting insights from data..." },
       { delay: 1800, agentType: "chart", status: "working", message: "Generating visualizations..." },
       { delay: 2200, agentType: "all", status: "complete", message: "Analysis complete!" }
     ];
+
+    // Reset all agent statuses first
+    setAgentStatus(prev => ({
+      ...prev,
+      planner: "idle",
+      insight: "idle",
+      chart: "idle"
+    }));
 
     stages.forEach((stage) => {
       setTimeout(() => {
@@ -208,17 +292,36 @@ export default function HomePage() {
           message: stage.message,
           delay: stage.delay
         });
+        
+        // Update agent status
+        if (stage.agentType === "all") {
+          setAgentStatus(prev => {
+            const newStatus = {...prev};
+            newStatus.planner = "complete";
+            newStatus.insight = "complete";
+            newStatus.chart = "complete";
+            return newStatus;
+          });
+          // Update workflow stage to complete
+          setWorkflowStage("complete");
+        } else {
+          setAgentStatus(prev => ({
+            ...prev,
+            [stage.agentType]: stage.status as "working" | "complete"
+          }));
+          setActiveAgentId(stage.agentType);
+        }
 
         setAgentData(prev => ({
           ...prev,
           activeAgents: prev.activeAgents.map(agent => {
             if (stage.agentType === "all") {
-              return { ...agent, status: "complete" as const, endTime: new Date().toISOString() };
+              return { ...agent, status: "idle", endTime: new Date().toISOString() };
             }
             if (agent.type === stage.agentType) {
               return { 
                 ...agent, 
-                status: stage.status === "working" ? "working" as const : "complete" as const, 
+                status: stage.status === "working" ? "idle" : "idle", 
                 message: stage.message,
                 startTime: stage.status === "working" ? new Date().toISOString() : agent.startTime,
                 endTime: stage.status === "complete" ? new Date().toISOString() : agent.endTime
@@ -261,7 +364,8 @@ export default function HomePage() {
       const perfColumn = columns.find(col => col.toLowerCase().includes('perf')) || 'perf';
       const scores = fullData.map((emp: any) => emp[perfColumn]).filter((score: any) => score !== undefined && score !== null);
       const avgPerf = scores.length > 0 ? (scores.reduce((sum: number, score: number) => sum + score, 0) / scores.length).toFixed(1) : 'N/A';
-      response = `⭐ **Performance Insights**: Average performance score is ${avgPerf}. Found ${scores.length} employees with performance data. This suggests ${avgPerf > 80 ? 'strong' : avgPerf > 60 ? 'moderate' : 'varied'} team performance.`;
+      const avgPerfNum = avgPerf !== 'N/A' ? parseFloat(avgPerf) : 0;
+      response = `⭐ **Performance Insights**: Average performance score is ${avgPerf}. Found ${scores.length} employees with performance data. This suggests ${avgPerfNum > 80 ? 'strong' : avgPerfNum > 60 ? 'moderate' : 'varied'} team performance.`;
     } else if (queryLower.includes('salary') || queryLower.includes('compensation')) {
       response = `💰 **Compensation Analysis**: I can help analyze salary distributions if your CSV contains compensation data. Available columns: ${columns.slice(0, 5).join(', ')}${columns.length > 5 ? '...' : ''}. Upload a file with salary/compensation columns for detailed analysis.`;
     } else {
@@ -298,6 +402,9 @@ export default function HomePage() {
       setQuery("");
       return;
     }
+    
+    // Update workflow stage to question
+    setWorkflowStage("question");
     
     logger.info("User query submitted", { 
       query: query.trim(),
@@ -366,117 +473,133 @@ export default function HomePage() {
       logger.debug("Enter key pressed for query submission");
       handleSend();
     }
-  }, [handleSend]);  return (
-    <div className="min-h-screen gradient-bg-enhanced relative overflow-hidden" style={{ scrollBehavior: 'smooth' }}>
-      {/* Enhanced Multi-layer Background Effects */}
+  }, [handleSend]);  
+  // Simulate agent invocation for demo (replace with backend events later)
+  useEffect(() => {
+    const timers: NodeJS.Timeout[] = [];
+    
+    // Only run animation if file is uploaded
+    if (!fileUploaded) {
+      return () => {};
+    }
+    
+    // Update workflow stage to show progress
+    setWorkflowStage("progress");
+    
+    // Animate through the agent workflow
+    setAgentStatus(s => ({ ...s, planner: "running" }));
+    timers.push(setTimeout(() => setAgentStatus(s => ({ ...s, planner: "success", query: "running" })), 1000));
+    timers.push(setTimeout(() => setAgentStatus(s => ({ ...s, query: "success", cleaner: "running" })), 2000));
+    timers.push(setTimeout(() => setAgentStatus(s => ({ ...s, cleaner: "success", sql: "running", insight: "running", chart: "running" })), 3000));
+    timers.push(setTimeout(() => setAgentStatus(s => ({ ...s, sql: "success", insight: "success", chart: "success", critique: "running" })), 4500));
+    timers.push(setTimeout(() => setAgentStatus(s => ({ ...s, critique: "success", debate: "running" })), 6000));
+    timers.push(setTimeout(() => setAgentStatus(s => ({ ...s, debate: "success", narrative: "running" })), 7000));
+    timers.push(setTimeout(() => setAgentStatus(s => ({ ...s, narrative: "success", report: "running" })), 8000));
+    timers.push(setTimeout(() => setAgentStatus(s => ({ ...s, report: "success" })), 9000));
+    
+    return () => timers.forEach(t => clearTimeout(t));
+  }, [fileUploaded]);
+
+  // Node click handler (show details, trigger agent, etc.)
+  const handleNodeClick = (id: string) => {
+    logger.info(`Agent node clicked: ${id}`);
+    
+    // Flash the status to highlight it was clicked
+    setAgentStatus(prev => ({
+      ...prev,
+      [id]: "running" 
+    }));
+    
+    // Set as active agent
+    setActiveAgentId(id);
+    
+    // Show a toast with agent info
+    const agent = AGENTS.find(a => a.id === id);
+    if (agent) {
+      setToast({
+        message: `${agent.icon} ${agent.name}: Status - ${agentStatus[id] || "idle"}`,
+        type: "success"
+      });
+    }
+    
+    // Reset status after a short delay (for visual feedback)
+    setTimeout(() => {
+      setAgentStatus(prev => ({
+        ...prev,
+        [id]: prev[id] === "running" ? "idle" : prev[id]
+      }));
+    }, 800);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#18122B] via-[#1E1B3A] to-[#0F1021] text-white">
+      {/* Toast Notification */}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {/* Agent Graph Visualizer - Centered and Prominent */}
+      <div className="w-full max-w-5xl mx-auto mt-6 mb-2 relative z-20">
+        <div className="glass-card-3d p-4 rounded-2xl border border-white/20 bg-white/5 backdrop-blur-md">
+          <h3 className="text-xl font-bold text-white text-center mb-2">Multi-Agent Enterprise System</h3>
+          <AgentGraphVisualizer 
+            agentStatus={agentStatus} 
+            onNodeClick={handleNodeClick} 
+            workflowStage={workflowStage}
+            activeAgentId={activeAgentId} 
+          />
+        </div>
+      </div>
+      {/* Enhanced Multi-layer Background Effects (NO orbs/particles) */}
       <div className="absolute inset-0 bg-gradient-to-br from-black via-purple-900/20 to-black"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(78,60,250,0.15),transparent_50%)]"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(233,240,255,0.08),transparent_50%)]"></div>
       <div className="absolute inset-0 bg-[conic-gradient(from_0deg_at_50%_50%,rgba(78,60,250,0.1)_0deg,transparent_60deg,rgba(233,240,255,0.05)_120deg,transparent_180deg)]"></div>
-      
-      {/* Enhanced Floating 3D Orbs */}
-      <div className="absolute top-1/4 left-1/6 w-40 h-40 floating-orb-3d bg-gradient-to-r from-purple-500/20 to-blue-500/20"></div>
-      <div className="absolute top-3/4 right-1/4 w-32 h-32 floating-orb-3d bg-gradient-to-r from-blue-500/15 to-cyan-500/15" style={{ animationDelay: '2s' }}></div>
-      <div className="absolute top-1/2 right-1/6 w-48 h-48 floating-orb-3d bg-gradient-to-r from-violet-500/10 to-purple-500/15" style={{ animationDelay: '4s' }}></div>
-      <div className="absolute bottom-1/3 left-1/3 w-36 h-36 floating-orb-3d bg-gradient-to-r from-emerald-500/10 to-teal-500/10" style={{ animationDelay: '6s' }}></div>
-      
-      {/* Enhanced Floating Particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(35)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-gradient-to-r from-purple-400/40 to-blue-400/40 rounded-full animate-pulse"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 4}s`,
-              animationDuration: `${3 + Math.random() * 3}s`,
-              boxShadow: '0 0 4px rgba(78, 60, 250, 0.3)'
-            }}
-          ></div>        ))}
-      </div>
-
-      {/* Enhanced Background Effects - Pure Gradients */}
-      <div className="absolute inset-0 overflow-hidden">
-        {/* Gradient Background Layers */}
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/20 via-purple-900/30 to-black"></div>
-        <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/10 via-transparent to-violet-900/20"></div>
-        <div className="absolute inset-0 bg-gradient-to-bl from-transparent via-purple-800/5 to-indigo-900/15"></div>
-        
-        {/* Floating Gradient Orbs */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-blue-500/8 to-purple-500/8 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-l from-purple-500/8 to-pink-500/8 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-gradient-to-br from-cyan-500/6 to-blue-500/6 rounded-full blur-2xl animate-pulse delay-2000"></div>
-      </div>
-
-      <div className="relative z-10 pt-20 p-6">
-        <div className="max-w-7xl mx-auto">          {/* Enhanced Header without glass background */}          <div className="text-center mb-12">
-            <div className="p-8 mb-8 max-w-5xl mx-auto">
-              <h1 className="text-7xl font-black mb-6 leading-tight">
-                <span className="bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
-                  Enterprise Insights
-                </span>
-                <br />
-                <span className="bg-gradient-to-r from-purple-300 via-blue-200 to-cyan-200 bg-clip-text text-transparent">
-                  Copilot
-                </span>
-              </h1>
-              <div className="text-2xl text-gray-300 font-light tracking-wide">
-                <span className="text-blue-200">AI-Powered</span> 
-                <span className="mx-2">•</span>
-                <span className="text-purple-200">Business Intelligence</span>
-                <span className="mx-2">•</span>
-                <span className="text-cyan-200">Platform</span>
-              </div>
-              <div className="mt-6 text-lg text-gray-400 max-w-3xl mx-auto">
-                Transform your data into actionable insights with intelligent multi-agent analysis
-              </div>
-            </div>
-          </div>
-
-          {/* Main Content Grid */}
-          <div className="grid lg:grid-cols-12 gap-6">
+      {/* No floating orbs or pulsing particles */}
+      <div className="relative z-10 pt-16 p-3">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-12 gap-4">
             {/* Left Column - Chat Interface */}
-            <div className="lg:col-span-5 space-y-6">              {/* Enhanced 3D Glassmorphic Chat Interface */}
-              <div className="glass-card-3d rounded-3xl p-8 relative overflow-hidden">
+            <div className="lg:col-span-5 space-y-4">
+              {/* Compact Glassmorphic Chat Interface */}
+              <div className="glass-card-3d rounded-2xl p-4 relative overflow-hidden border border-white/15 shadow-lg">
                 {/* Additional 3D highlight layer */}
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent"></div>
                 
-                <div className="flex items-center gap-4 mb-8 relative z-10">
-                  <div className="w-14 h-14 bg-gradient-to-br from-purple-500/60 via-blue-500/40 to-violet-600/60 rounded-2xl flex items-center justify-center shadow-2xl shadow-purple-500/30 border border-white/20 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl"></div>
-                    <span className="text-2xl relative z-10">🤖</span>
+                <div className="flex items-center gap-3 mb-4 relative z-10">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500/60 via-blue-500/40 to-violet-600/60 rounded-xl flex items-center justify-center shadow-xl border border-white/20 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-xl"></div>
+                    <span className="text-xl relative z-10">🤖</span>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-white font-bold text-xl mb-1">AI Copilot</h3>
-                    <p className="text-purple-200 text-sm">Your intelligent data assistant</p>
+                    <h3 className="text-white font-bold text-base mb-0.5">AI Copilot</h3>
+                    <p className="text-purple-200 text-xs">Your intelligent data assistant</p>
                   </div>
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-400/40 to-pink-400/40 rounded-full shadow-lg relative overflow-hidden">
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-400/40 to-pink-400/40 rounded-full shadow relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-full"></div>
                   </div>
-                </div>                {/* Enhanced 3D Upload Section */}
-                <div className="glass-card-3d rounded-3xl p-8 mb-8 relative overflow-hidden">
+                </div>                {/* Compact Upload Section */}
+                <div className="glass-card-3d rounded-2xl p-4 mb-4 relative overflow-hidden border border-white/10">
                   {/* Top highlight line */}
                   <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent"></div>
                   
                   <div className="text-center relative z-10">
-                    <div className="w-20 h-20 glass-card-3d rounded-3xl mx-auto mb-6 flex items-center justify-center text-4xl relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-purple-500/10 rounded-3xl"></div>
+                    <div className="w-12 h-12 glass-card-3d rounded-2xl mx-auto mb-3 flex items-center justify-center text-2xl relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-purple-500/10 rounded-2xl"></div>
                       <span className="relative z-10">📄</span>
                     </div>
-                    <div className="flex items-center justify-between mb-6">
-                      <h4 className="text-white font-bold text-xl">Upload CSV or Drag & Drop</h4>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-white font-bold text-base">Upload CSV or Drag & Drop</h4>
                       <button
                         onClick={() => setUseMultiUpload(!useMultiUpload)}
-                        className={`button-glossy-3d px-6 py-3 rounded-2xl text-sm font-medium transition-all duration-400 ${
-                          useMultiUpload 
-                            ? 'bg-gradient-to-r from-white/25 to-white/15 text-white shadow-2xl border-white/30' 
-                            : 'bg-gradient-to-r from-black/30 to-black/20 text-purple-200 hover:from-white/15 hover:to-white/10'
-                        }`}
+                        className={`button-glossy-3d px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-400 border-2 focus:ring-2 focus:ring-blue-400/60
+                          ${useMultiUpload
+                            ? 'bg-gradient-to-r from-white/30 to-white/20 text-white border-blue-400/60 shadow-xl'
+                            : 'bg-gradient-to-r from-black/40 to-black/20 text-purple-200 border-white/20 hover:from-white/10 hover:to-white/5'}
+                        `}
+                        aria-pressed={useMultiUpload}
                       >
                         {useMultiUpload ? '📂 Multi' : '📄 Single'}
                       </button>
-                    </div>{/* Upload Components */}
+                    </div>
+                    {/* Upload Components */}
                     {useMultiUpload ? (
                       <div className="space-y-4">
                         <MultiFileUpload
@@ -664,71 +787,72 @@ export default function HomePage() {
                       <p className="text-sm">Upload a CSV file to see data preview</p>
                     </div>
                   </div>
-                )}                {/* Chat Input with enhanced styling */}
-                <div className="flex gap-3">
+                )}                {/* Chat Input with enhanced action affordance */}
+                <div className="flex gap-2 mt-2">
                   <input
                     type="text"
                     value={query}
                     onChange={handleQueryChange}
                     onKeyPress={handleKeyPress}
-                    placeholder="Ask a question about your data..."                    className="flex-1 glass-card-3d border-0 rounded-2xl px-6 py-4 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-400/50 transition-all duration-300"
+                    placeholder="Ask a question about your data..."
+                    className="flex-1 glass-card-3d border-0 rounded-xl px-4 py-2 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-blue-400/60 text-sm transition-all duration-300"
                     disabled={isLoading}
                   />
                   <button
                     onClick={handleSend}
                     disabled={isLoading || !query.trim()}
-                    className="button-glossy-3d px-8 py-4 rounded-2xl font-semibold transition-all duration-400 disabled:opacity-50 disabled:cursor-not-allowed text-white"
+                    className="button-glossy-3d px-5 py-2 rounded-xl font-bold transition-all duration-400 disabled:opacity-50 disabled:cursor-not-allowed text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg focus:ring-2 focus:ring-blue-400/60"
+                    aria-label="Send query"
                   >
                     Send
                   </button>
                 </div>
-              </div>              {/* Enhanced 3D Chat Messages */}
-              <div className="space-y-6">
+              </div>
+              {/* Compact Chat Messages */}
+              <div className="space-y-3">
                 {messages.map((message, i) => (
-                  <div key={i} className="glass-card-3d rounded-3xl p-6 relative overflow-hidden">
+                  <div key={i} className="glass-card-3d rounded-2xl p-4 relative overflow-hidden border border-white/10">
                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
-                    <div className="flex items-start gap-4 relative z-10">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg shadow-2xl border border-white/20 relative overflow-hidden ${
-                        message.role === 'assistant' 
-                          ? 'bg-gradient-to-br from-purple-500/60 to-violet-500/60' 
+                    <div className="flex items-start gap-3 relative z-10">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-base shadow-xl border border-white/20 relative overflow-hidden ${
+                        message.role === 'assistant'
+                          ? 'bg-gradient-to-br from-purple-500/60 to-violet-500/60'
                           : 'bg-gradient-to-br from-blue-500/60 to-cyan-500/60'
                       }`}>
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl"></div>
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-xl"></div>
                         <span className="relative z-10">{message.role === 'assistant' ? '🤖' : '👤'}</span>
                       </div>
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <span className="text-white font-bold text-lg">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-white font-bold text-base">
                             {message.role === 'assistant' ? 'AI Copilot' : 'You'}
                           </span>
-                          <span className="text-purple-300 text-sm bg-purple-500/20 px-2 py-1 rounded-lg">{message.timestamp}</span>
+                          <span className="text-purple-300 text-xs bg-purple-500/20 px-2 py-0.5 rounded">{message.timestamp}</span>
                         </div>
-                        <p className="text-gray-100 leading-relaxed text-base">{message.content}</p>
+                        <p className="text-gray-100 leading-relaxed text-sm">{message.content}</p>
                       </div>
                     </div>
                   </div>
                 ))}
-                
                 {isLoading && (
-                  <div className="glass-card-3d rounded-3xl p-6 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-400/40 to-transparent"></div>
-                    <div className="flex items-center gap-4 relative z-10">
-                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500/60 to-violet-500/60 rounded-2xl flex items-center justify-center text-lg shadow-2xl border border-white/20 relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl"></div>
+                  <div className="glass-card-3d rounded-2xl p-4 relative overflow-hidden border border-white/10">
+                    <div className="flex items-center gap-3 relative z-10">
+                      <div className="w-8 h-8 bg-gradient-to-br from-purple-500/60 to-violet-500/60 rounded-xl flex items-center justify-center text-base shadow-xl border border-white/20 relative overflow-hidden">
                         <span className="relative z-10">🤖</span>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-4 h-4 bg-gradient-to-r from-purple-400 to-violet-400 rounded-full animate-bounce shadow-lg"></div>
-                        <div className="w-4 h-4 bg-gradient-to-r from-violet-400 to-purple-400 rounded-full animate-bounce delay-100 shadow-lg"></div>
-                        <div className="w-4 h-4 bg-gradient-to-r from-purple-400 to-violet-400 rounded-full animate-bounce delay-200 shadow-lg"></div>
-                        <span className="text-purple-200 ml-3 font-medium">AI is thinking...</span>
+                      <div className="flex items-center gap-2">
+                        <span className="loader-dot bg-purple-400"></span>
+                        <span className="loader-dot bg-violet-400"></span>
+                        <span className="loader-dot bg-purple-400"></span>
+                        <span className="text-purple-200 ml-2 font-medium text-xs">AI is thinking...</span>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
-            </div>            {/* Right Column - Enhanced Features */}
-            <div className="lg:col-span-7 space-y-6">
+            </div>
+            {/* Right Column - Enhanced Features */}
+            <div className="lg:col-span-7 space-y-4">
               {/* Smart Suggestions */}
               <SmartSuggestions
                 data={allData}
@@ -853,3 +977,21 @@ export default function HomePage() {
     </div>
   );
 }
+
+/*
+Add to globals.css:
+.loader-dot {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 9999px;
+  margin-right: 0.15rem;
+  animation: loader-bounce 1s infinite alternate;
+}
+.loader-dot:nth-child(2) { animation-delay: 0.15s; }
+.loader-dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes loader-bounce {
+  0% { transform: translateY(0); opacity: 0.7; }
+  100% { transform: translateY(-0.4rem); opacity: 1; }
+}
+*/

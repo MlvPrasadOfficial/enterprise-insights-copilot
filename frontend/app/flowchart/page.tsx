@@ -448,6 +448,12 @@ export default function FlowchartPage() {
               </div>
             </div>
           </div>
+
+          <div className="glass-card-3d p-6 mt-12">
+  <p className="text-gray-300 text-center leading-relaxed">
+    The flowchart visually represents the <strong className="text-purple-400">multi-layered architecture</strong> and <strong className="text-blue-400">agent orchestration</strong> of the platform. The design leverages <strong className="text-green-400">glassmorphic UI</strong> and <strong className="text-amber-400">modern color theory</strong> for clarity and enterprise appeal.
+  </p>
+</div>
         </div>
       </div>
     </PageBackground>

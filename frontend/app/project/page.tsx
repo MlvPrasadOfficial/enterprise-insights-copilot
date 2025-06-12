@@ -194,8 +194,8 @@ export default function ProjectPage() {
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-12 p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10">
-          <p className="text-gray-400 text-sm">
+        <div className="glass-card-3d p-6 mt-12">
+          <p className="text-gray-300 text-center leading-relaxed">
             The codebase shows <strong className="text-green-400">excellent architectural foundation</strong> with 
             modern technologies and sophisticated agent orchestration. The main areas for improvement are{" "}
             <strong className="text-yellow-400">production readiness</strong>, <strong className="text-blue-400">scalability</strong>, 

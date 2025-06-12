@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
+
+import PageBackground from "@/components/PageBackground";
 
 export default function UXPage() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -1105,68 +1106,19 @@ export default function UXPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Navigation Header */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-2xl border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo and Brand */}
-            <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">EI</span>
-              </div>
-              <span className="text-white font-semibold text-lg">Enterprise Insights</span>
-            </Link>
-            
-            {/* Center Navigation */}
-            <div className="hidden md:flex items-center space-x-8">
-              <Link href="/" className="text-white/60 hover:text-white/90 transition-colors text-sm font-medium">
-                🏠 Home
-              </Link>
-              <Link href="/project" className="text-white/60 hover:text-white/90 transition-colors text-sm font-medium">
-                📊 Project
-              </Link>
-              <Link href="/architecture" className="text-white/60 hover:text-white/90 transition-colors text-sm font-medium">
-                🏗️ Architecture
-              </Link>              <span className="text-white/90 text-sm font-medium">
-                🎨 UI/UX
-              </span>
-              <Link href="/flowchart" className="text-white/60 hover:text-white/90 transition-colors text-sm font-medium">
-                🔄 Flowchart
-              </Link>
-            </div>
-            
-            {/* Back Button */}
-            <Link href="/" className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-              ← Back to Home
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      <div className="pt-20 px-4 py-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-white mb-4">
-              🎨 Complete UI/UX Analysis & Recommendations
-            </h1>
-            <p className="text-gray-300 text-lg max-w-4xl mx-auto">
-              Comprehensive analysis of the current user interface and experience, 
-              with billion-dollar company design recommendations.
-            </p>
-          </div>
-
-          {/* Navigation Tabs */}
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
+    <PageBackground title="UI/UX Analysis & Recommendations" subtitle="Comprehensive analysis of the current user interface and experience with billion-dollar company design recommendations" showTitle={true}>
+      <div className="max-w-6xl mx-auto">
+        {/* Navigation Tabs */}
+        <div className="glass-card-3d p-2 mb-8">
+          <div className="flex flex-wrap gap-2">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 ${
                   activeTab === tab.id
-                    ? "bg-purple-600/80 text-white shadow-lg border border-purple-500/50"
-                    : "bg-white/10 text-gray-300 hover:text-white hover:bg-white/20 border border-white/20 hover:border-white/40"
+                    ? "button-glossy-3d text-white"
+                    : "text-gray-300 hover:text-white hover:bg-white/10"
                 }`}
               >
                 <span>{tab.icon}</span>
@@ -1174,24 +1126,24 @@ export default function UXPage() {
               </button>
             ))}
           </div>
+        </div>
 
-          {/* Content */}
-          <div className="mb-8">
-            {getSectionContent()}
-          </div>
+        {/* Content */}
+        <div className="space-y-8">
+          {getSectionContent()}
+        </div>
 
-          {/* Footer */}
-          <div className="text-center mt-12 p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10">
-            <p className="text-gray-400 text-sm">
-              The current UI shows <strong className="text-green-400">excellent design foundation</strong> with 
-              modern glassmorphic aesthetics and strong technical implementation. The main opportunities lie in{" "}
-              <strong className="text-purple-400">enterprise features</strong>, <strong className="text-blue-400">mobile optimization</strong>, 
-              and <strong className="text-amber-400">advanced interactions</strong>. With strategic UX improvements,
-              this platform can compete with <strong className="text-white">industry leaders like Tableau and PowerBI</strong>.
-            </p>
-          </div>
+        {/* Footer */}
+        <div className="glass-card-3d p-6 mt-12">
+          <p className="text-gray-300 text-center leading-relaxed">
+            The current UI shows <strong className="text-green-400">excellent design foundation</strong> with 
+            modern glassmorphic aesthetics and strong technical implementation. The main opportunities lie in{" "}
+            <strong className="text-purple-400">enterprise features</strong>, <strong className="text-blue-400">mobile optimization</strong>, 
+            and <strong className="text-amber-400">advanced interactions</strong>. With strategic UX improvements,
+            this platform can compete with <strong className="text-white">industry leaders like Tableau and PowerBI</strong>.
+          </p>
         </div>
       </div>
-    </div>
+    </PageBackground>
   );
 }
