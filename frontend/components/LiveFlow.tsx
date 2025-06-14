@@ -29,7 +29,7 @@ interface EnhancedAgent {
   steps?: StepProcess[];
 }
 
-interface EnhancedAgentStatusProps {
+interface LiveFlowProps {
   agents: any[]; // Original agent format
   currentQuery: string;
   fileUploadStatus: any;
@@ -37,13 +37,13 @@ interface EnhancedAgentStatusProps {
   onAgentToggle?: (agentType: string, enabled: boolean) => void;
 }
 
-export default function EnhancedAgentStatus({ 
+export default function LiveFlow({ 
   agents, 
   currentQuery, 
   fileUploadStatus,
   agentStatus,
   onAgentToggle 
-}: EnhancedAgentStatusProps) {
+}: LiveFlowProps) {
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [agentLogs, setAgentLogs] = useState<Record<string, string[]>>({});
   const [agentStepProgress, setAgentStepProgress] = useState<Record<string, number>>({});
@@ -359,6 +359,185 @@ export default function EnhancedAgentStatus({
     }
   };  
 
+  // Define the AgentPanel component
+  interface AgentPanelProps {
+    agent: EnhancedAgent;
+    selectedAgent: string | null;
+    setSelectedAgent: (agent: string | null) => void;
+    agentLogs: Record<string, string[]>;
+    getStatusBackground: (status: string) => string;
+    getStatusColor: (status: string) => string;
+    formatDuration: (ms: number) => string;
+  }
+
+  const AgentPanel: React.FC<AgentPanelProps> = ({
+    agent,
+    selectedAgent,
+    setSelectedAgent,
+    agentLogs,
+    getStatusBackground,
+    getStatusColor,
+    formatDuration
+  }) => {
+    const isExpanded = selectedAgent === agent.type;
+    const logs = agentLogs[agent.type] || [];
+
+    return (
+      <div 
+        key={agent.type}
+        className={`glass-card-3d ${getStatusBackground(agent.status)} backdrop-blur-sm transition-all duration-300 ${
+          isExpanded ? 'p-4' : 'p-3'
+        }`}
+      >
+        {/* Agent Header */}
+        <div 
+          className="flex items-center justify-between cursor-pointer"
+          onClick={() => setSelectedAgent(isExpanded ? null : agent.type)}
+        >
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-lg bg-gray-800/50 flex items-center justify-center shadow-inner border border-gray-700/50">
+              <span className="text-xl">{agent.icon}</span>
+            </div>
+            <div>
+              <h4 className="font-medium text-white">{agent.name}</h4>
+              <div className="flex items-center">
+                <div className={`w-2 h-2 rounded-full mr-2 ${
+                  agent.status === 'idle' ? 'bg-gray-400' : 
+                  agent.status === 'working' ? 'bg-blue-400 animate-pulse' : 
+                  agent.status === 'complete' ? 'bg-green-400' : 
+                  'bg-red-400'
+                }`}></div>
+                <span className={`text-xs ${getStatusColor(agent.status)}`}>
+                  {agent.status}
+                  {agent.estimatedTimeRemaining && agent.status === 'working' && 
+                    ` · ~${formatDuration(agent.estimatedTimeRemaining)} remaining`
+                  }
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            {agent.status === 'working' && (
+              <div className="h-1 w-16 bg-gray-700 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-blue-400 rounded-full" 
+                  style={{ width: `${agent.progress || 0}%` }}
+                ></div>
+              </div>
+            )}
+            <button 
+              className="rounded-lg p-1 hover:bg-white/10 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation(); 
+                setSelectedAgent(isExpanded ? null : agent.type);
+              }}
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className={`h-5 w-5 text-white transition-transform transform ${isExpanded ? 'rotate-180' : ''}`} 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        {/* Expanded View */}
+        {isExpanded && (
+          <div className="mt-4 space-y-4">
+            {/* Progress Steps */}
+            {agent.steps && (
+              <div className="space-y-3">
+                <h5 className="text-white/80 text-sm font-medium">Process Steps</h5>
+                <div className="space-y-2">
+                  {agent.steps.map((step) => (
+                    <div key={step.id} className="flex items-center space-x-3">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                        step.status === 'complete' ? 'bg-green-500/20 text-green-400' :
+                        step.status === 'in-progress' ? 'bg-blue-500/20 text-blue-400 animate-pulse' :
+                        step.status === 'error' ? 'bg-red-500/20 text-red-400' :
+                        'bg-gray-500/20 text-gray-400'
+                      }`}>
+                        {step.status === 'complete' ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : step.status === 'in-progress' ? (
+                          <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                        ) : step.status === 'error' ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        ) : (
+                          <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between">
+                          <span className={`text-sm ${
+                            step.status === 'complete' ? 'text-green-400' :
+                            step.status === 'in-progress' ? 'text-blue-400' :
+                            step.status === 'error' ? 'text-red-400' :
+                            'text-gray-400'
+                          }`}>
+                            {step.description}
+                          </span>
+                          {step.timestamp && (
+                            <span className="text-xs text-gray-500">{step.timestamp}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Agent Logs */}
+            {logs.length > 0 && (
+              <div className="space-y-2">
+                <h5 className="text-white/80 text-sm font-medium">Recent Logs</h5>
+                <div className="space-y-1 bg-black/30 rounded-lg p-2 border border-white/10">
+                  {logs.map((log, i) => (
+                    <div key={i} className="text-xs text-gray-300 font-mono">{log}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Capabilities */}
+            <div className="space-y-2">
+              <h5 className="text-white/80 text-sm font-medium">Capabilities</h5>
+              <div className="grid grid-cols-1 gap-2">
+                {agent.capabilities.map((capability, idx) => (
+                  <div 
+                    key={idx}
+                    className={`text-xs p-2 rounded border ${
+                      capability.enabled 
+                        ? 'border-cyan-500/30 bg-cyan-500/5 text-cyan-400'
+                        : 'border-gray-700/30 bg-gray-800/30 text-gray-500'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{capability.name}</span>
+                      <div className={`w-3 h-3 rounded-full ${
+                        capability.enabled ? 'bg-cyan-400' : 'bg-gray-700'
+                      }`}></div>
+                    </div>
+                    <p className="mt-1 text-xs opacity-80">{capability.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Function to render an agent panel consistently
   const renderAgentPanel = (agent: EnhancedAgent) => (
     <AgentPanel
@@ -388,7 +567,7 @@ export default function EnhancedAgentStatus({
           </div>
           <div>
             <h3 className="text-white font-semibold text-lg bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">
-              Agent Status Panel
+              Live Flow
             </h3>
             <p className="text-white/70 text-sm">Real-time agent monitoring</p>
           </div>
@@ -402,7 +581,7 @@ export default function EnhancedAgentStatus({
         </div>
       </div>
 
-      {/* Data Cleaner Agent Panel - 1st Panel */}
+      {/* Cleaner Agent Panel - 1st Panel */}
       {enhancedAgents.filter(agent => agent.type === 'cleaner').map(renderAgentPanel)}
 
       {/* Data Agent Panel - 2nd Panel */}
@@ -431,185 +610,3 @@ export default function EnhancedAgentStatus({
     </div>
   );
 }
-
-// A reusable component for the expanded agent view
-// Removed unused AgentExpandedView component
-
-// Define the AgentPanel component
-interface AgentPanelProps {
-  agent: EnhancedAgent;
-  selectedAgent: string | null;
-  setSelectedAgent: (agent: string | null) => void;
-  agentLogs: Record<string, string[]>;
-  getStatusBackground: (status: string) => string;
-  getStatusColor: (status: string) => string;
-  formatDuration: (ms: number) => string;
-}
-
-const AgentPanel: React.FC<AgentPanelProps> = ({
-  agent,
-  selectedAgent,
-  setSelectedAgent,
-  agentLogs,
-  getStatusBackground,
-  getStatusColor,
-  formatDuration
-}) => {
-  const isExpanded = selectedAgent === agent.type;
-  const logs = agentLogs[agent.type] || [];
-
-  return (
-    <div 
-      key={agent.type}
-      className={`glass-card-3d ${getStatusBackground(agent.status)} backdrop-blur-sm transition-all duration-300 ${
-        isExpanded ? 'p-4' : 'p-3'
-      }`}
-    >
-      {/* Agent Header */}
-      <div 
-        className="flex items-center justify-between cursor-pointer"
-        onClick={() => setSelectedAgent(isExpanded ? null : agent.type)}
-      >
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-lg bg-gray-800/50 flex items-center justify-center shadow-inner border border-gray-700/50">
-            <span className="text-xl">{agent.icon}</span>
-          </div>
-          <div>
-            <h4 className="font-medium text-white">{agent.name}</h4>
-            <div className="flex items-center">
-              <div className={`w-2 h-2 rounded-full mr-2 ${
-                agent.status === 'idle' ? 'bg-gray-400' : 
-                agent.status === 'working' ? 'bg-blue-400 animate-pulse' : 
-                agent.status === 'complete' ? 'bg-green-400' : 
-                'bg-red-400'
-              }`}></div>
-              <span className={`text-xs ${getStatusColor(agent.status)}`}>
-                {agent.status}
-                {agent.estimatedTimeRemaining && agent.status === 'working' && 
-                  ` · ~${formatDuration(agent.estimatedTimeRemaining)} remaining`
-                }
-              </span>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          {agent.status === 'working' && (
-            <div className="h-1 w-16 bg-gray-700 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-blue-400 rounded-full" 
-                style={{ width: `${agent.progress || 0}%` }}
-              ></div>
-            </div>
-          )}
-          <button 
-            className="rounded-lg p-1 hover:bg-white/10 transition-colors"
-            onClick={(e) => {
-              e.stopPropagation(); 
-              setSelectedAgent(isExpanded ? null : agent.type);
-            }}
-          >
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              className={`h-5 w-5 text-white transition-transform transform ${isExpanded ? 'rotate-180' : ''}`} 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-        </div>
-      </div>
-      
-      {/* Expanded View */}
-      {isExpanded && (
-        <div className="mt-4 space-y-4">
-          {/* Progress Steps */}
-          {agent.steps && (
-            <div className="space-y-3">
-              <h5 className="text-white/80 text-sm font-medium">Process Steps</h5>
-              <div className="space-y-2">
-                {agent.steps.map((step) => (
-                  <div key={step.id} className="flex items-center space-x-3">
-                    <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                      step.status === 'complete' ? 'bg-green-500/20 text-green-400' :
-                      step.status === 'in-progress' ? 'bg-blue-500/20 text-blue-400 animate-pulse' :
-                      step.status === 'error' ? 'bg-red-500/20 text-red-400' :
-                      'bg-gray-500/20 text-gray-400'
-                    }`}>
-                      {step.status === 'complete' ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      ) : step.status === 'in-progress' ? (
-                        <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                      ) : step.status === 'error' ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      ) : (
-                        <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between">
-                        <span className={`text-sm ${
-                          step.status === 'complete' ? 'text-green-400' :
-                          step.status === 'in-progress' ? 'text-blue-400' :
-                          step.status === 'error' ? 'text-red-400' :
-                          'text-gray-400'
-                        }`}>
-                          {step.description}
-                        </span>
-                        {step.timestamp && (
-                          <span className="text-xs text-gray-500">{step.timestamp}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {/* Agent Logs */}
-          {logs.length > 0 && (
-            <div className="space-y-2">
-              <h5 className="text-white/80 text-sm font-medium">Recent Logs</h5>
-              <div className="space-y-1 bg-black/30 rounded-lg p-2 border border-white/10">
-                {logs.map((log, i) => (
-                  <div key={i} className="text-xs text-gray-300 font-mono">{log}</div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {/* Capabilities */}
-          <div className="space-y-2">
-            <h5 className="text-white/80 text-sm font-medium">Capabilities</h5>
-            <div className="grid grid-cols-1 gap-2">
-              {agent.capabilities.map((capability, idx) => (
-                <div 
-                  key={idx}
-                  className={`text-xs p-2 rounded border ${
-                    capability.enabled 
-                      ? 'border-cyan-500/30 bg-cyan-500/5 text-cyan-400'
-                      : 'border-gray-700/30 bg-gray-800/30 text-gray-500'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{capability.name}</span>
-                    <div className={`w-3 h-3 rounded-full ${
-                      capability.enabled ? 'bg-cyan-400' : 'bg-gray-700'
-                    }`}></div>
-                  </div>
-                  <p className="mt-1 text-xs opacity-80">{capability.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};

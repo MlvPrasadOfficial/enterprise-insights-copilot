@@ -1,17 +1,39 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import CSVUpload from "../components/CSVUpload";
-import ProcessVisualizer from "../components/ProcessVisualizer";
 import DataQualityAnalyzer from "../components/DataQualityAnalyzer";
 import SmartSuggestions from "../components/SmartSuggestions";
 import DataExport from "../components/DataExport";
 import MultiFileUpload from "../components/MultiFileUpload";
 import EnhancedAgentStatus from "../components/EnhancedAgentStatus";
-import AgentGraphVisualizer from "../components/AgentGraphVisualizer";
+import LiveFlow from "../components/LiveFlow";
+import NavBar from "../components/Navbar";
 
 // Define types for better type safety
 type AgentStatusType = "idle" | "working" | "complete" | "error" | "running" | "success";
-type WorkflowStageType = "idle" | "progress" | "uploaded" | "question" | "complete";
+
+interface AgentData {
+  id: string;
+  name: string;
+  type: string;
+  icon: string;
+  color: string;
+  status: "idle" | "working" | "complete" | "error";
+  message: string;
+  startTime?: string;
+  endTime?: string;
+}
+
+interface AgentDataState {
+  activeAgents: AgentData[];
+  currentQuery: string;
+  sessionId: string;
+  fileUploadStatus: {
+    fileName: string;
+    indexed: boolean;
+    rowCount: number;
+  };
+}
 
 // Enhanced logging utility
 const logger = {
@@ -70,9 +92,7 @@ export default function HomePage() {
     }
   ]);
   const [fileUploaded, setFileUploaded] = useState(false);
-  
-  // Agent workflow state
-  const [workflowStage, setWorkflowStage] = useState<WorkflowStageType>("idle");
+    // Agent workflow state
   const [agentStatus, setAgentStatus] = useState<Record<string, AgentStatusType>>({
     planner: "idle",
     query: "idle",
@@ -87,52 +107,47 @@ export default function HomePage() {
     retrieval: "idle",
     data: "idle"
   });
-  const [activeAgentId, setActiveAgentId] = useState<string | undefined>(undefined);
   
-  // Historical state structure
-  const [agentData, setAgentData] = useState({
-    activeAgents: [
-      { 
-        type: "planner" as const, 
-        name: "Planning Agent", 
-        icon: "🧠", 
-        status: "idle" as const,
-        message: "Ready to analyze data",
-        startTime: undefined as string | undefined,
-        endTime: undefined as string | undefined
-      },
-      { 
-        type: "insight" as const, 
-        name: "Insight Generator", 
-        icon: "💡", 
-        status: "idle" as const,
-        message: "Ready to generate insights",
-        startTime: undefined as string | undefined,
-        endTime: undefined as string | undefined
-      },
-      { 
-        type: "chart" as const, 
-        name: "Chart Agent", 
-        icon: "📊", 
-        status: "idle" as const,
-        message: "Ready to create visualizations",
-        startTime: undefined as string | undefined,
-        endTime: undefined as string | undefined
-      }
-    ],
-    currentQuery: query,
+  // Historical state structure  
+  const [agentData, setAgentData] = useState<AgentDataState>({
+    // Initialize with all 12 agents defined in AGENTS array
+    activeAgents: AGENTS.map(agent => ({
+      id: agent.id,
+      name: agent.name,
+      type: agent.id,
+      icon: agent.icon,
+      color: agent.color,
+      status: "idle" as "idle" | "working" | "complete" | "error",      message: `${agent.name} ready`,
+      startTime: undefined,
+      endTime: undefined
+    })),
+    currentQuery: "",
     sessionId: "session-" + Date.now(),
     fileUploadStatus: { 
       fileName: "", 
-      indexed: false, 
+      indexed: false,
       rowCount: 0 
     }
-  });  const [sampleData, setSampleData] = useState<any[]>([]);  const [allData, setAllData] = useState<any[]>([]);
-  const [columns, setColumns] = useState<string[]>([]);
-  const [showAllRows, setShowAllRows] = useState(false);  const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
-  const [activeFileId, setActiveFileId] = useState<string | null>(null);  const [useMultiUpload, setUseMultiUpload] = useState(false);
+  });
+  
+  const [sampleData, setSampleData] = useState<any[]>([]);  
+  const [allData, setAllData] = useState<any[]>([]);
+  const [columns, setColumns] = useState<string[]>([]);  
+  const [showAllRows, setShowAllRows] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
+  const [activeFileId, setActiveFileId] = useState<string | null>(null);
+  const [useMultiUpload, setUseMultiUpload] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const toastTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  // Component visibility state
+  const [visibleComponents, setVisibleComponents] = useState<Record<string, boolean>>({
+    'agent-status': true,
+    'live-flow': true,
+    'data-quality': true,
+    'smart-suggestions': true,
+    'data-export': true,
+  });
 
   // Toast auto-dismiss
   useEffect(() => {
@@ -142,6 +157,16 @@ export default function HomePage() {
     }
     return () => { if (toastTimeout.current) clearTimeout(toastTimeout.current); };
   }, [toast]);
+
+  // Toggle component visibility
+  const handleToggleComponent = useCallback((componentId: string, isVisible: boolean) => {
+    setVisibleComponents(prev => ({
+      ...prev,
+      [componentId]: isVisible
+    }));
+    
+    logger.info(`Component visibility toggled: ${componentId} is now ${isVisible ? 'visible' : 'hidden'}`);
+  }, []);
 
   // Handle file selection from multi-upload (moved before handleMultiFileUpload)
   const handleFileSelection = useCallback((file: any) => {
@@ -231,18 +256,34 @@ export default function HomePage() {
         indexed: true,
         rowCount: data.length
       }
-    }));
-
-    // Reset agents to initial state
+    }));    // Update both agentStatus and agentData to ensure only first 4 are active after upload
+    const firstFourAgentTypes = ['planner', 'query', 'retrieval', 'data'];
+    
+    // Update the legacy agentStatus state
+    setAgentStatus(prev => {
+      const newStatus = { ...prev };
+      // Set all agents to idle first
+      Object.keys(newStatus).forEach(agentType => {
+        newStatus[agentType as keyof typeof newStatus] = "idle";
+      });
+      return newStatus;
+    });
+    
+    // Update the newer agentData.activeAgents state
     setAgentData(prev => ({
       ...prev,
-      activeAgents: prev.activeAgents.map(agent => ({
-        ...agent,
-        status: "idle" as const,
-        message: `${agent.name} ready to process ${fileName}`,
-        startTime: undefined,
-        endTime: undefined
-      }))
+      activeAgents: prev.activeAgents.map(agent => {
+        const isFirstFourAgent = firstFourAgentTypes.includes(agent.type);
+        return {
+          ...agent,
+          status: "idle" as const, // All start as idle after file upload
+          message: isFirstFourAgent 
+            ? `${agent.name} ready to process ${fileName}` 
+            : `${agent.name} waiting for preceding agents`,
+          startTime: undefined,
+          endTime: undefined
+        };
+      })
     }));
 
     // Add welcome message for uploaded file
@@ -256,8 +297,10 @@ export default function HomePage() {
 
     // Store full dataset for analysis (in real app, this would go to backend)
     (window as any).uploadedData = data;
-    (window as any).uploadedColumns = fileColumns;
-  }, []);
+    (window as any).uploadedColumns = fileColumns;  }, []);  // Define workflow status type
+  const [workflowStage, setWorkflowStage] = useState<"idle" | "uploaded" | "question" | "result">("idle");
+  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
+
   // Enhanced agent simulation with realistic processing stages
   const simulateAgentWorkflow = useCallback(() => {
     if (!fileUploaded) {
@@ -267,71 +310,209 @@ export default function HomePage() {
 
     logger.info("Starting agent workflow simulation", { query });
     
-    // Update workflow stage to show progress
-    setWorkflowStage("progress");
-    
-    const stages = [
-      { delay: 500, agentType: "planner", status: "working", message: "Planning analysis strategy..." },
-      { delay: 1200, agentType: "insight", status: "working", message: "Extracting insights from data..." },
-      { delay: 1800, agentType: "chart", status: "working", message: "Generating visualizations..." },
-      { delay: 2200, agentType: "all", status: "complete", message: "Analysis complete!" }
+    // Define the order of agent activation
+    const agentOrder = [
+      "planner",
+      "query",
+      "retrieval",
+      "data",
+      "cleaner",
+      "sql",
+      "insight",
+      "chart",
+      "critique",
+      "debate",
+      "narrative",
+      "report"
     ];
+      // Create a realistic agent workflow for demonstration
+    const workflow = [
+      // Initial planning phase
+      { 
+        delay: 500, 
+        agents: [
+          { type: "planner", status: "working", message: "Analyzing query and planning workflow..." }
+        ]
+      },
+      // Data and query processing
+      { 
+        delay: 2000, 
+        agents: [
+          { type: "planner", status: "complete", message: "Analysis plan ready" },
+          { type: "query", status: "working", message: "Processing natural language query..." }
+        ]
+      },
+      // Retrieval phase
+      { 
+        delay: 3500, 
+        agents: [
+          { type: "query", status: "complete", message: "Query processed successfully" },
+          { type: "retrieval", status: "working", message: "Retrieving relevant context..." }
+        ]
+      },
+      // Data preparation
+      { 
+        delay: 5000, 
+        agents: [
+          { type: "retrieval", status: "complete", message: "Context retrieved successfully" },
+          { type: "data", status: "working", message: "Loading data sources..." }
+        ]
+      },
+      // Data completion - this is as far as we go after file upload
+      { 
+        delay: 6500, 
+        agents: [
+          { type: "data", status: "complete", message: "Data loaded successfully" }
+        ]
+      }
+    ];    // Only add these additional workflow steps when a query is submitted
+    if (query && query.trim() !== "") {
+      workflow.push(
+        // Data complete
+        { 
+          delay: 6500, 
+          agents: [
+            { type: "data", status: "complete", message: "Data loaded successfully" },
+            { type: "cleaner", status: "working", message: "Cleaning and preprocessing data..." }
+          ]
+        },
+        // SQL generation and execution
+        { 
+          delay: 8000, 
+          agents: [
+            { type: "cleaner", status: "complete", message: "Data cleaned successfully" },
+            { type: "sql", status: "working", message: "Generating and executing SQL..." }
+          ]
+        },
+        // Insight and chart generation
+        { 
+          delay: 10000, 
+          agents: [
+            { type: "sql", status: "complete", message: "SQL executed successfully" },
+            { type: "insight", status: "working", message: "Generating insights..." },
+            { type: "chart", status: "working", message: "Creating visualizations..." }
+          ]
+        },
+        // Critique
+        { 
+          delay: 12000, 
+          agents: [
+            { type: "insight", status: "complete", message: "Insights generated successfully" },
+            { type: "chart", status: "complete", message: "Visualizations created successfully" },
+            { type: "critique", status: "working", message: "Reviewing analysis for accuracy..." }
+          ]
+        },
+        // Debate
+        { 
+          delay: 13500, 
+          agents: [
+            { type: "critique", status: "complete", message: "Analysis reviewed successfully" },
+            { type: "debate", status: "working", message: "Evaluating multiple perspectives..." }
+          ]
+        },
+        // Narrative
+        { 
+          delay: 15000, 
+          agents: [
+            { type: "debate", status: "complete", message: "Evaluation complete" },
+            { type: "narrative", status: "working", message: "Creating narrative summary..." }
+          ]
+        },
+        // Report
+        { 
+          delay: 16500, 
+          agents: [
+            { type: "narrative", status: "complete", message: "Narrative complete" },
+            { type: "report", status: "working", message: "Generating final report..." }
+          ]
+        },
+        // Completion
+        { 
+          delay: 18000, 
+          agents: [
+            { type: "report", status: "complete", message: "Report generated successfully" }
+          ]
+        }
+      );
+    }
 
     // Reset all agent statuses first
     setAgentStatus(prev => ({
       ...prev,
       planner: "idle",
+      query: "idle",
+      retrieval: "idle",
+      cleaner: "idle",
+      data: "idle",
+      sql: "idle",
       insight: "idle",
-      chart: "idle"
+      chart: "idle",
+      critique: "idle",
+      debate: "idle",
+      narrative: "idle",
+      report: "idle"
+    }));
+    
+    // Reset agent data
+    setAgentData(prev => ({
+      ...prev,
+      activeAgents: prev.activeAgents.map(agent => ({
+        ...agent, 
+        status: "idle",
+        message: `${agent.name} ready`,
+        startTime: undefined,
+        endTime: undefined
+      }))
     }));
 
-    stages.forEach((stage) => {
+    // Execute workflow steps
+    workflow.forEach((step) => {
       setTimeout(() => {
-        logger.debug(`Agent workflow stage: ${stage.agentType}`, {
-          status: stage.status,
-          message: stage.message,
-          delay: stage.delay
-        });
-        
-        // Update agent status
-        if (stage.agentType === "all") {
-          setAgentStatus(prev => {
-            const newStatus = {...prev};
-            newStatus.planner = "complete";
-            newStatus.insight = "complete";
-            newStatus.chart = "complete";
-            return newStatus;
+        // Update each agent in this step
+        step.agents.forEach(update => {
+          logger.debug(`Agent update: ${update.type}`, {
+            status: update.status,
+            message: update.message
           });
-          // Update workflow stage to complete
-          setWorkflowStage("complete");
-        } else {
+          
+          // Update agentStatus for legacy code
           setAgentStatus(prev => ({
             ...prev,
-            [stage.agentType]: stage.status as "working" | "complete"
+            [update.type]: update.status === "working" ? "running" : 
+                          update.status === "complete" ? "success" : "idle"
           }));
-          setActiveAgentId(stage.agentType);
-        }
-
-        setAgentData(prev => ({
-          ...prev,
-          activeAgents: prev.activeAgents.map(agent => {
-            if (stage.agentType === "all") {
-              return { ...agent, status: "idle", endTime: new Date().toISOString() };
-            }
-            if (agent.type === stage.agentType) {
-              return { 
-                ...agent, 
-                status: stage.status === "working" ? "idle" : "idle", 
-                message: stage.message,
-                startTime: stage.status === "working" ? new Date().toISOString() : agent.startTime,
-                endTime: stage.status === "complete" ? new Date().toISOString() : agent.endTime
-              };
-            }
-            return agent;
-          })
-        }));      }, stage.delay);
+          
+          // Update agentData for current UI
+          setAgentData(prev => ({
+            ...prev,
+            activeAgents: prev.activeAgents.map(agent => {
+              if (agent.type === update.type) {
+                // Map the update.status string to a valid AgentData status
+                const statusMap: Record<string, "idle" | "working" | "complete" | "error"> = {
+                  "idle": "idle",
+                  "working": "working",
+                  "complete": "complete",
+                  "error": "error"
+                };
+                
+                const newStatus = statusMap[update.status] || "idle";
+                  return { 
+                  ...agent, 
+                  status: newStatus,
+                  message: update.message,
+                  startTime: newStatus === "working" ? new Date().toISOString() : agent.startTime,
+                  endTime: newStatus === "complete" ? new Date().toISOString() : agent.endTime
+                };
+              }
+              return agent;
+            })
+          }));
+        });
+      }, step.delay);
     });
-  }, [query, fileUploaded]);  // Generate smart insights based on the query
+  }, [query, fileUploaded]);
+
+  // Generate smart insights based on the query
   const generateSmartResponse = useCallback((userQuery: string) => {
     if (!fileUploaded || sampleData.length === 0) {
       return "Please upload a CSV file first to analyze your data. I'll be ready to help once you have data loaded!";
@@ -456,16 +637,72 @@ export default function HomePage() {
       }
     }, 2500);
       setQuery("");
-  }, [query, isLoading, messages.length, simulateAgentWorkflow, generateSmartResponse, fileUploaded]);
-
+  }, [query, isLoading, setMessages, simulateAgentWorkflow, generateSmartResponse, fileUploaded]);
   // Handle input changes with logging
   const handleQueryChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newQuery = e.target.value;
     setQuery(newQuery);
-    if (newQuery.length > 0 && newQuery.length % 20 === 0) {
+    
+    // Update agent data with the current query
+    setAgentData(prev => ({ ...prev, currentQuery: newQuery }));
+    
+    // If query is long enough, start showing the planner as "thinking" for better feedback
+    if (newQuery.length > 10) {
+      setAgentStatus(prev => ({
+        ...prev,
+        planner: "running"
+      }));
+      
+      // Update agent data to show planner is working
+      setAgentData(prev => {
+        const updatedAgents = prev.activeAgents.map(agent => 
+          agent.type === "planner" 
+            ? { 
+                ...agent, 
+                status: "working" as const, 
+                message: "Analyzing query as you type...",
+                startTime: new Date().toISOString(),
+                endTime: undefined
+              }
+            : agent
+        );
+        
+        return {
+          ...prev,
+          activeAgents: updatedAgents
+        };
+      });
+    } else {
+      // Reset planner status when query is cleared or too short
+      setAgentStatus(prev => ({
+        ...prev,
+        planner: "idle"
+      }));
+      
+      // Update agent data to show planner is idle
+      setAgentData(prev => {
+        const updatedAgents = prev.activeAgents.map(agent => 
+          agent.type === "planner" 
+            ? { 
+                ...agent, 
+                status: "idle" as const, 
+                message: "Ready to analyze",
+                startTime: undefined,
+                endTime: undefined
+              }
+            : agent
+        );
+        
+        return {
+          ...prev,
+          activeAgents: updatedAgents
+        };
+      });
+    }
+      if (newQuery.length > 0 && newQuery.length % 20 === 0) {
       logger.debug("Query input progress", { queryLength: newQuery.length });
     }
-  }, []);
+  }, [setQuery, setAgentData, setAgentStatus]);
 
   // Handle keyboard events
   const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -473,8 +710,7 @@ export default function HomePage() {
       logger.debug("Enter key pressed for query submission");
       handleSend();
     }
-  }, [handleSend]);  
-  // Simulate agent invocation for demo (replace with backend events later)
+  }, [handleSend]);    // Simulate agent invocation for demo (replace with backend events later)
   useEffect(() => {
     const timers: NodeJS.Timeout[] = [];
     
@@ -482,9 +718,6 @@ export default function HomePage() {
     if (!fileUploaded) {
       return () => {};
     }
-    
-    // Update workflow stage to show progress
-    setWorkflowStage("progress");
     
     // Animate through the agent workflow
     setAgentStatus(s => ({ ...s, planner: "running" }));
@@ -500,60 +733,21 @@ export default function HomePage() {
     return () => timers.forEach(t => clearTimeout(t));
   }, [fileUploaded]);
 
-  // Node click handler (show details, trigger agent, etc.)
-  const handleNodeClick = (id: string) => {
-    logger.info(`Agent node clicked: ${id}`);
-    
-    // Flash the status to highlight it was clicked
-    setAgentStatus(prev => ({
-      ...prev,
-      [id]: "running" 
-    }));
-    
-    // Set as active agent
-    setActiveAgentId(id);
-    
-    // Show a toast with agent info
-    const agent = AGENTS.find(a => a.id === id);
-    if (agent) {
-      setToast({
-        message: `${agent.icon} ${agent.name}: Status - ${agentStatus[id] || "idle"}`,
-        type: "success"
-      });
-    }
-    
-    // Reset status after a short delay (for visual feedback)
-    setTimeout(() => {
-      setAgentStatus(prev => ({
-        ...prev,
-        [id]: prev[id] === "running" ? "idle" : prev[id]
-      }));
-    }, 800);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#18122B] via-[#1E1B3A] to-[#0F1021] text-white">
       {/* Toast Notification */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-      {/* Agent Graph Visualizer - Centered and Prominent */}
-      <div className="w-full max-w-5xl mx-auto mt-6 mb-2 relative z-20">
-        <div className="glass-card-3d p-4 rounded-2xl border border-white/20 bg-white/5 backdrop-blur-md">
-          <h3 className="text-xl font-bold text-white text-center mb-2">Multi-Agent Enterprise System</h3>
-          <AgentGraphVisualizer 
-            agentStatus={agentStatus} 
-            onNodeClick={handleNodeClick} 
-            workflowStage={workflowStage}
-            activeAgentId={activeAgentId} 
-          />
-        </div>
-      </div>
       {/* Enhanced Multi-layer Background Effects (NO orbs/particles) */}
       <div className="absolute inset-0 bg-gradient-to-br from-black via-purple-900/20 to-black"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(78,60,250,0.15),transparent_50%)]"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(233,240,255,0.08),transparent_50%)]"></div>
-      <div className="absolute inset-0 bg-[conic-gradient(from_0deg_at_50%_50%,rgba(78,60,250,0.1)_0deg,transparent_60deg,rgba(233,240,255,0.05)_120deg,transparent_180deg)]"></div>
+      <div className="absolute inset-0 bg-[conic-gradient(from_0deg_at_50%_50%,rgba(78,60,250,0.1)_0deg,transparent_60deg,rgba(233,240,255,0.05)_120deg,transparent_180deg)]"></div>      {/* Add NavBar component at the top */}      <NavBar 
+        onToggleComponent={handleToggleComponent}
+        visibleComponents={visibleComponents}
+      />
+      
       {/* No floating orbs or pulsing particles */}
-      <div className="relative z-10 pt-16 p-3">
+      <div className="relative z-10 pt-6 p-3">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-12 gap-4">
             {/* Left Column - Chat Interface */}
@@ -854,37 +1048,50 @@ export default function HomePage() {
             {/* Right Column - Enhanced Features */}
             <div className="lg:col-span-7 space-y-4">
               {/* Smart Suggestions */}
-              <SmartSuggestions
-                data={allData}
-                columns={columns}
-                onSuggestionClick={handleSuggestionClick}
-                disabled={isLoading}
-              />
+              {visibleComponents['smart-suggestions'] && (
+                <SmartSuggestions
+                  data={allData}
+                  columns={columns}
+                  onSuggestionClick={handleSuggestionClick}
+                  disabled={isLoading}
+                />
+              )}
 
               {/* Data Quality Analyzer */}
-              <DataQualityAnalyzer
-                data={allData}
-                columns={columns}
-              />
-
-              {/* Enhanced Agent Status */}
-              <EnhancedAgentStatus
-                agents={agentData.activeAgents}
-                currentQuery={agentData.currentQuery}
-                fileUploadStatus={agentData.fileUploadStatus}
-              />
+              {visibleComponents['data-quality'] && (
+                <DataQualityAnalyzer
+                  data={allData}
+                  columns={columns}
+                />
+              )}              {/* Enhanced Agent Status */}
+              {visibleComponents['agent-status'] && (
+                <EnhancedAgentStatus
+                  agents={agentData.activeAgents}
+                  currentQuery={agentData.currentQuery}
+                  fileUploadStatus={agentData.fileUploadStatus}
+                  agentStatus={agentStatus}
+                />
+              )}
+              
+              {/* Live Flow - Duplicate Agent Status Panel */}
+              {visibleComponents['live-flow'] && (
+                <LiveFlow
+                  agents={agentData.activeAgents}
+                  currentQuery={agentData.currentQuery}
+                  fileUploadStatus={agentData.fileUploadStatus}
+                  agentStatus={agentStatus}
+                />
+              )}
 
               {/* Data Export */}
-              <DataExport
-                data={allData}
-                columns={columns}
-                originalFileName={agentData.fileUploadStatus.fileName}
-                disabled={!fileUploaded}
-              />              {/* Original Process Visualizer */}
-              <ProcessVisualizer
-                currentQuery={agentData.currentQuery}
-                activeAgents={agentData.activeAgents}
-                fileUploadStatus={agentData.fileUploadStatus}              />
+              {visibleComponents['data-export'] && (
+                <DataExport
+                  data={allData}
+                  columns={columns}
+                  originalFileName={agentData.fileUploadStatus.fileName}
+                  disabled={!fileUploaded}
+                />
+              )}              {/* Process Visualizer removed as requested */}
             </div>
           </div>
         </div>
