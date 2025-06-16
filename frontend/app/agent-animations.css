@@ -1,0 +1,208 @@
+/* Enhanced 3D Glass Animations for Agent Panels */
+.glass-card-3d {
+  position: relative;
+  transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: linear-gradient(145deg, 
+    rgba(255, 255, 255, 0.08) 0%, 
+    rgba(255, 255, 255, 0.02) 100%);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  box-shadow: 
+    0 10px 40px rgba(0, 0, 0, 0.15),
+    0 1px 0px rgba(255, 255, 255, 0.06) inset;
+  overflow: hidden;
+}
+
+/* Enhanced hover effects */
+.glass-card-3d::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.05),
+    transparent
+  );
+  transition: all 0.6s;
+  z-index: 0;
+}
+
+.glass-card-3d:hover::before {
+  left: 100%;
+}
+
+/* Agent Panel Micro Animations */
+.agent-panel {
+  transform-style: preserve-3d;
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.agent-panel:hover {
+  transform: translateY(-5px) scale(1.01) translateZ(10px);
+}
+
+.agent-panel.working {
+  position: relative;
+}
+
+.agent-panel.working::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, 
+    rgba(138, 43, 226, 0) 0%, 
+    rgba(138, 43, 226, 0.3) 50%, 
+    rgba(138, 43, 226, 0) 100%);
+  border-radius: 14px;
+  z-index: -1;
+  animation: pulse-border 2s infinite;
+}
+
+/* Special styling for analysis panels */
+.analysis-panel {
+  transform-style: preserve-3d;
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.analysis-panel:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 
+    0 15px 35px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(138, 43, 226, 0.15),
+    0 1px 0px rgba(138, 43, 226, 0.15) inset;
+}
+
+/* Special animation for the analysis panel container - without rectangular box */
+.analysis-panel-container {
+  position: relative;
+}
+
+/* Removed the rectangular box around purple panels */
+
+@keyframes analysis-panel-glow {
+  0% {
+    opacity: 0.2;
+    box-shadow: 0 0 5px rgba(138, 43, 226, 0.1);
+  }
+  50% {
+    opacity: 0.4;
+    box-shadow: 0 0 15px rgba(138, 43, 226, 0.2);
+  }
+  100% {
+    opacity: 0.2;
+    box-shadow: 0 0 5px rgba(138, 43, 226, 0.1);
+  }
+}
+
+/* Agent Pulse Border Animation with Purple Glow */
+@keyframes pulse-border {
+  0% {
+    opacity: 0.3;
+    transform: scale(1);
+    box-shadow: 0 0 5px rgba(138, 43, 226, 0.2);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.02);
+    box-shadow: 0 0 15px rgba(138, 43, 226, 0.4);
+  }
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+    box-shadow: 0 0 5px rgba(138, 43, 226, 0.2);
+  }
+}
+
+/* Loading animation for agents */
+.agent-loading-dots {
+  display: inline-flex;
+  align-items: center;
+  height: 1em;
+}
+
+.agent-loading-dots span {
+  width: 4px;
+  height: 4px;
+  margin: 0 1px;
+  background: currentColor;
+  border-radius: 50%;
+  animation: agent-loading 1.4s infinite ease-in-out both;
+  box-shadow: 0 0 5px rgba(138, 43, 226, 0.6);
+}
+
+.agent-loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+.agent-loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes agent-loading {
+  0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* Enhanced fade-in animations for agent panels */
+.animate-fadeIn {
+  animation: enhanced-fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes enhanced-fadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Analysis panel animations */
+.analysis-panel-container {
+  perspective: 1000px;
+}
+
+.analysis-panel {
+  transform-style: preserve-3d;
+  transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.analysis-panel:hover {
+  transform: scale(1.02) translateZ(20px);
+}
+
+/* Agent panel status animations */
+.agent-icon-container {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.agent-icon-container::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 15px rgba(var(--primary-rgb), 0.4);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.agent-icon-container.active::after {
+  opacity: 1;
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0% { opacity: 0.4; box-shadow: 0 0 10px rgba(var(--primary-rgb), 0.4); }
+  50% { opacity: 0.8; box-shadow: 0 0 20px rgba(var(--primary-rgb), 0.6); }
+  100% { opacity: 0.4; box-shadow: 0 0 10px rgba(var(--primary-rgb), 0.4); }
+}

@@ -1,13 +1,10 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import CSVUpload from "../components/CSVUpload";
-import DataQualityAnalyzer from "../components/DataQualityAnalyzer";
-import SmartSuggestions from "../components/SmartSuggestions";
-import DataExport from "../components/DataExport";
+import EnhancedSmartSuggestions from "../components/EnhancedSmartSuggestions";
 import MultiFileUpload from "../components/MultiFileUpload";
-import EnhancedAgentStatus from "../components/EnhancedAgentStatus";
 import LiveFlow from "../components/LiveFlow";
-import NavBar from "../components/Navbar";
+import TroubleshootAgentFlow from "../components/TroubleshootAgentFlow";
 
 // Define types for better type safety
 type AgentStatusType = "idle" | "working" | "complete" | "error" | "running" | "success";
@@ -32,6 +29,7 @@ interface AgentDataState {
     fileName: string;
     indexed: boolean;
     rowCount: number;
+    columns?: string[]; // Add columns to type definition
   };
 }
 
@@ -66,33 +64,34 @@ function Toast({ message, type, onClose }: { message: string; type: 'success' | 
 
 // Agent node definitions for reference in handleNodeClick
 const AGENTS = [
-  { id: "planner", name: "Planning Agent", icon: "🧠", color: "from-blue-500 to-cyan-500" },
-  { id: "query", name: "Query Agent", icon: "🔎", color: "from-indigo-500 to-blue-500" },
-  { id: "cleaner", name: "Data Cleaner", icon: "🧹", color: "from-green-500 to-emerald-500" },
-  { id: "sql", name: "SQL Agent", icon: "🗃️", color: "from-green-500 to-teal-500" },
-  { id: "insight", name: "Insight Agent", icon: "💡", color: "from-amber-500 to-orange-500" },
-  { id: "chart", name: "Chart Agent", icon: "📊", color: "from-purple-500 to-pink-500" },
-  { id: "critique", name: "Critique Agent", icon: "📝", color: "from-pink-500 to-rose-500" },
-  { id: "debate", name: "Debate Agent", icon: "🤔", color: "from-yellow-500 to-orange-500" },
-  { id: "narrative", name: "Narrative Agent", icon: "📖", color: "from-blue-400 to-purple-400" },
-  { id: "report", name: "Report Generator", icon: "📄", color: "from-indigo-500 to-blue-500" },
-  { id: "retrieval", name: "Retrieval Agent", icon: "🔗", color: "from-cyan-500 to-blue-500" },
-  { id: "data", name: "Data Agent", icon: "📂", color: "from-gray-500 to-gray-700" }
+  { id: "planner", name: "Planning Agent", icon: "🧠", color: "from-blue-500 to-cyan-500", type: "planner" },
+  { id: "query", name: "Query Agent", icon: "🔎", color: "from-indigo-500 to-blue-500", type: "query" },
+  { id: "cleaner", name: "Data Cleaner", icon: "🧹", color: "from-green-500 to-emerald-500", type: "cleaner" },
+  { id: "sql", name: "SQL Agent", icon: "🗃️", color: "from-green-500 to-teal-500", type: "sql" },
+  { id: "insight", name: "Insight Agent", icon: "💡", color: "from-amber-500 to-orange-500", type: "insight" },
+  { id: "chart", name: "Chart Agent", icon: "📊", color: "from-purple-500 to-pink-500", type: "chart" },
+  { id: "critique", name: "Critique Agent", icon: "📝", color: "from-pink-500 to-rose-500", type: "critique" },
+  { id: "debate", name: "Debate Agent", icon: "🤔", color: "from-yellow-500 to-orange-500", type: "debate" },
+  { id: "narrative", name: "Narrative Agent", icon: "📖", color: "from-blue-400 to-purple-400", type: "narrative" },
+  { id: "report", name: "Report Generator", icon: "📄", color: "from-indigo-500 to-blue-500", type: "report" },
+  { id: "retrieval", name: "Retrieval Agent", icon: "🔗", color: "from-cyan-500 to-blue-500", type: "retrieval" },
+  { id: "data", name: "Data Agent", icon: "📂", color: "from-gray-500 to-gray-700", type: "data" }
 ];
 
-export default function HomePage() {
-  // Main state
+export default function HomePage() {  // Main state
   const [query, setQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);  
   const [messages, setMessages] = useState([
     {
       role: "assistant",
       content: "Welcome! Upload your CSV data and I'll help you analyze it with natural language queries.",
-      timestamp: new Date().toLocaleTimeString('en-US', { hour12: false })
+      timestamp: "Ready"
     }
   ]);
   const [fileUploaded, setFileUploaded] = useState(false);
-    // Agent workflow state
+  // Define workflow status type
+  const [workflowStage, setWorkflowStage] = useState<"idle" | "uploaded" | "question" | "result">("idle");
+  // Agent workflow state
   const [agentStatus, setAgentStatus] = useState<Record<string, AgentStatusType>>({
     planner: "idle",
     query: "idle",
@@ -108,16 +107,17 @@ export default function HomePage() {
     data: "idle"
   });
   
-  // Historical state structure  
+  // Historical state structure
   const [agentData, setAgentData] = useState<AgentDataState>({
     // Initialize with all 12 agents defined in AGENTS array
     activeAgents: AGENTS.map(agent => ({
       id: agent.id,
       name: agent.name,
-      type: agent.id,
+      type: agent.type || agent.id, // Use explicit type if available, otherwise fall back to id
       icon: agent.icon,
       color: agent.color,
-      status: "idle" as "idle" | "working" | "complete" | "error",      message: `${agent.name} ready`,
+      status: "idle" as "idle" | "working" | "complete" | "error",
+      message: `${agent.name} ready`,
       startTime: undefined,
       endTime: undefined
     })),
@@ -129,25 +129,20 @@ export default function HomePage() {
       rowCount: 0 
     }
   });
-  
-  const [sampleData, setSampleData] = useState<any[]>([]);  
+    const [sampleData, setSampleData] = useState<any[]>([]);
   const [allData, setAllData] = useState<any[]>([]);
-  const [columns, setColumns] = useState<string[]>([]);  
+  const [columns, setColumns] = useState<string[]>([]); 
   const [showAllRows, setShowAllRows] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
   const [useMultiUpload, setUseMultiUpload] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const toastTimeout = useRef<NodeJS.Timeout | null>(null);
-
-  // Component visibility state
-  const [visibleComponents, setVisibleComponents] = useState<Record<string, boolean>>({
-    'agent-status': true,
+  const toastTimeout = useRef<NodeJS.Timeout | null>(null); 
+  // Component visibility state - all components are now always visible
+  const visibleComponents = {
     'live-flow': true,
-    'data-quality': true,
     'smart-suggestions': true,
-    'data-export': true,
-  });
+  };
 
   // Toast auto-dismiss
   useEffect(() => {
@@ -157,16 +152,6 @@ export default function HomePage() {
     }
     return () => { if (toastTimeout.current) clearTimeout(toastTimeout.current); };
   }, [toast]);
-
-  // Toggle component visibility
-  const handleToggleComponent = useCallback((componentId: string, isVisible: boolean) => {
-    setVisibleComponents(prev => ({
-      ...prev,
-      [componentId]: isVisible
-    }));
-    
-    logger.info(`Component visibility toggled: ${componentId} is now ${isVisible ? 'visible' : 'hidden'}`);
-  }, []);
 
   // Handle file selection from multi-upload (moved before handleMultiFileUpload)
   const handleFileSelection = useCallback((file: any) => {
@@ -200,11 +185,11 @@ export default function HomePage() {
       }))
     }));
 
-    // Add message
+    // Add message    // Use useEffect to add timestamps on the client side only
     setMessages(prev => [...prev, {
       role: "assistant", 
       content: `📁 Switched to file "${file.name}" - ${file.data.length} rows with ${file.columns.length} columns. Ready for analysis!`,
-      timestamp: new Date().toLocaleTimeString('en-US', { hour12: false })
+      timestamp: "File uploaded"
     }]);
 
     // Store data
@@ -242,7 +227,31 @@ export default function HomePage() {
   const handleRealFileUpload = useCallback((fileName: string, data: any[], fileColumns: string[]) => {
     logger.info("Real CSV file uploaded", { fileName, rowCount: data.length, columns: fileColumns });
     
-    setFileUploaded(true);
+    // Set file uploaded first to trigger UI updates
+    setFileUploaded(true); 
+    
+    // Save data to sessionStorage for access by Data Agent
+    if (typeof window !== 'undefined') {
+      // Save column names
+      sessionStorage.setItem('uploadedColumns', JSON.stringify(fileColumns));
+      
+      // Save sample data (first 5 rows)
+      sessionStorage.setItem('sampleData', JSON.stringify(data.slice(0, 5)));
+      
+      // Save file statistics
+      sessionStorage.setItem('fileStats', JSON.stringify({
+        fileName,
+        rowCount: data.length,
+        columnCount: fileColumns.length,
+        indexed: true
+      }));
+    }
+    
+    // Force a UI refresh to ensure all components are updated
+    setTimeout(() => {
+      console.log("File upload detected - refreshing UI state");
+    }, 100);
+    
     setSampleData(data.slice(0, 5)); // Show first 5 rows for preview
     setAllData(data); // Store all data
     setColumns(fileColumns);
@@ -254,53 +263,120 @@ export default function HomePage() {
       fileUploadStatus: {
         fileName,
         indexed: true,
-        rowCount: data.length
+        rowCount: data.length,
+        columns: fileColumns // Add columns to fileUploadStatus
       }
-    }));    // Update both agentStatus and agentData to ensure only first 4 are active after upload
-    const firstFourAgentTypes = ['planner', 'query', 'retrieval', 'data'];
+    }));
     
-    // Update the legacy agentStatus state
+    // Reset ALL agent statuses first
     setAgentStatus(prev => {
-      const newStatus = { ...prev };
-      // Set all agents to idle first
-      Object.keys(newStatus).forEach(agentType => {
-        newStatus[agentType as keyof typeof newStatus] = "idle";
+      const resetStatus = { ...prev };
+      // Reset all agents to idle
+      Object.keys(resetStatus).forEach(key => {
+        resetStatus[key] = "idle";
       });
-      return newStatus;
+      // Only set data agent to working - this is the only one that should be active on upload
+      resetStatus.data = "working";
+      return resetStatus;
     });
     
-    // Update the newer agentData.activeAgents state
+    // Update agent messages to reflect file processing - ONLY activate File Upload agents
     setAgentData(prev => ({
       ...prev,
       activeAgents: prev.activeAgents.map(agent => {
-        const isFirstFourAgent = firstFourAgentTypes.includes(agent.type);
-        return {
-          ...agent,
-          status: "idle" as const, // All start as idle after file upload
-          message: isFirstFourAgent 
-            ? `${agent.name} ready to process ${fileName}` 
-            : `${agent.name} waiting for preceding agents`,
-          startTime: undefined,
-          endTime: undefined
-        };
+        // File Upload Agents: data and cleaner
+        if (agent.type === "data") {
+          return {
+            ...agent,
+            status: "working",
+            message: `Processing ${fileName} - ${data.length} rows`,
+            startTime: new Date().toISOString(),
+            endTime: undefined
+          };
+        } else if (agent.type === "cleaner") {
+          return {
+            ...agent,
+            status: "idle",
+            message: `Ready to clean data from ${fileName}`,
+            startTime: undefined,
+            endTime: undefined
+          };
+        } else {
+          // All other agents should be reset to idle
+          return {
+            ...agent,
+            status: "idle",
+            message: `Waiting for user query to begin analysis`,
+            startTime: undefined,
+            endTime: undefined
+          };
+        }
       })
     }));
 
-    // Add welcome message for uploaded file
+    // After a delay, simulate the Data Agent completing and Cleaner starting
+    setTimeout(() => {
+      // Complete Data Agent work
+      setAgentStatus(prev => ({ ...prev, data: "success", cleaner: "working" }));
+      setAgentData(prev => ({
+        ...prev,
+        activeAgents: prev.activeAgents.map(agent => {
+          if (agent.type === "data") {
+            return {
+              ...agent,
+              status: "complete",
+              message: `Processed ${fileName} successfully - ${data.length} rows indexed`,
+              endTime: new Date().toISOString()
+            };
+          } else if (agent.type === "cleaner") {
+            return {
+              ...agent,
+              status: "working",
+              message: `Cleaning data from ${fileName}`,
+              startTime: new Date().toISOString()
+            };
+          }
+          return agent;
+        })
+      }));
+      
+      // After a delay, complete the Cleaner's work
+      setTimeout(() => {
+        setAgentStatus(prev => ({ ...prev, cleaner: "success" }));
+        setAgentData(prev => ({
+          ...prev,
+          activeAgents: prev.activeAgents.map(agent => {
+            if (agent.type === "cleaner") {
+              return {
+                ...agent,
+                status: "complete",
+                message: `Data cleaned successfully`,
+                endTime: new Date().toISOString()
+              };
+            }
+            return agent;
+          })
+        }));
+          // Show a success message
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: `✅ File "${fileName}" processed and cleaned successfully! ${data.length} rows are ready for analysis.`,
+          timestamp: "Processing complete"
+        }]);
+        
+        setToast({ message: `File "${fileName}" processed successfully!`, type: 'success' });
+      }, 2000);
+    }, 3000);
+      // Add message
     setMessages(prev => [...prev, {
       role: "assistant", 
-      content: `📁 File "${fileName}" uploaded successfully! Found ${data.length} rows with ${fileColumns.length} columns: ${fileColumns.slice(0, 3).join(', ')}${fileColumns.length > 3 ? '...' : ''}. You can now ask questions about your data.`,
-      timestamp: new Date().toLocaleTimeString('en-US', { hour12: false })
-    }]);
-
-    setToast({ message: `File "${fileName}" uploaded successfully!`, type: 'success' });
-
-    // Store full dataset for analysis (in real app, this would go to backend)
+      content: `📊 Processing file "${fileName}" with ${data.length} rows and ${fileColumns.length} columns...`,
+      timestamp: "Processing started"
+    }]);    // Store data for debugging/access
     (window as any).uploadedData = data;
-    (window as any).uploadedColumns = fileColumns;  }, []);  // Define workflow status type
-  const [workflowStage, setWorkflowStage] = useState<"idle" | "uploaded" | "question" | "result">("idle");
+    (window as any).uploadedColumns = fileColumns;  }, [setFileUploaded, setSampleData, setAllData, setColumns, setShowAllRows, setWorkflowStage, setAgentData, setAgentStatus, setMessages, setToast]);
+  
   const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
-
   // Enhanced agent simulation with realistic processing stages
   const simulateAgentWorkflow = useCallback(() => {
     if (!fileUploaded) {
@@ -308,15 +384,14 @@ export default function HomePage() {
       return;
     }
 
-    logger.info("Starting agent workflow simulation", { query });
+    logger.info("Starting chat agent workflow simulation", { query });
     
-    // Define the order of agent activation
+    // Define the order of agent activation - for chat response, we exclude data and cleaner
+    // as those are file upload agents that should already be done
     const agentOrder = [
       "planner",
       "query",
       "retrieval",
-      "data",
-      "cleaner",
       "sql",
       "insight",
       "chart",
@@ -325,7 +400,8 @@ export default function HomePage() {
       "narrative",
       "report"
     ];
-      // Create a realistic agent workflow for demonstration
+    
+    // Create a realistic agent workflow for chat/query processing - assuming data is already loaded
     const workflow = [
       // Initial planning phase
       { 
@@ -334,7 +410,7 @@ export default function HomePage() {
           { type: "planner", status: "working", message: "Analyzing query and planning workflow..." }
         ]
       },
-      // Data and query processing
+      // Query processing
       { 
         delay: 2000, 
         agents: [
@@ -350,91 +426,80 @@ export default function HomePage() {
           { type: "retrieval", status: "working", message: "Retrieving relevant context..." }
         ]
       },
-      // Data preparation
+      // SQL phase - using already loaded data
       { 
         delay: 5000, 
         agents: [
           { type: "retrieval", status: "complete", message: "Context retrieved successfully" },
-          { type: "data", status: "working", message: "Loading data sources..." }
+          { type: "sql", status: "working", message: "Generating SQL for analysis..." }
         ]
       },
-      // Data completion - this is as far as we go after file upload
+      // Data complete
       { 
         delay: 6500, 
         agents: [
-          { type: "data", status: "complete", message: "Data loaded successfully" }
+          { type: "data", status: "complete", message: "Data loaded successfully" },
+          { type: "cleaner", status: "working", message: "Cleaning and preprocessing data..." }
+        ]
+      },
+      // SQL generation and execution
+      { 
+        delay: 8000, 
+        agents: [
+          { type: "cleaner", status: "complete", message: "Data cleaned successfully" },
+          { type: "sql", status: "working", message: "Generating and executing SQL..." }
+        ]
+      },
+      // Insight and chart generation
+      { 
+        delay: 10000, 
+        agents: [
+          { type: "sql", status: "complete", message: "SQL executed successfully" },
+          { type: "insight", status: "working", message: "Generating insights..." },
+          { type: "chart", status: "working", message: "Creating visualizations..." }
+        ]
+      },
+      // Critique
+      { 
+        delay: 12000, 
+        agents: [
+          { type: "insight", status: "complete", message: "Insights generated successfully" },
+          { type: "chart", status: "complete", message: "Visualizations created successfully" },
+          { type: "critique", status: "working", message: "Reviewing analysis for accuracy..." }
+        ]
+      },
+      // Debate
+      { 
+        delay: 13500, 
+        agents: [
+          { type: "critique", status: "complete", message: "Analysis reviewed successfully" },
+          { type: "debate", status: "working", message: "Evaluating multiple perspectives..." }
+        ]
+      },
+      // Narrative
+      { 
+        delay: 15000, 
+        agents: [
+          { type: "debate", status: "complete", message: "Evaluation complete" },
+          { type: "narrative", status: "working", message: "Creating narrative summary..." }
+        ]
+      },
+      // Report
+      { 
+        delay: 16500, 
+        agents: [
+          { type: "narrative", status: "complete", message: "Narrative complete" },
+          { type: "report", status: "working", message: "Generating final report..." }
+        ]
+      },
+      // Completion
+      { 
+        delay: 18000, 
+        agents: [
+          { type: "report", status: "complete", message: "Report generated successfully" }
         ]
       }
-    ];    // Only add these additional workflow steps when a query is submitted
-    if (query && query.trim() !== "") {
-      workflow.push(
-        // Data complete
-        { 
-          delay: 6500, 
-          agents: [
-            { type: "data", status: "complete", message: "Data loaded successfully" },
-            { type: "cleaner", status: "working", message: "Cleaning and preprocessing data..." }
-          ]
-        },
-        // SQL generation and execution
-        { 
-          delay: 8000, 
-          agents: [
-            { type: "cleaner", status: "complete", message: "Data cleaned successfully" },
-            { type: "sql", status: "working", message: "Generating and executing SQL..." }
-          ]
-        },
-        // Insight and chart generation
-        { 
-          delay: 10000, 
-          agents: [
-            { type: "sql", status: "complete", message: "SQL executed successfully" },
-            { type: "insight", status: "working", message: "Generating insights..." },
-            { type: "chart", status: "working", message: "Creating visualizations..." }
-          ]
-        },
-        // Critique
-        { 
-          delay: 12000, 
-          agents: [
-            { type: "insight", status: "complete", message: "Insights generated successfully" },
-            { type: "chart", status: "complete", message: "Visualizations created successfully" },
-            { type: "critique", status: "working", message: "Reviewing analysis for accuracy..." }
-          ]
-        },
-        // Debate
-        { 
-          delay: 13500, 
-          agents: [
-            { type: "critique", status: "complete", message: "Analysis reviewed successfully" },
-            { type: "debate", status: "working", message: "Evaluating multiple perspectives..." }
-          ]
-        },
-        // Narrative
-        { 
-          delay: 15000, 
-          agents: [
-            { type: "debate", status: "complete", message: "Evaluation complete" },
-            { type: "narrative", status: "working", message: "Creating narrative summary..." }
-          ]
-        },
-        // Report
-        { 
-          delay: 16500, 
-          agents: [
-            { type: "narrative", status: "complete", message: "Narrative complete" },
-            { type: "report", status: "working", message: "Generating final report..." }
-          ]
-        },
-        // Completion
-        { 
-          delay: 18000, 
-          agents: [
-            { type: "report", status: "complete", message: "Report generated successfully" }
-          ]
-        }
-      );
-    }
+    ];
 
     // Reset all agent statuses first
     setAgentStatus(prev => ({
@@ -496,7 +561,7 @@ export default function HomePage() {
                 };
                 
                 const newStatus = statusMap[update.status] || "idle";
-                  return { 
+                return { 
                   ...agent, 
                   status: newStatus,
                   message: update.message,
@@ -592,8 +657,7 @@ export default function HomePage() {
       queryLength: query.trim().length,
       messageCount: messages.length
     });
-    
-    setIsLoading(true);
+      setIsLoading(true);
     const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
     
     // Add user message
@@ -602,9 +666,39 @@ export default function HomePage() {
       logger.debug("User message added", { messageCount: newMessages.length });
       return newMessages;
     });
+      // Reset any chat agent statuses to idle before starting the workflow
+    // (File upload agents status should be preserved)
+    setAgentStatus(prev => {
+      const chatAgentStatus = { ...prev };
+      // Only reset chat response agents
+      const chatAgents = ["planner", "query", "retrieval", "sql", "insight", "chart", "critique", "debate", "narrative", "report"];
+      chatAgents.forEach(agentType => {
+        chatAgentStatus[agentType] = "idle";
+      });
+      return chatAgentStatus;
+    });
     
-    // Start enhanced agent workflow simulation
-    simulateAgentWorkflow();
+    // Update agent data to reflect the start of chat processing
+    setAgentData(prev => ({
+      ...prev,
+      currentQuery: query.trim(), // Store the current query
+      activeAgents: prev.activeAgents.map(agent => {
+        if (["planner", "query", "retrieval", "sql", "insight", "chart", "critique", "debate", "narrative", "report"].includes(agent.type)) {
+          return {
+            ...agent,
+            status: "idle",
+            message: `Preparing to process query: "${query.trim().substring(0, 30)}${query.trim().length > 30 ? '...' : ''}"`,
+          };
+        }
+        return agent;
+      })
+    }));
+    
+    // After a short delay to ensure UI updates, start the chat agent workflow
+    setTimeout(() => {
+      // Start enhanced agent workflow simulation - this will only activate chat response agents
+      simulateAgentWorkflow();
+    }, 100);
     
     // Generate smart AI response
     setTimeout(() => {
@@ -710,7 +804,7 @@ export default function HomePage() {
       logger.debug("Enter key pressed for query submission");
       handleSend();
     }
-  }, [handleSend]);    // Simulate agent invocation for demo (replace with backend events later)
+  }, [handleSend]);  // File upload agent workflow simulation
   useEffect(() => {
     const timers: NodeJS.Timeout[] = [];
     
@@ -719,34 +813,19 @@ export default function HomePage() {
       return () => {};
     }
     
-    // Animate through the agent workflow
-    setAgentStatus(s => ({ ...s, planner: "running" }));
-    timers.push(setTimeout(() => setAgentStatus(s => ({ ...s, planner: "success", query: "running" })), 1000));
-    timers.push(setTimeout(() => setAgentStatus(s => ({ ...s, query: "success", cleaner: "running" })), 2000));
-    timers.push(setTimeout(() => setAgentStatus(s => ({ ...s, cleaner: "success", sql: "running", insight: "running", chart: "running" })), 3000));
-    timers.push(setTimeout(() => setAgentStatus(s => ({ ...s, sql: "success", insight: "success", chart: "success", critique: "running" })), 4500));
-    timers.push(setTimeout(() => setAgentStatus(s => ({ ...s, critique: "success", debate: "running" })), 6000));
-    timers.push(setTimeout(() => setAgentStatus(s => ({ ...s, debate: "success", narrative: "running" })), 7000));
-    timers.push(setTimeout(() => setAgentStatus(s => ({ ...s, narrative: "success", report: "running" })), 8000));
-    timers.push(setTimeout(() => setAgentStatus(s => ({ ...s, report: "success" })), 9000));
+    // Only animate the file upload agents: data and cleaner
+    setAgentStatus(s => ({ ...s, data: "running" }));
+    timers.push(setTimeout(() => setAgentStatus(s => ({ ...s, data: "success", cleaner: "running" })), 2000));
+    timers.push(setTimeout(() => setAgentStatus(s => ({ ...s, cleaner: "success" })), 3500));
     
     return () => timers.forEach(t => clearTimeout(t));
   }, [fileUploaded]);
-
+  // No longer listening for component toggle events as we're using navigation instead
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#18122B] via-[#1E1B3A] to-[#0F1021] text-white">
+    <div className="min-h-screen text-white">
       {/* Toast Notification */}
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-      {/* Enhanced Multi-layer Background Effects (NO orbs/particles) */}
-      <div className="absolute inset-0 bg-gradient-to-br from-black via-purple-900/20 to-black"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(78,60,250,0.15),transparent_50%)]"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(233,240,255,0.08),transparent_50%)]"></div>
-      <div className="absolute inset-0 bg-[conic-gradient(from_0deg_at_50%_50%,rgba(78,60,250,0.1)_0deg,transparent_60deg,rgba(233,240,255,0.05)_120deg,transparent_180deg)]"></div>      {/* Add NavBar component at the top */}      <NavBar 
-        onToggleComponent={handleToggleComponent}
-        visibleComponents={visibleComponents}
-      />
-      
-      {/* No floating orbs or pulsing particles */}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}      
+      {/* Live Agent Dashboard removed as requested */}
       <div className="relative z-10 pt-6 p-3">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-12 gap-4">
@@ -1042,142 +1121,59 @@ export default function HomePage() {
                       </div>
                     </div>
                   </div>
-                )}
+                )}              </div>
+              
+              {/* Agent Troubleshooting Panel */}
+              <div className="glass-card-3d rounded-2xl p-4 relative overflow-hidden border border-white/15 shadow-lg">
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent"></div>
+                <div className="flex items-center gap-3 mb-4 relative z-10">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500/60 via-blue-500/40 to-violet-600/60 rounded-xl flex items-center justify-center shadow-xl border border-white/20 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-xl"></div>
+                    <span className="text-xl relative z-10">🔧</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-white font-bold text-base mb-0.5">Agent Troubleshooting</h3>
+                    <p className="text-purple-200 text-xs">Monitor agent status and diagnose issues</p>
+                  </div>
+                </div>
+                
+                <TroubleshootAgentFlow 
+                  agents={agentData.activeAgents}
+                  fileUploaded={fileUploaded}
+                  agentStatus={agentStatus}
+                />
               </div>
-            </div>
-            {/* Right Column - Enhanced Features */}
-            <div className="lg:col-span-7 space-y-4">
-              {/* Smart Suggestions */}
+            </div>            {/* Right Column - Enhanced Features */}
+            <div className="lg:col-span-7 space-y-4">              {/* Live Flow - Moved to the top */}              {visibleComponents['live-flow'] && (
+                <LiveFlow
+                  agents={agentData.activeAgents}
+                  fileUploaded={fileUploaded}
+                  currentQuery={query}
+                  fileUploadStatus={agentData.fileUploadStatus}
+                  agentStatus={agentStatus}
+                />
+              )}
+
+              {/* Enhanced Smart Suggestions */}
               {visibleComponents['smart-suggestions'] && (
-                <SmartSuggestions
+                <EnhancedSmartSuggestions
                   data={allData}
                   columns={columns}
                   onSuggestionClick={handleSuggestionClick}
                   disabled={isLoading}
                 />
               )}
-
-              {/* Data Quality Analyzer */}
-              {visibleComponents['data-quality'] && (
-                <DataQualityAnalyzer
-                  data={allData}
-                  columns={columns}
-                />
-              )}              {/* Enhanced Agent Status */}
-              {visibleComponents['agent-status'] && (
-                <EnhancedAgentStatus
-                  agents={agentData.activeAgents}
-                  currentQuery={agentData.currentQuery}
-                  fileUploadStatus={agentData.fileUploadStatus}
-                  agentStatus={agentStatus}
-                />
-              )}
-              
-              {/* Live Flow - Duplicate Agent Status Panel */}
-              {visibleComponents['live-flow'] && (
-                <LiveFlow
-                  agents={agentData.activeAgents}
-                  currentQuery={agentData.currentQuery}
-                  fileUploadStatus={agentData.fileUploadStatus}
-                  agentStatus={agentStatus}
-                />
-              )}
-
-              {/* Data Export */}
-              {visibleComponents['data-export'] && (
-                <DataExport
-                  data={allData}
-                  columns={columns}
-                  originalFileName={agentData.fileUploadStatus.fileName}
-                  disabled={!fileUploaded}
-                />
-              )}              {/* Process Visualizer removed as requested */}
+                {/* Process Visualizer removed as requested */}
             </div>
           </div>
         </div>
-      </div>      
-      {/* Enhanced 3D Glassmorphic Footer */}
-      <footer className="relative z-10 mt-20 glass-card-3d border-t-0 rounded-t-3xl">
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent"></div>
-        <div className="max-w-7xl mx-auto px-6 py-12 relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {/* Company Info */}
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded flex items-center justify-center">
-                  <span className="text-white font-bold text-xs">EI</span>
-                </div>
-                <span className="text-white font-semibold">Enterprise Insights</span>
-              </div>
-              <p className="text-gray-400 text-sm">
-                AI-powered business intelligence platform for modern enterprises. 
-                Transform your data into actionable insights.
-              </p>
-              <div className="flex space-x-4">
-                <button className="text-gray-400 hover:text-white transition-colors">
-                  <span className="sr-only">Twitter</span>
-                  🐦
-                </button>
-                <button className="text-gray-400 hover:text-white transition-colors">
-                  <span className="sr-only">LinkedIn</span>
-                  💼
-                </button>
-                <button className="text-gray-400 hover:text-white transition-colors">
-                  <span className="sr-only">GitHub</span>
-                  🐙
-                </button>
-              </div>
+      </div>        {/* Minimal Footer */}      <footer className="relative z-10 mt-12 border-t border-white/10">
+        <div className="max-w-7xl mx-auto px-6 py-4 relative z-10">
+          <div className="flex items-center justify-center">
+            <div className="w-5 h-5 bg-gradient-to-r from-blue-500 to-purple-600 rounded flex items-center justify-center mr-2">
+              <span className="text-white font-bold text-xs">EI</span>
             </div>
-            
-            {/* Product */}
-            <div className="space-y-4">
-              <h3 className="text-white font-semibold">Product</h3>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Features</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Pricing</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Documentation</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">API Reference</a></li>
-              </ul>
-            </div>
-            
-            {/* Company */}
-            <div className="space-y-4">
-              <h3 className="text-white font-semibold">Company</h3>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">About Us</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Careers</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Contact</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Blog</a></li>
-              </ul>
-            </div>
-            
-            {/* Support */}
-            <div className="space-y-4">
-              <h3 className="text-white font-semibold">Support</h3>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Help Center</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Community</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Status</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Security</a></li>
-              </ul>
-            </div>
-          </div>
-          
-          {/* Bottom Bar */}
-          <div className="mt-8 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center space-x-6 text-sm text-gray-400">
-              <span>© 2025 Enterprise Insights. All rights reserved.</span>
-              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-            </div>
-            <div className="flex items-center space-x-4 mt-4 md:mt-0">
-              <div className="flex items-center space-x-2 text-sm text-gray-400">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span>All systems operational</span>
-              </div>
-              <span className="text-gray-600">|</span>
-              <span className="text-sm text-gray-400">v2.1.0</span>
-            </div>
+            <span className="text-white/60 text-xs">© 2025 Enterprise Insights</span>
           </div>
         </div>
       </footer>

@@ -282,18 +282,7 @@ export default function CSVUpload({ onFileUpload, disabled = false, onUploadStar
               }
             </p>
             
-            {/* Enhanced Progress bar */}
-            {uploading && (
-              <div className="mb-6">
-                <div className="w-full bg-black/30 rounded-full h-3 mb-3 border border-white/20">
-                  <div 
-                    className="bg-gradient-to-r from-blue-500 to-cyan-500 h-3 rounded-full transition-all duration-300 ease-out shadow-sm"
-                    style={{ width: `${uploadProgress}%` }}
-                  ></div>
-                </div>
-                <p className="text-sm text-blue-200 text-center font-medium">{uploadProgress}%</p>
-              </div>
-            )}
+            {/* Removed redundant progress bar since we have a better one in the overlay */}
             
             {/* Hidden file input */}
             <input
@@ -330,12 +319,42 @@ export default function CSVUpload({ onFileUpload, disabled = false, onUploadStar
           </div>
         </div>
 
-        {/* Enhanced Upload progress indicator */}
+        {/* Glassmorphic Upload progress indicator */}
         {uploading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-indigo-900/60 to-purple-900/60 rounded-2xl backdrop-blur-md">
-            <div className="flex items-center space-x-4 text-white">
-              <div className="animate-spin h-8 w-8 border-3 border-white border-t-transparent rounded-full shadow-lg"></div>
-              <span className="font-semibold text-lg">Processing CSV...</span>
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-2xl backdrop-blur-md border border-white/10 animate-glassMorphism-slow">
+            {/* Glass highlight effects */}
+            <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent"></div>
+            <div className="absolute bottom-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+            
+            <div className="glass-card-3d p-6 bg-white/5 border border-white/20 rounded-xl shadow-xl">
+              <div className="flex flex-col items-center space-y-4">
+                {/* Glassmorphic spinning loader */}
+                <div className="relative w-16 h-16">
+                  <div className="absolute inset-0 rounded-full border-4 border-white/10"></div>
+                  <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-400 animate-spin"></div>
+                  <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-purple-400 animate-spin-slow"></div>
+                  <div className="absolute inset-4 rounded-full border-4 border-transparent border-t-blue-400 animate-spin-reverse"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-xl animate-pulse">📊</span>
+                  </div>
+                </div>
+                
+                <div className="text-center">
+                  <p className="font-medium text-lg text-white mb-1">Processing CSV</p>
+                  <p className="text-sm text-white/70">{uploadStatus === 'reading' ? 'Reading file...' : uploadStatus === 'parsing' ? 'Parsing data...' : 'Processing...'}</p>
+                </div>
+                
+                {/* Glassmorphic progress bar */}
+                <div className="w-full glass-progress-bar mt-2">
+                  <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden backdrop-blur-sm border border-white/20">
+                    <div 
+                      className="h-full bg-gradient-to-r from-indigo-500 via-purple-400 to-blue-500 rounded-full transition-all duration-500 animate-pulse-slow"
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                  <div className="mt-1 text-center text-sm text-white/80 font-medium">{uploadProgress}%</div>
+                </div>
+              </div>
             </div>
           </div>
         )}

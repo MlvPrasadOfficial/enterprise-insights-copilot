@@ -1,0 +1,448 @@
+# Enterprise Insights Copilot Agent Architecture Analysis
+
+## 1. Base Agent Architecture
+
+### Core Functionality
+- Provides a robust foundation for all specialized agents with uniform interface
+- Implements lifecycle management (pre_process, _execute, post_process)
+- Handles error recovery with graceful degradation
+- Offers extensive event handling system for agent lifecycle events
+- Provides metrics tracking (execution time, token usage, errors)
+- Implements configurable caching system with multiple policies
+- Supports tracing and logging for debugging and performance monitoring
+
+### When Invoked
+- Never invoked directly - serves as the parent class for all specialized agents
+- Each specialized agent inherits and extends this functionality
+
+### General Output
+- Does not produce output directly - specialized agents override _execute method
+- Provides standardized output format with consistent error handling
+- Includes execution metrics, logging, and tracing information
+
+
+### Enhancement Opportunities
+- Implement hierarchical memory system for cross-request context retention
+- Add agent-to-agent communication protocol for direct information exchange
+- Integrate distributed caching system for horizontal scaling
+- Add dynamic model selection based on task complexity
+- Implement resource usage prediction and preemptive allocation
+- Add continual learning capabilities to improve over time from feedback
+- Develop fine-tuning pipeline for domain specialization
+
+## 2. Data Agent
+
+### Core Functionality
+- Analyzes dataset structure, types, and statistical properties
+- Provides schema inference and data profiling
+- Analyzes missing values and data quality issues
+- Gives numeric summaries of quantitative columns
+- Performs initial data assessment for other agents
+
+### When Invoked
+- When a new dataset is uploaded to the system
+- When explicit data profiling is requested
+- As part of the initial phase in multi-agent workflows
+- When schema or structural information is needed by other agents
+
+### General Output
+- Dataset profiles with column information, types, and statistics
+- Missing value analysis and data quality metrics
+- Schema information and structural insights
+- Memory usage statistics and optimization suggestions
+
+### Enhancement Opportunities
+- Implement comprehensive data profiling with 50+ statistical metrics and automated insight generation
+- Develop adaptive sampling strategies with confidence intervals for datasets of any size (GB to TB)
+- Create multi-algorithm anomaly detection system combining statistical, distance-based, and ML methods
+- Build semantic data type inference with 100+ domain-specific types and format recognition patterns
+- Implement data quality scoring framework with 15+ dimensions and actionable improvement recommendations
+- Add entity resolution and schema matching with fuzzy matching and probabilistic record linkage
+- Create specialized analyzers for time-series (seasonality, trend, stationarity), geospatial (clustering, patterns), and hierarchical data (parent-child inference)
+- Develop column relationship detection using functional dependencies, mutual information, and causality testing
+- Implement priority-based progressive profiling that delivers critical information first with 90% accuracy
+- Add streaming-based profiling algorithms with constant memory footprint regardless of dataset size
+- Create data drift monitoring with distribution comparison and shift detection
+- Develop automated metadata extraction and documentation generation
+- Implement schema discovery and validation against business rules and constraints
+
+## 3. Data Cleaner Agent
+
+### Core Functionality
+- Performs data cleaning operations on uploaded datasets
+- Handles missing values, duplicates, and outliers
+- Normalizes data formats and standardizes values
+- Corrects data types and formats
+- Prepares data for analysis by other agents
+
+### When Invoked
+- After data upload during initial processing
+- When explicit data cleaning requests are made
+- Before analyses that require clean data
+- When data quality issues are detected by other agents
+
+### General Output
+- Cleaned dataset with transformations applied
+- Data cleaning report detailing actions taken
+- Data quality metrics before and after cleaning
+- Recommendations for further data improvement
+
+### Enhancement Opportunities
+- Implement advanced ML-based cleaning recommendation engine with transfer learning from previous cleaning operations
+- Develop comprehensive schema validation system with natural language rule definition and complex constraints
+- Create specialized type handlers for 50+ complex data formats including geospatial, nested structures, and temporal data
+- Build cleaning strategy explorer with side-by-side comparison and risk assessment of multiple approaches
+- Add impact analysis system with statistical testing of cleaning effects and data utility preservation metrics
+- Implement contextual missing value imputation using multiple strategies with confidence scoring
+- Create interactive cleaning workflow with human validation for uncertain operations and expert feedback integration
+- Develop parameter auto-tuning system based on data characteristics and cleaning objectives
+- Build versioned cleaning workflow persistence with executable script generation and documentation
+- Implement intelligent outlier classification and contextual treatment policies
+- Add data standardization engine with customizable rules for consistency
+- Create data transformation verification with pre/post quality checks and assertions
+- Develop error correction system for common data entry mistakes using pattern recognition
+
+## 4. SQL Agent
+
+### Core Functionality
+- Generates SQL queries from natural language requests
+- Executes SQL queries against in-memory DataFrame using DuckDB
+- Translates results back to user-friendly formats
+- Handles error recovery for SQL execution failures
+- Provides query optimization suggestions
+
+### When Invoked
+- When explicit SQL generation is requested
+- For data filtering and aggregation operations
+- When complex data transformations are needed
+- As part of multi-agent workflows requiring structured data access
+
+### General Output
+- Generated SQL query matching user intent
+- Query execution results as structured data
+- Error messages for invalid queries
+- Execution statistics and performance metrics
+
+### Enhancement Opportunities
+- Implement multi-dialect SQL support with adapters for PostgreSQL, MySQL, SQL Server, Snowflake, and BigQuery
+- Develop intelligent query optimization with cost-based analysis and execution plan visualization
+- Create comprehensive security framework with parameterized queries and injection prevention
+- Build advanced analytical function library with 30+ window functions and complex aggregations
+- Add natural language query explanations with step-by-step breakdowns and visual execution flows
+- Implement interactive query builder with real-time validation and result previews
+- Create parameterized template system for 50+ common analytical patterns with customization options
+- Develop progressive query execution with sampling for instant feedback on large datasets
+- Add performance tuning recommendations with expected improvement metrics and bottleneck identification
+- Implement version control system with semantic diff visualization and performance comparison
+- Build comprehensive template library with industry-specific modules and metric calculations
+- Create query translation service for cross-database compatibility and migration
+- Implement data lineage tracking to visualize query dependencies and impact analysis
+
+## 5. Insight Agent
+
+### Core Functionality
+- Generates natural language insights from data analysis
+- Identifies patterns, trends, and anomalies in data
+- Produces human-readable explanations of data characteristics
+- Combines statistical analysis with narrative generation
+- Extracts key findings and business implications
+
+### When Invoked
+- When explicit insight generation is requested
+- As final stage in data analysis workflows
+- When summarization of complex data is needed
+- When business context for data is required
+
+### General Output
+- Natural language insights about data patterns
+- Key findings highlighted with supporting evidence
+- Statistical analyses presented in readable format
+- Recommendations based on data analysis
+- Context and business implications of findings
+
+
+
+### Enhancement Opportunities
+- Implement industry-specific insight generation with 12+ vertical templates (retail, finance, healthcare, etc.)
+- Develop comprehensive statistical analysis engine with hypothesis testing and p-value interpretation
+- Create advanced temporal analysis with seasonal decomposition, trend detection, and multi-horizon forecasting
+- Build segment comparison framework with automatic cohort discovery and statistical significance testing
+- Add Bayesian confidence scoring system with explicit evidence linking and uncertainty visualization
+- Implement business impact prioritization using customizable ROI metrics and actionability scoring
+- Develop causal inference engine using structural equation modeling and quasi-experimental designs
+- Create adaptive narrative system with progressive disclosure based on audience expertise level
+- Build multi-factor root cause analysis with attribution percentages and resolution recommendations
+- Implement cross-validation system using multiple analytical approaches for insight verification
+- Develop automated visualization recommendation system paired with key insights and finding types
+- Create insight persistence tracking with metric drift detection and intervention impact assessment
+- Implement business context integration linking insights to strategic KPIs and organizational objectives
+- Develop semantic insight database for cross-project pattern recognition and knowledge accumulation
+
+## 6. Chart Agent
+
+### Core Functionality
+- Generates data visualizations from DataFrames
+- Determines appropriate chart types for data attributes
+- Optimizes chart aesthetics for clarity and insight
+- Provides chart specifications in Altair format
+- Pairs visualizations with descriptive context
+
+### When Invoked
+- When explicit chart generation is requested
+- As part of insight generation workflows
+- When visual representation of data is needed
+- For dashboard and report generation
+
+### General Output
+- Altair chart specifications for rendering
+- Chart metadata (type, axes, data ranges)
+- Visual insights highlighting key patterns
+- Interactive chart specifications when supported
+- Chart context explaining the visualization
+
+
+
+### Enhancement Opportunities
+- Implement AI-powered chart recommendation using embedding similarity and distribution analysis
+- Develop advanced aesthetic system with perceptual color spaces and visual hierarchy optimization
+- Create rich interactive specifications with coordinated views, cross-filtering and dynamic tooltips
+- Implement adaptive sampling and progressive rendering for large datasets (>100K rows)
+- Add intelligent annotation system that identifies and highlights statistically significant patterns
+- Develop comparative visualization templates for multi-dimensional analysis across 5+ variables
+- Create guided narrative visualization flows with sequential reveal and contextual explanations
+- Build composite visualization engine combining complementary chart types with shared axes
+- Implement comprehensive accessibility features including screen reader support and keyboard navigation
+- Add dynamic color scheme generation that respects brand guidelines and optimizes for data types
+- Develop responsive visualization system that adapts to device capabilities and screen dimensions
+- Create chart validation engine that detects and prevents common visualization errors and biases
+- Implement statistical context layers showing confidence intervals, significance markers, and trend reliability
+
+## 7. Critique Agent
+
+### Core Functionality
+- Evaluates outputs from other agents for quality and correctness
+- Identifies potential issues in analyses and visualizations
+- Suggests improvements to enhance output quality
+- Provides confidence scores for agent outputs
+- Ensures compliance with best practices and standards
+
+### When Invoked
+- After primary agents generate outputs
+- During multi-agent debate workflows
+- When explicit quality assessment is requested
+- As part of continuous improvement processes
+
+### General Output
+- Quality assessments of agent outputs
+- Identified issues and improvement suggestions
+- Confidence scores and supporting justifications
+- Alternative approaches when appropriate
+- References to relevant best practices or standards
+
+
+
+### Enhancement Opportunities
+- Implement multi-dimensional evaluation framework with 20+ industry-specific rubrics and customizable criteria
+- Develop comprehensive uncertainty quantification system with propagation analysis and sensitivity testing
+- Create adversarial testing engine that identifies edge cases and boundary condition failures
+- Build adaptive learning system that improves critique quality based on historical feedback and outcomes
+- Add methodological evaluation module with statistical validity assessment and procedural verification
+- Implement comparative critique against multiple solution approaches with trade-off analysis
+- Create visual explanation system for critique points with interactive evidence exploration
+- Develop component-level trust scoring with confidence metrics and evidence strength assessment
+- Add transparency layer that identifies model limitations, assumptions, and known failure modes
+- Implement benchmark comparison against industry standards with competitive positioning analysis
+- Create prioritized recommendation engine with step-by-step implementation guidance and impact estimates
+- Develop multi-level bias detection covering sampling bias, measurement bias, confirmation bias, and algorithmic bias
+- Add ethical implication assessment for privacy, fairness, and potential misuse
+- Implement generalizability scoring to evaluate external validity and application boundaries
+- Create meta-critique capability to evaluate and improve the critique process itself
+
+## 8. Debate Agent
+
+### Core Functionality
+- Orchestrates debates among multiple specialized agents
+- Evaluates competing perspectives on analytical questions
+- Identifies strengths and weaknesses in different approaches
+- Synthesizes final consensus from multiple viewpoints
+- Provides comprehensive multi-perspective analysis
+
+### When Invoked
+- When complex analytical questions require multiple perspectives
+- For decisions with significant uncertainty or trade-offs
+- When robustness of analysis needs verification
+- For comprehensive analysis of controversial topics
+
+### General Output
+- Multiple agent perspectives on the analytical question
+- Evaluation of each perspective's strengths and limitations
+- Areas of agreement and disagreement between perspectives
+- Synthesized final answer with supporting evidence
+- Confidence assessment of the final conclusion
+
+
+
+### Enhancement Opportunities
+- Implement contextual perspective generation with 20+ stakeholder viewpoints tailored to query domains
+- Develop parallel debate processing with real-time cross-perspective challenges and responses
+- Create knowledge integration framework connecting to domain-specific resources and expert systems
+- Build comprehensive uncertainty representation using probability distributions and confidence intervals
+- Implement Toulmin model argumentation framework with explicit claims, warrants, backings, and rebuttals
+- Add Bayesian belief updating system with prior/posterior probability calculations for evolving positions
+- Create multi-round deliberation with position refinement, concession tracking, and convergence detection
+- Develop quantitative evaluation system for argument strength using multi-factor scoring (evidence quality, logical coherence, relevance)
+- Add detailed reasoning traces with assumption tracking and inference transparency
+- Implement advanced dialectical synthesis using higher-order integration of seemingly opposing positions
+- Create interactive perspective mapping with agreement-disagreement visualization and dimensional analysis
+- Develop cognitive bias detection covering 15+ common reasoning biases with mitigation strategies
+- Add ethical framework evaluation for assessing moral implications of different perspectives
+- Implement adaptive debate depth based on question complexity, uncertainty level, and decision stakes
+- Create meta-debate capability for reasoning about the debate process itself and its limitations
+
+## 9. Planning Agent
+
+### Core Functionality
+- Determines the optimal sequence of agents for a given query
+- Routes requests to appropriate specialized agents
+- Creates execution plans for complex analytical workflows
+- Breaks down complex requests into manageable sub-tasks
+- Monitors execution progress and adapts plans as needed
+
+### When Invoked
+- At the beginning of multi-agent workflows
+- When complex queries require orchestrated processing
+- For optimizing resource allocation across agents
+- When query intent is ambiguous and requires routing
+
+### General Output
+- Execution plans specifying agent sequence
+- Task decomposition for complex queries
+- Agent routing decisions with justifications
+- Workflow status updates during execution
+- Execution metadata for monitoring and optimization
+
+
+
+### Enhancement Opportunities
+- Implement semantic routing based on deep query understanding
+- Add dynamic plan adaptation based on intermediate results
+- Create parallelized execution for independent sub-tasks
+- Develop execution history learning for improved future planning
+- Add multi-intent detection and handling for complex queries
+- Implement resource-aware planning for optimized execution
+- Create interactive plan refinement with user feedback
+- Develop execution simulation for plan validation before full execution
+- Add fallback strategies for graceful degradation
+- Implement cost/benefit analysis for execution plan selection
+- Create cross-agent dependency management and optimization
+
+## 10. Retrieval Agent
+
+### Core Functionality
+- Accesses and retrieves information from vector stores
+- Performs semantic search on indexed documents
+- Retrieves contextual information relevant to queries
+- Manages context window size for effective retrieval
+- Ranks and filters retrieved information by relevance
+
+### When Invoked
+- When contextual information retrieval is required
+- As part of RAG pipelines before generation
+- When searching through indexed documents
+- For finding relevant examples in stored data
+
+### General Output
+- Retrieved document chunks relevant to the query
+- Relevance scores for retrieved information
+- Context window with prioritized information
+- Metadata about retrieval process (sources, timestamps)
+- Suggested follow-up retrieval strategies
+
+
+
+### Enhancement Opportunities
+- Implement hybrid retrieval with multiple strategies (dense, sparse, lexical)
+- Add query decomposition for complex information needs
+- Create dynamic context management with adaptive chunk sizes
+- Develop re-ranking models for improved relevance
+- Add personalized retrieval based on user context
+- Implement query clarification for ambiguous requests
+- Create cross-document reasoning for synthesized information
+- Develop source credibility assessment during retrieval
+- Add temporal awareness for time-sensitive information
+- Implement retrieval explanation for transparency
+- Create multi-hop retrieval for complex reasoning chains
+
+## 11. Narrative Agent
+
+### Core Functionality
+- Creates coherent narratives from analytical findings
+- Structures insights into compelling stories
+- Adapts content presentation to audience expertise levels
+- Adds contextual background to raw analytical results
+- Creates executive summaries and detailed explanations
+
+### When Invoked
+- For generating final reports and summaries
+- When presenting complex analytical findings
+- As part of report generation workflows
+- When converting raw insights to narrative format
+
+### General Output
+- Structured narrative documents
+- Executive summaries with key points
+- Detailed explanations with supporting evidence
+- Contextual background information
+- Recommendations with narrative justification
+
+
+
+### Enhancement Opportunities
+- Implement domain-specific narrative frameworks
+- Add audience adaptation based on expertise profiles
+- Create optimal narrative structure for information retention
+- Develop integrated visual-textual narrative generation
+- Add uncertainty communication frameworks in narratives
+- Implement narrative coherence management across sections
+- Create personalized narrative styles for different users
+- Develop interactive narratives with drill-down capabilities
+- Add narrative evaluation metrics for quality assessment
+- Implement narrative versioning for different contexts
+- Create multi-format output generation (text, slides, infographics)
+
+## 12. Report Agent
+
+### Core Functionality
+- Generates comprehensive reports from analytical findings
+- Combines narrative text with supporting visualizations
+- Creates structured documents with logical flow
+- Formats output for different delivery channels
+- Includes executive summaries and detailed sections
+
+### When Invoked
+- When explicit report generation is requested
+- As final stage in complex analytical workflows
+- For creating shareable analytical deliverables
+- When formalized documentation of findings is needed
+
+### General Output
+- Structured report documents (PDF, HTML)
+- Combined text and visualization components
+- Executive summaries and detailed findings
+- Appendices with supporting data and methodologies
+- Citations and references to data sources
+
+
+
+### Enhancement Opportunities
+- Implement diverse report templates for different use cases
+- Add advanced text-visual integration with layout optimization
+- Create customizable branding and styling system
+- Develop audience-adaptive content selection
+- Implement interactive report elements for exploration
+- Add collaborative features for team report development
+- Create dynamic report updating for live data sources
+- Develop multi-format export capabilities
+- Add report quality assessment and improvement suggestions
+- Implement section reuse and knowledge management
+- Create compliance checking for industry-specific regulations

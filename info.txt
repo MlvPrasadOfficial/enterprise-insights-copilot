@@ -1,0 +1,231 @@
+# Enterprise Insights Copilot Agent Analysis
+
+## Detailed Analysis of 12 Agent Files and Their Execution Flow
+
+### BaseAgent
+
+**Functionality:** Serves as the foundational class that all specialized agents inherit from. Provides core functionality like error handling, metrics collection, lifecycle hooks, and caching.
+
+**Specific Role:** 
+- Defines standard agent interface with `run()` method
+- Manages agent state, configuration, and metadata
+- Handles error recovery and metrics tracking
+- Provides pre-processing and post-processing hooks
+
+**Invocation:** Not directly invoked - serves as the parent class for all specialized agents.
+
+### 1. Planning Agent
+
+**Functionality:** Analyzes user queries and determines which specialized agent(s) should handle the request.
+
+**Specific Role:**
+- Routes queries to SQL, Chart, or Insight agents based on query intent
+- Decomposes complex queries into sub-queries when needed
+- Learns from previous routing decisions to improve over time
+- Balances workload across available agents
+
+**Invocation:** Invoked on chat prompt submission. This is the first agent called when a new query is submitted.
+
+**Code Insights:** The Planning Agent uses a combination of keyword analysis and semantic classification to determine the query type. It maintains a history of past decisions and their outcomes to improve routing accuracy over time.
+
+### 2. Query Agent
+
+**Functionality:** Processes natural language queries and prepares them for specialized agents.
+
+**Specific Role:**
+- Parses and understands the semantic structure of queries
+- Extracts entities and relationships from queries
+- Reformulates ambiguous or complex queries for better processing
+- Manages query context across conversation turns
+
+**Invocation:** Invoked on chat prompt submission. It's typically called right after the Planning Agent to process the query before specialized agents handle it.
+
+**Code Insights:** The Query Agent implements advanced NLP techniques to extract entities, classify intent, and maintain conversation context across multiple turns.
+
+### 3. Retrieval Agent
+
+**Functionality:** Fetches relevant context from vector stores and knowledge bases to support query answering.
+
+**Specific Role:**
+- Performs hybrid retrieval using vector embeddings and keyword search
+- Re-ranks results based on relevance to the query
+- Handles context window management for large documents
+- Applies metadata filtering and boosting based on content properties
+
+**Invocation:** Invoked on chat prompt submission when additional context is needed to answer a question. It's called after the Query Agent processes the query.
+
+**Code Insights:** The Retrieval Agent incorporates sophisticated hybrid search strategies combining dense and sparse retrieval with cross-encoder reranking.
+
+### 4. Data Agent
+
+**Functionality:** Analyzes uploaded data files to provide statistical profiles and insights.
+
+**Specific Role:**
+- Creates comprehensive data profiles with distribution analysis
+- Detects anomalies and patterns in datasets
+- Infers semantic data types and relationships
+- Generates statistical summaries and correlation analysis
+
+**Invocation:** Invoked on file upload. This agent is called when a user uploads a new data file to analyze its structure and contents.
+
+**Code Insights:** The Data Agent uses sophisticated statistical methods to profile datasets, identify outliers, and suggest potential insights. It implements adaptive sampling for large datasets.
+
+### 5. Data Cleaner Agent
+
+**Functionality:** Prepares and cleans data for analysis and visualization.
+
+**Specific Role:**
+- Normalizes units and formats across columns
+- Handles missing values with appropriate strategies
+- Detects and corrects outliers and errors
+- Standardizes column names and data types
+
+**Invocation:** Invoked on file upload, after the Data Agent profiles the data. It's also potentially re-invoked during chat conversations if data quality issues are detected.
+
+**Code Insights:** The Data Cleaner Agent uses a combination of rule-based and ML-based approaches to detect and clean various data quality issues, with specialized handlers for different data types.
+
+### 6. SQL Agent
+
+**Functionality:** Generates and executes SQL queries based on natural language requests.
+
+**Specific Role:**
+- Converts natural language questions to SQL queries
+- Executes queries against data sources (primarily DuckDB)
+- Handles error recovery for invalid SQL
+- Optimizes queries for better performance
+
+**Invocation:** Invoked on chat prompt submission when the Planning Agent determines the query requires SQL processing. Operates on previously uploaded data.
+
+**Code Insights:** The SQL Agent uses LLM-based query generation with specialized prompting techniques to produce accurate SQL. It includes safety validation and query optimization.
+
+### 7. Insight Agent
+
+**Functionality:** Generates natural language insights and interpretations from data analysis.
+
+**Specific Role:**
+- Analyzes patterns and trends in data
+- Identifies statistically significant findings
+- Generates human-readable descriptions of data observations
+- Prioritizes insights based on relevance and importance
+
+**Invocation:** Invoked on chat prompt submission when the Planning Agent determines the query requires insight generation. Can also be triggered after SQL or Chart agents complete their work.
+
+**Code Insights:** The Insight Agent combines statistical analysis techniques with natural language generation to produce meaningful interpretations of data patterns.
+
+### 8. Chart Agent
+
+**Functionality:** Creates data visualizations based on natural language requests.
+
+**Specific Role:**
+- Determines appropriate visualization types for data and questions
+- Generates chart specifications for rendering
+- Adds statistical annotations to enhance understanding
+- Optimizes visual properties for clarity and impact
+
+**Invocation:** Invoked on chat prompt submission when the Planning Agent determines the query requires visualization. Operates on previously uploaded data.
+
+**Code Insights:** The Chart Agent uses sophisticated visualization recommendation algorithms to select appropriate chart types and configurations based on data characteristics and query intent.
+
+### 9. Critique Agent
+
+**Functionality:** Evaluates the quality and accuracy of other agents' outputs.
+
+**Specific Role:**
+- Checks for factual correctness in responses
+- Identifies potential hallucinations or inaccuracies
+- Validates that responses address the original query
+- Suggests improvements to agent-generated content
+
+**Invocation:** Invoked after other agents (particularly SQL, Chart, or Insight) complete their work, to validate the results before presenting to the user.
+
+**Code Insights:** The Critique Agent evaluates outputs against source data, checks logical consistency, and uses specialized frameworks for evaluating different output types (SQL correctness, chart appropriateness, etc.).
+
+### 10. Debate Agent
+
+**Functionality:** Simulates a debate between multiple perspectives to reach better conclusions.
+
+**Specific Role:**
+- Generates multiple viewpoints on complex questions
+- Evaluates evidence supporting different perspectives
+- Facilitates consensus building across viewpoints
+- Provides balanced conclusions considering multiple angles
+
+**Invocation:** Invoked on complex chat prompt submissions where multiple valid interpretations are possible. Usually triggered after initial analysis by SQL, Chart, or Insight agents.
+
+**Code Insights:** The Debate Agent implements a structured multi-perspective analysis system with explicit argumentation frameworks and belief updating based on evidence.
+
+### 11. Narrative Agent
+
+**Functionality:** Creates coherent narratives and explanations from analysis results.
+
+**Specific Role:**
+- Synthesizes insights into cohesive stories
+- Structures findings in logical progression
+- Adapts content complexity to audience needs
+- Connects disparate pieces of analysis into unified narratives
+
+**Invocation:** Invoked near the end of processing a chat prompt, after specialized agents and the Critique Agent have completed their work.
+
+**Code Insights:** The Narrative Agent uses sophisticated NLG techniques with narrative structure templates to create coherent explanations of findings with appropriate pacing and emphasis.
+
+### 12. Report Generator
+
+**Functionality:** Creates formatted reports combining text, data, and visualizations.
+
+**Specific Role:**
+- Compiles analysis results into structured documents
+- Formats content for different output formats (PDF, HTML)
+- Creates navigational elements like table of contents
+- Adds metadata and styling for professional presentation
+
+**Invocation:** Invoked after all analysis is complete, typically at the end of processing a complex chat prompt that requires comprehensive reporting.
+
+**Code Insights:** The Report Generator supports multiple output formats with customizable templates and dynamic content organization based on analysis types.
+
+## Execution Order and Process-Specific Agents
+
+### File Upload Process
+
+When a user uploads a data file, the following agents are invoked in this order:
+
+1. **Data Agent** - Profiles the uploaded data
+2. **Data Cleaner Agent** - Cleans and prepares the data
+3. **Insight Agent** (optional) - Generates initial insights about the dataset
+
+### Chat Prompt Process
+
+When a user submits a question in chat, the following typical execution flow occurs:
+
+1. **Planning Agent** - Determines which agents to invoke
+2. **Query Agent** - Processes the natural language query
+3. **Retrieval Agent** (if needed) - Gets relevant context
+4. Based on Planning Agent's decision, one or more of:
+   - **SQL Agent** - For data querying
+   - **Chart Agent** - For visualization
+   - **Insight Agent** - For interpretation
+5. **Critique Agent** - Validates the outputs
+6. **Debate Agent** (for complex queries) - Considers multiple perspectives
+7. **Narrative Agent** - Creates a coherent explanation
+8. **Report Generator** (for comprehensive requests) - Creates formatted output
+
+### Agents Re-invoked in Ongoing Chat Conversation
+
+The following agents are commonly re-invoked with each new prompt in an ongoing conversation:
+
+1. **Planning Agent** - Always invoked to determine the flow
+2. **Query Agent** - Always processes new queries
+3. **Retrieval Agent** - Re-invoked when new context is needed
+
+The specialized agents (SQL, Chart, Insight) are invoked based on the Planning Agent's determination for each new query. The DataAgent and DataCleanerAgent are typically not re-invoked unless the conversation specifically references data quality issues or new data is uploaded.
+
+### Key Integration Points
+
+The system's orchestration layer in `langgraph_flow.py` manages the agent invocation sequence through a state machine that tracks:
+
+1. Which agents have been invoked
+2. The current processing state
+3. Intermediate results from each agent
+4. Error states and recovery paths
+
+This allows for dynamic agent selection and parallel processing where appropriate, with the Planning Agent making the critical routing decisions at each step.
+

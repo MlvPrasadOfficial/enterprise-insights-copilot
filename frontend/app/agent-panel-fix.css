@@ -1,0 +1,58 @@
+/* Enhanced near-black purple glass effect for all agent panels */
+.agent-panel {
+  background: linear-gradient(145deg,
+    rgba(28, 10, 50, 0.95) 0%,
+    rgba(15, 5, 30, 0.98) 100%) !important;
+  border: 1px solid rgba(138, 43, 226, 0.08) !important;
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.6),
+    0 1px 0px rgba(138, 43, 226, 0.12) inset,
+    0 0 20px rgba(138, 43, 226, 0.08) !important;
+}
+
+/* Analysis panels with perfect symmetry */
+.analysis-panel-wrapper .agent-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 180px;
+  background: linear-gradient(145deg,
+    rgba(35, 10, 70, 0.95) 0%,
+    rgba(18, 5, 45, 0.98) 100%) !important;
+  border: 1px solid rgba(158, 53, 246, 0.1) !important;
+}
+
+/* Ensure consistent height for better symmetry */
+.analysis-panel-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Make outputs display consistently in the horizontal panels */
+.analysis-panel-wrapper .agent-panel .bg-indigo-900\/20,
+.analysis-panel-wrapper .agent-panel .bg-emerald-900\/20 {
+  height: 100%;
+  min-height: 100px;
+}
+
+/* Ensure Analysis Panels have the specific purple styling */
+.analysis-panel .agent-panel {
+  background: linear-gradient(145deg,
+    rgba(56, 20, 94, 0.92) 0%,
+    rgba(36, 12, 66, 0.98) 100%) !important;
+  border: 1px solid rgba(158, 63, 246, 0.15) !important;
+  box-shadow: 
+    0 15px 35px rgba(0, 0, 0, 0.5),
+    0 1px 0px rgba(168, 73, 256, 0.2) inset,
+    0 0 25px rgba(158, 63, 246, 0.15) !important;
+}
+
+/* Heading for Analysis Panels */
+.analysis-panels-heading {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  text-shadow: 0 0 15px rgba(138, 43, 226, 0.3);
+}

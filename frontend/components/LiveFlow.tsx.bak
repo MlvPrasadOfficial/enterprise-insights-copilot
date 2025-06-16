@@ -1,0 +1,624 @@
+"use client";
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { FileUploadAgentsPanel, ChatAgentsPanel, OutputAgentsPanel } from './AgentGroupPanels';
+import NarrativeAgentPanel from './NarrativeAgentPanel';
+import ReportAgentPanel from './ReportAgentPanel';
+import AgentPanel from './AgentPanel';
+
+interface AgentCapability {
+  name: string;
+  description: string;
+  enabled: boolean;
+}
+
+interface StepProcess {
+  id: number;
+  description: string;
+  status: "pending" | "in-progress" | "complete" | "error";
+  timestamp?: string;
+}
+
+interface EnhancedAgent {
+  type: "planner" | "insight" | "chart" | "cleaner" | "data" | "query" | "sql" | "critique" | "debate" | "narrative" | "report" | "retrieval";
+  name: string;
+  icon: string;
+  status: "idle" | "working" | "complete" | "error";
+  message: string;
+  startTime?: string;
+  endTime?: string;
+  progress?: number;
+  capabilities: AgentCapability[];
+  currentTask?: string;
+  estimatedTimeRemaining?: number;
+  steps?: StepProcess[];
+}
+
+interface LiveFlowProps {
+  agents: any[]; // Original agent format
+  currentQuery: string;
+  fileUploadStatus: any;
+  agentStatus?: Record<string, string>;
+  onAgentToggle?: (agentType: string, enabled: boolean) => void;
+  fileUploaded?: boolean;
+}
+
+export default function LiveFlow({ 
+  agents, 
+  currentQuery, 
+  fileUploadStatus,
+  agentStatus,
+  onAgentToggle,
+  fileUploaded = false
+}: LiveFlowProps) {  const [isPanelExpanded, setIsPanelExpanded] = useState(true);
+  const liveFlowRef = useRef<HTMLDivElement>(null);
+  // Suppress unused variable warnings by consuming them
+  void currentQuery; void fileUploadStatus; void onAgentToggle;
+  // Agent workflow step definitions
+  const getAgentSteps = (agentType: string): StepProcess[] => {
+    // Use fixed timestamps to avoid hydration mismatch errors
+    const commonSteps: StepProcess[] = [
+      { id: 1, description: "Initializing", status: "complete", timestamp: "Previously" },
+      { id: 2, description: "Processing request", status: "in-progress", timestamp: "Now" },
+      { id: 3, description: "Finalizing results", status: "pending" }
+    ];
+      switch(agentType) {
+      case 'planner':
+        return [
+          { id: 1, description: "Analyzing query", status: "complete", timestamp: "Previously" },
+          { id: 2, description: "Planning execution strategy", status: "in-progress", timestamp: "Now" },
+          { id: 3, description: "Resource allocation", status: "pending" },
+          { id: 4, description: "Generating execution plan", status: "pending" }
+        ];      case 'query':
+        return [
+          { id: 1, description: "Parsing natural language", status: "complete", timestamp: "Step 1" },
+          { id: 2, description: "Extracting key parameters", status: "complete", timestamp: "Step 2" },
+          { id: 3, description: "Analyzing intent", status: "in-progress", timestamp: "Now" },
+          { id: 4, description: "Formulating structured query", status: "pending" }
+        ];      case 'retrieval':
+        return [
+          { id: 1, description: "Searching knowledge base", status: "complete", timestamp: "Previously" },
+          { id: 2, description: "Retrieving relevant context", status: "in-progress", timestamp: "Now" },
+          { id: 3, description: "Ranking information relevance", status: "pending" },
+          { id: 4, description: "Integrating retrieved data", status: "pending" }
+        ];      case 'data':
+        return [
+          { id: 1, description: "Identifying data sources", status: "complete", timestamp: "Previously" },
+          { id: 2, description: "Loading data structures", status: "in-progress", timestamp: "Now" },
+          { id: 3, description: "Processing transformations", status: "pending" },
+          { id: 4, description: "Preparing for analysis", status: "pending" }
+        ];      case 'cleaner':
+        return [
+          { id: 1, description: "Scanning for issues", status: "complete", timestamp: "Step 1" },
+          { id: 2, description: "Detecting missing values", status: "complete", timestamp: "Step 2" },
+          { id: 3, description: "Normalizing formats", status: "in-progress", timestamp: "Now" },
+          { id: 4, description: "Validating integrity", status: "pending" }
+        ];      case 'sql':
+        return [
+          { id: 1, description: "Generating SQL", status: "complete", timestamp: "Previously" },
+          { id: 2, description: "Optimizing query", status: "in-progress", timestamp: "Now" },
+          { id: 3, description: "Executing database query", status: "pending" },
+          { id: 4, description: "Processing results", status: "pending" }
+        ];      case 'insight':
+        return [
+          { id: 1, description: "Processing correlations", status: "complete", timestamp: "Previously" },
+          { id: 2, description: "Statistical analysis", status: "in-progress", timestamp: "Now" },
+          { id: 3, description: "Identifying patterns", status: "pending" },
+          { id: 4, description: "Generating insights", status: "pending" }
+        ];      case 'chart':
+        return [
+          { id: 1, description: "Preparing data", status: "complete", timestamp: "Previously" },
+          { id: 2, description: "Selecting chart type", status: "in-progress", timestamp: "Now" },
+          { id: 3, description: "Rendering visualization", status: "pending" },
+          { id: 4, description: "Applying styling", status: "pending" }
+        ];      case 'critique':
+        return [
+          { id: 1, description: "Evaluating accuracy", status: "complete", timestamp: "Previously" },
+          { id: 2, description: "Checking validity", status: "in-progress", timestamp: "Now" },
+          { id: 3, description: "Identifying biases", status: "pending" },
+          { id: 4, description: "Generating feedback", status: "pending" }
+        ];      case 'debate':
+        return [
+          { id: 1, description: "Evaluating perspectives", status: "complete", timestamp: "Previously" },
+          { id: 2, description: "Analyzing evidence", status: "in-progress", timestamp: "Now" },
+          { id: 3, description: "Forming counterarguments", status: "pending" },
+          { id: 4, description: "Reaching conclusions", status: "pending" }
+        ];      case 'narrative':
+        return [
+          { id: 1, description: "Structuring story", status: "complete", timestamp: "Previously" },
+          { id: 2, description: "Developing narrative", status: "in-progress", timestamp: "Now" },
+          { id: 3, description: "Connecting insights", status: "pending" },
+          { id: 4, description: "Finalizing communication", status: "pending" }
+        ];      case 'report':
+        return [
+          { id: 1, description: "Gathering components", status: "complete", timestamp: "Previously" },
+          { id: 2, description: "Structuring report", status: "in-progress", timestamp: "Now" },
+          { id: 3, description: "Formatting content", status: "pending" },
+          { id: 4, description: "Creating summary", status: "pending" }
+        ];
+      default:
+        return commonSteps;
+    }
+  };
+
+  // Convert basic agents to enhanced agents with data from both agents and agentStatus
+  const enhancedAgents = useMemo((): EnhancedAgent[] => {
+    return agents.map(agent => {
+      // Sync agent status with the global agentStatus if available
+      let currentStatus = agent.status;
+      if (agentStatus && agentStatus[agent.type]) {
+        // Map from global status to component status
+        const statusMap: Record<string, "idle" | "working" | "complete" | "error"> = {
+          "idle": "idle",
+          "running": "working",
+          "working": "working",
+          "success": "complete",
+          "complete": "complete",
+          "error": "error"
+        };
+        currentStatus = statusMap[agentStatus[agent.type]] || currentStatus;
+      }
+
+      return {
+        ...agent,
+        status: currentStatus,
+        progress: currentStatus === 'working' ? Math.random() * 100 : currentStatus === 'complete' ? 100 : 0,
+        capabilities: [
+          { 
+            name: agent.type === 'planner' ? 'Query Analysis' : agent.type === 'insight' ? 'Pattern Detection' : 'Chart Generation',
+            description: agent.type === 'planner' ? 'Analyze and break down complex queries' : agent.type === 'insight' ? 'Find patterns and correlations in data' : 'Create visualizations and charts',
+            enabled: true 
+          },
+          { 
+            name: agent.type === 'planner' ? 'Resource Planning' : agent.type === 'insight' ? 'Statistical Analysis' : 'Interactive Dashboards',
+            description: agent.type === 'planner' ? 'Optimize resource allocation for queries' : agent.type === 'insight' ? 'Perform statistical computations' : 'Build interactive data dashboards',
+            enabled: Math.random() > 0.3 
+          },
+          { 
+            name: agent.type === 'planner' ? 'Cost Estimation' : agent.type === 'insight' ? 'Anomaly Detection' : 'Export Options',
+            description: agent.type === 'planner' ? 'Estimate query processing costs' : agent.type === 'insight' ? 'Identify data anomalies and outliers' : 'Export charts in multiple formats',
+            enabled: Math.random() > 0.5 
+          }
+        ],
+        currentTask: currentStatus === 'working' ? agent.message : undefined,
+        estimatedTimeRemaining: currentStatus === 'working' ? Math.floor(Math.random() * 5000) + 1000 : undefined,
+        steps: currentStatus !== 'idle' ? getAgentSteps(agent.type) : undefined
+      };
+    });
+  }, [agents, agentStatus]);
+
+  // Determine if any agent is active for automatic expansion
+  const hasActiveAgent = useMemo(() => {
+    return enhancedAgents.some(agent => agent.status === 'working');
+  }, [enhancedAgents]);
+    // Auto-expand when an agent becomes active or file is uploaded
+  useEffect(() => {
+    if (hasActiveAgent || fileUploaded) {
+      setIsPanelExpanded(true);
+    }
+  }, [hasActiveAgent, fileUploaded]);
+
+  // Toggle work dropdown for a specific agent
+  const toggleWorkDropdown = (agentId: string) => {
+    setWorkExpandedDropdowns(prev => ({
+      ...prev,
+      [agentId]: !prev[agentId]
+    }));
+    
+    // Close roles dropdown if open
+    if (rolesExpandedDropdowns[agentId]) {
+      setRolesExpandedDropdowns(prev => ({
+        ...prev,
+        [agentId]: false
+      }));
+    }
+  };
+  
+  // Toggle roles dropdown for a specific agent
+  const toggleRolesDropdown = (agentId: string) => {
+    setRolesExpandedDropdowns(prev => ({
+      ...prev,
+      [agentId]: !prev[agentId]
+    }));
+    
+    // Close work dropdown if open
+    if (workExpandedDropdowns[agentId]) {
+      setWorkExpandedDropdowns(prev => ({
+        ...prev,
+        [agentId]: false
+      }));
+    }
+  };
+  
+  // Get work done by agent (for dropdown)
+  const getAgentWork = (agentType: string) => {
+    const workMap: Record<string, string[]> = {
+      "planner": ["Analyzed query intent", "Created execution plan", "Allocated resources"],
+      "query": ["Parsed natural language", "Extracted key parameters", "Determined query structure"],
+      "cleaner": ["Identified missing values", "Normalized data formats", "Handled outliers"],
+      "data": ["Loaded data source", "Indexed columns", "Prepared for analysis"],
+      "sql": ["Generated SQL query", "Optimized execution plan", "Retrieved results"],
+      "insight": ["Analyzed patterns", "Applied statistical methods", "Generated insights"],
+      "chart": ["Selected optimal visualization", "Prepared chart data", "Rendered visualization"],
+      "critique": ["Evaluated accuracy", "Checked for biases", "Provided quality assessment"],
+      "debate": ["Considered alternative views", "Analyzed contradictions", "Refined conclusions"],
+      "narrative": ["Structured insights", "Created coherent story", "Applied communication best practices"],
+      "report": ["Compiled components", "Formatted results", "Created executive summary"],
+      "retrieval": ["Searched knowledge base", "Ranked relevant information", "Incorporated context"]
+    };
+    
+    return workMap[agentType] || [];
+  };
+  
+  // Get agent capabilities/roles (for dropdown)
+  const getAgentRoles = (agentType: string) => {
+    const roleMap: Record<string, AgentCapability[]> = {
+      "planner": [
+        { name: "Query Analysis", description: "Breaks down complex queries into subtasks", enabled: true },
+        { name: "Resource Planning", description: "Optimizes agent allocation for efficient processing", enabled: true },
+        { name: "Execution Strategy", description: "Determines optimal processing sequence", enabled: true }
+      ],
+      "query": [
+        { name: "NL Understanding", description: "Interprets natural language questions", enabled: true },
+        { name: "Intent Detection", description: "Identifies the core purpose of queries", enabled: true },
+        { name: "Parameter Extraction", description: "Isolates key variables from questions", enabled: true }
+      ],
+      "cleaner": [
+        { name: "Data Cleansing", description: "Removes inconsistencies and errors", enabled: true },
+        { name: "Format Normalization", description: "Standardizes data formats across dataset", enabled: true },
+        { name: "Missing Data Handling", description: "Addresses gaps in the dataset", enabled: true }
+      ],
+      "data": [
+        { name: "Data Loading", description: "Imports and processes data files", enabled: true },
+        { name: "Schema Detection", description: "Identifies data structure and relationships", enabled: true },
+        { name: "Initial Analysis", description: "Performs preliminary data assessment", enabled: true }
+      ],
+      "sql": [
+        { name: "SQL Generation", description: "Creates efficient database queries", enabled: true },
+        { name: "Query Optimization", description: "Improves query performance", enabled: true },
+        { name: "Result Processing", description: "Formats query results for analysis", enabled: true }
+      ],
+      "insight": [
+        { name: "Pattern Detection", description: "Identifies trends and correlations", enabled: true },
+        { name: "Statistical Analysis", description: "Applies statistical methods to data", enabled: true },
+        { name: "Insight Generation", description: "Creates meaningful business insights", enabled: true }
+      ],
+      "chart": [
+        { name: "Chart Selection", description: "Chooses optimal visualization types", enabled: true },
+        { name: "Data Visualization", description: "Creates effective visual representations", enabled: true },
+        { name: "Visual Enhancement", description: "Applies styling and interactive elements", enabled: true }
+      ],
+      "critique": [
+        { name: "Accuracy Evaluation", description: "Validates findings and conclusions", enabled: true },
+        { name: "Bias Detection", description: "Identifies potential biases in analysis", enabled: true },
+        { name: "Quality Assessment", description: "Evaluates overall insight quality", enabled: true }
+      ],
+      "debate": [
+        { name: "Alternative Views", description: "Considers multiple interpretations", enabled: true },
+        { name: "Evidence Analysis", description: "Evaluates supporting and contradicting data", enabled: true },
+        { name: "Conclusion Validation", description: "Ensures robust final conclusions", enabled: true }
+      ],
+      "narrative": [
+        { name: "Story Structure", description: "Creates coherent narrative frameworks", enabled: true },
+        { name: "Content Connection", description: "Links insights into meaningful stories", enabled: true },
+        { name: "Communication Clarity", description: "Ensures clear, compelling communication", enabled: true }
+      ],
+      "report": [
+        { name: "Content Compilation", description: "Gathers and organizes all outputs", enabled: true },
+        { name: "Format Optimization", description: "Creates professional report layouts", enabled: true },
+        { name: "Summary Creation", description: "Distills key findings into executive summaries", enabled: true }
+      ],
+      "retrieval": [
+        { name: "Context Search", description: "Finds relevant information from knowledge base", enabled: true },
+        { name: "Relevance Ranking", description: "Prioritizes most relevant information", enabled: true },
+        { name: "Context Integration", description: "Incorporates background knowledge into analysis", enabled: true }
+      ]
+    };
+    
+    return roleMap[agentType] || [];
+  };
+
+  // Helper function for sample agent outputs based on agent type
+  const getAgentSampleOutput = (agentType: string) => {
+    switch(agentType) {
+      case 'data':
+        return [
+          { title: "Data Summary", content: "22 rows, 5 columns processed. No missing values detected." },
+          { title: "Column Analysis", content: "Numeric: 3, Categorical: 2, Date: 0" },
+          { title: "Data Preview", content: "First 5 rows available for inspection" }
+        ];
+      case 'cleaner':
+        return [
+          { title: "Cleaning Report", content: "Standardized formats for all date columns" },
+          { title: "Transformations", content: "Removed 0 outliers, fixed 3 inconsistent values" },
+          { title: "Quality Score", content: "Data quality improved from 87% to 98%" }
+        ];
+      case 'planner':
+        return [
+          { title: "Analysis Plan", content: "Multi-phase approach to investigate patterns in sales data" },
+          { title: "Resources Allocation", content: "Optimal agent distribution determined for query" },
+          { title: "Execution Timeline", content: "Expected completion in ~45 seconds" }
+        ];
+      case 'query':
+        return [
+          { title: "Query Interpretation", content: "Analyzing sales trends by region and product category" },
+          { title: "Parameters Extracted", content: "Time period: Q1-2025, Metrics: Revenue, Units" },
+          { title: "Query Refinement", content: "Added context from previous analysis for better results" }
+        ];
+      case 'sql':
+        return [
+          { title: "SQL Query", content: "SELECT region, product, SUM(revenue) FROM sales GROUP BY region, product" },
+          { title: "Query Plan", content: "Optimized execution path with indexed lookup" },
+          { title: "Results Summary", content: "103 records returned in 1.2s" }
+        ];
+      case 'insight':
+        return [
+          { title: "Key Findings", content: "Western region shows 23% higher engagement than average" },
+          { title: "Correlation Analysis", content: "Strong relationship (r=0.87) between price and demand" },
+          { title: "Anomaly Detection", content: "Unusual activity spotted in Q3 marketing data" }
+        ];
+      case 'chart':
+        return [
+          { title: "Visualization", content: "Multi-series bar chart showing regional performance" },
+          { title: "Design Choices", content: "Color coding by product category for enhanced clarity" },
+          { title: "Interactive Elements", content: "Hover for details, click to filter by dimension" }
+        ];
+      case 'narrative':
+        return [
+          { title: "Story Structure", content: "Problem → Analysis → Discovery → Recommendation" },
+          { title: "Content Highlights", content: "Focusing on unexpected correlation between customer age and product usage" },
+          { title: "Communication Style", content: "Executive summary with supporting detailed evidence" }
+        ];
+      case 'report':
+        return [
+          { title: "Report Components", content: "Executive Summary, Methodology, Findings, Recommendations" },
+          { title: "Format Options", content: "Available as interactive dashboard or PDF export" },
+          { title: "Citation Sources", content: "All insights linked to source data and analysis methods" }
+        ];
+      default:
+        return [
+          { title: "Output Summary", content: "Processing complete with standard results" },
+          { title: "Status", content: "Ready for review and further action" }
+        ];
+    }
+  };
+
+  // Helper function for agent capabilities based on agent type
+  const getAgentCapabilities = (agentType: string): AgentCapability[] => {
+    switch(agentType) {
+      case 'data':
+        return [
+          { name: "Data Profiling", description: "Analyze and summarize dataset characteristics", enabled: true },
+          { name: "Schema Detection", description: "Automatically detect data types and structure", enabled: true },
+          { name: "Anomaly Detection", description: "Identify outliers and unusual patterns", enabled: true }
+        ];
+      case 'cleaner':
+        return [
+          { name: "Format Standardization", description: "Ensure consistent data formats", enabled: true },
+          { name: "Missing Value Handling", description: "Identify and address missing data", enabled: true },
+          { name: "Deduplication", description: "Find and remove duplicate records", enabled: true }
+        ];
+      case 'planner':
+        return [
+          { name: "Query Analysis", description: "Understand user intent and requirements", enabled: true },
+          { name: "Task Distribution", description: "Coordinate agent activities for optimal workflow", enabled: true },
+          { name: "Priority Management", description: "Identify critical path for analysis", enabled: true }
+        ];
+      case 'query':
+        return [
+          { name: "Natural Language Processing", description: "Understand complex queries", enabled: true },
+          { name: "Parameter Extraction", description: "Identify key elements in requests", enabled: true },
+          { name: "Context Retention", description: "Maintain conversation history", enabled: true }
+        ];
+      case 'sql':
+        return [
+          { name: "Query Generation", description: "Create optimized SQL statements", enabled: true },
+          { name: "Schema Navigation", description: "Work efficiently with complex data models", enabled: true },
+          { name: "Performance Optimization", description: "Ensure fast query execution", enabled: true }
+        ];
+      case 'insight':
+        return [
+          { name: "Pattern Recognition", description: "Identify meaningful trends in data", enabled: true },
+          { name: "Statistical Analysis", description: "Apply advanced statistical methods", enabled: true },
+          { name: "Correlation Detection", description: "Find relationships between variables", enabled: true }
+        ];
+      case 'chart':
+        return [
+          { name: "Visualization Selection", description: "Choose optimal chart types for data", enabled: true },
+          { name: "Interactive Design", description: "Create engaging visual experiences", enabled: true },
+          { name: "Aesthetic Optimization", description: "Apply design principles for clarity", enabled: true }
+        ];
+      case 'narrative':
+        return [
+          { name: "Story Development", description: "Create compelling narratives from data", enabled: true },
+          { name: "Context Integration", description: "Connect findings to business context", enabled: true },
+          { name: "Communication Targeting", description: "Adjust content for specific audiences", enabled: true }
+        ];
+      case 'report':
+        return [
+          { name: "Content Organization", description: "Structure information for maximum impact", enabled: true },
+          { name: "Format Versatility", description: "Generate reports in various formats", enabled: true },
+          { name: "Visual Integration", description: "Combine text and visuals effectively", enabled: true }
+        ];
+      default:
+        return [
+          { name: "Basic Processing", description: "Handle standard operations", enabled: true },
+          { name: "Status Reporting", description: "Provide clear progress updates", enabled: true }
+        ];
+    }
+  };
+
+  // Enhanced agent panel renderer with dropdowns  // Removed renderAgentPanelWithDropdowns - replaced with AgentPanel component// Debug logging for agent visibility
+  console.log("LiveFlow render state:", { 
+    fileUploaded, 
+    agentCount: agents.length,
+    hasActiveAgent,
+    isPanelExpanded,
+    dataAgentStatus: agentStatus?.data || 'unknown',
+    enhancedAgentsCount: enhancedAgents.length,
+    enhancedAgentsTypes: enhancedAgents.map(a => a.type),
+    agentsTypes: agents.map(a => a.type)
+  });
+  
+  // Force panel expansion when file is uploaded
+  useEffect(() => {
+    if (fileUploaded) {
+      console.log("File uploaded - forcing panel expansion and agent visibility");
+      setIsPanelExpanded(true);
+    }
+  }, [fileUploaded]);
+  // Dropdown closing functionality removed as it's now handled by individual agent panels
+
+  return (
+    <div 
+      ref={liveFlowRef}
+      className={`glass-card-3d p-4 space-y-4 bg-gradient-to-br from-gray-600/10 to-slate-600/10 animate-slideInUp transition-all duration-500
+        ${isPanelExpanded || fileUploaded ? 'max-h-[2000px]' : 'max-h-[100px] overflow-hidden'}`}
+    >
+      {/* Header with expand/collapse toggle */}
+      <div className="relative">
+        <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-gray-500/30 to-transparent"></div>
+        <div className="absolute top-0 left-0 w-px h-4 bg-gradient-to-b from-gray-500/30 to-transparent"></div>
+        <div className="absolute top-0 right-0 w-px h-4 bg-gradient-to-b from-gray-500/30 to-transparent"></div>
+
+        <div 
+          className="flex items-center justify-between mb-2 pt-2 cursor-pointer" 
+          onClick={() => setIsPanelExpanded(!isPanelExpanded)}
+        >
+          <div className="flex items-center space-x-3">
+            <div className={`w-10 h-10 rounded-lg bg-gray-800/40 flex items-center justify-center border border-gray-700/50 
+              ${hasActiveAgent ? 'shadow-glow animate-pulse' : ''}`}
+            >
+              <span role="img" aria-label="live flow" className="text-xl">⚙️</span>
+            </div>
+            <div>
+              <h3 className="text-white font-medium">Live Agent Flow</h3>
+              <p className="text-white/70 text-xs">
+                {hasActiveAgent 
+                  ? `${enhancedAgents.filter(a => a.status === 'working').length} agents active` 
+                  : 'Agents ready'}
+              </p>
+            </div>
+          </div>
+          <div>
+            {isPanelExpanded ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            )}
+          </div>
+        </div>
+      </div>      {/* Agent groups with staggered animations */}
+      <div className="space-y-6">
+        {/* SIMPLIFIED: Always render all agent panels when file is uploaded */}
+        {fileUploaded && (
+          <div className="space-y-8 animate-fadeIn">
+            {/* File Upload Agents (Data & Cleaner) */}<div className="glass-card-3d p-4 bg-gradient-to-br from-purple-600/20 to-fuchsia-600/20">
+              <h5 className="text-white font-semibold mb-3">File Upload Agents</h5>
+              <div className="space-y-3">                {/* Reordering File Upload Agents to ensure Data Agent is first */}
+                {['data', 'cleaner'].map(agentType => enhancedAgents.find(agent => agent.type === agentType))
+                  .filter(Boolean)
+                  .map(agent => (
+                  <div key={agent.type} className="animate-fadeIn">                    <AgentPanel 
+                      agent={agent} 
+                      fileUploaded={fileUploaded}
+                      agentOutputs={getAgentSampleOutput(agent.type)}
+                      agentCapabilities={getAgentCapabilities(agent.type)}
+                    />
+                  </div>
+                ))}
+                {enhancedAgents.filter(agent => ['data', 'cleaner'].includes(agent.type)).length === 0 && (
+                  <p className="text-white/40 text-sm">No file upload agents found in agent data</p>
+                )}
+              </div>
+            </div>            {/* Chat Agents - Only show when a query has been asked or if any chat agent is active */}
+            <div className="glass-card-3d p-4 bg-gradient-to-br from-cyan-600/20 to-blue-600/20">
+              <h5 className="text-white font-semibold mb-3">Chat Response Agents</h5>
+              <div className="space-y-3">                {/* Only show if there's a query or if the chat response agents are active (user has clicked send) */}
+                {(currentQuery && currentQuery.trim() !== "") || enhancedAgents.some(agent => 
+                  ['planner', 'query', 'retrieval', 'sql', 'insight', 'chart', 'critique', 'debate'].includes(agent.type) && 
+                  (agent.status === 'working' || agent.status === 'complete')
+                ) ? (                  // Only show the chat agents if there's a current query or if any chat agent is active
+                  // Filter out SQL, Insight, and Chart agents as they will be displayed in the AnalyticsPanel
+                  // Reordering Chat Response Agents to match their invocation order
+                  ['planner', 'query', 'retrieval', 'critique', 'debate']
+                    .map(agentType => enhancedAgents.find(agent => agent.type === agentType))
+                    .filter(Boolean) // Filter out any undefined agents
+                    .map(agent => (
+                    <div key={agent.type} className="animate-fadeIn">
+                      <AgentPanel 
+                        agent={agent} 
+                        fileUploaded={fileUploaded}
+                        agentOutputs={getAgentSampleOutput(agent.type)}
+                        agentCapabilities={getAgentCapabilities(agent.type)}
+                      />
+                    </div>
+                  ))
+                  ) : (                  // If no query has been asked yet
+                  <p className="text-white/40 text-sm">Ask a question to activate chat response agents</p>
+                )}
+                
+                {/* Horizontal panels for Insight, SQL, and Chart agents - Moved below retrieval agent */}
+                {(currentQuery && currentQuery.trim() !== "") && (
+                  <div className="mt-6 analysis-panel-container">
+                    <h5 className="text-white font-semibold mb-3">Analysis Panels</h5>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* Only show if there's a query or if any analytics agent is active */}
+                      {enhancedAgents.some(agent => 
+                        ['insight', 'sql', 'chart'].includes(agent.type) && 
+                        (agent.status === 'working' || agent.status === 'complete')
+                      ) ? (
+                    // Horizontal layout for Insight, SQL and Chart agents
+                    ['insight', 'sql', 'chart'].map(agentType => {
+                      const agent = enhancedAgents.find(a => a.type === agentType);
+                      return agent && (
+                        <div key={agentType} className="animate-fadeIn">
+                          <AgentPanel 
+                            agent={agent} 
+                            fileUploaded={fileUploaded}
+                            agentOutputs={getAgentSampleOutput(agentType)}
+                            agentCapabilities={getAgentCapabilities(agentType)}
+                          />
+                        </div>
+                      );                    })
+                  ) : (
+                    <p className="text-white/40 text-sm col-span-3">Analysis agents will appear here</p>
+                  )}
+                    </div>
+                  </div>
+                )}
+            
+            {/* Output Agents - Enhanced Narrative & Report Panels */}
+            <div className="space-y-4">
+              <h5 className="text-white font-semibold">Enhanced Output Agents</h5>
+              
+              {/* Advanced Narrative Agent Panel */}
+              <NarrativeAgentPanel 
+                agent={enhancedAgents.find(agent => agent.type === 'narrative')}
+                fileUploaded={fileUploaded}
+              />
+              
+              {/* Advanced Report Generator Panel */}
+              <ReportAgentPanel 
+                agent={enhancedAgents.find(agent => agent.type === 'report')}
+                fileUploaded={fileUploaded}
+              />
+              
+              {/* Fallback if no agents found */}
+              {enhancedAgents.filter(agent => ['narrative', 'report'].includes(agent.type)).length === 0 && (
+                <div className="glass-card-3d p-4 bg-gradient-to-br from-emerald-600/20 to-teal-600/20">
+                  <p className="text-white/40 text-sm text-center py-4">
+                    No output agents (narrative/report) found in agent data
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

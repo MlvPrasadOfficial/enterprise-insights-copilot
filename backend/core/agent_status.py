@@ -19,7 +19,7 @@ _lock = threading.Lock()
 _agent_statuses: Dict[str, List[Dict]] = {}
 
 def update_agent_status(session_id: str, agent_name: str, status: str, 
-                       agent_type: str, message: str):
+                       agent_type: str, message: str, additional_data: Dict = None):
     """
     Update the status of an agent for a particular session.
     
@@ -29,6 +29,7 @@ def update_agent_status(session_id: str, agent_name: str, status: str,
         status (str): Current status (idle, working, complete, error)
         agent_type (str): Type of agent (planner, chart, sql, insight, critique, debate)
         message (str): Status message or current activity description
+        additional_data (Dict, optional): Any additional data to store with the agent status
     """
     with _lock:
         if session_id not in _agent_statuses:
@@ -44,6 +45,11 @@ def update_agent_status(session_id: str, agent_name: str, status: str,
                     agent['startTime'] = datetime.now().isoformat()
                 if status in ['complete', 'error']:
                     agent['endTime'] = datetime.now().isoformat()
+                
+                # Add any additional data to the agent status
+                if additional_data:
+                    for key, value in additional_data.items():
+                        agent[key] = value
                 return
         
         # Agent doesn't exist, add it
@@ -55,6 +61,11 @@ def update_agent_status(session_id: str, agent_name: str, status: str,
         }
         if status == 'working':
             new_agent['startTime'] = datetime.now().isoformat()
+        
+        # Add any additional data to the agent status
+        if additional_data:
+            for key, value in additional_data.items():
+                new_agent[key] = value
             
         _agent_statuses[session_id].append(new_agent)
 
