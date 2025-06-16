@@ -116,7 +116,6 @@ if PROJECT_ROOT not in sys.path:
     sys.path.append(PROJECT_ROOT)
 
 from backend.core.llm_rag import upsert_document, run_rag
-from backend.core.memory import memory
 from config.settings import load_prompt
 from backend.agents.chart_agent import ChartAgent
 from backend.agents.sql_agent import SQLAgent
