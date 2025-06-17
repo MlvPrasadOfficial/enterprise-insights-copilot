@@ -523,15 +523,17 @@ async def index_csv(file: UploadFile = File(...)) -> Any:
         from backend.core.agent_status import update_agent_status
         session_id = "default"  # Use request's session ID if available
         
-        # Prepare cleaning results for the frontend
+        # Prepare cleaning results for the frontend - include detailed_results
         cleaning_result = {
             "operations": result["operations"],
-            "cleaning_stats": result["cleaning_stats"]
+            "cleaning_stats": result["cleaning_stats"],
+            "detailed_results": result.get("detailed_results", {})
         }
         
         # Log detailed cleaning results for debugging
         logger.info(f"[UPLOAD] Real cleaning operations: {result['operations']}")
         logger.info(f"[UPLOAD] Cleaning stats: {result['cleaning_stats']}")
+        logger.info(f"[UPLOAD] Detailed results present: {True if result.get('detailed_results') else False}")
         
         # Update the agent status with real cleaning results
         update_agent_status(
@@ -1197,28 +1199,38 @@ async def get_data_cleaner_results(request: Request):
         "detailed_results": Detailed breakdown of cleaning operations
     }
     """
+    logger.info(f"[DATA-CLEANER] Endpoint called with request: {request.query_params}")
     try:
         from backend.core.agent_status import get_agent_statuses
         import pandas as pd
+        import traceback
         from backend.agents.data_cleaner_agent import DataCleanerAgent
         
         session_id = request.query_params.get("session_id", "default")
+        logger.info(f"[DATA-CLEANER] Getting results for session_id: {session_id}")
+        
         agent_statuses = get_agent_statuses(session_id)
+        logger.info(f"[DATA-CLEANER] Found {len(agent_statuses)} total agents")
         
         # Find the Data Cleaner agent
         cleaner_agents = [agent for agent in agent_statuses if agent.get('type') == 'cleaner']
+        logger.info(f"[DATA-CLEANER] Found {len(cleaner_agents)} cleaner agents")
         
         # First try to get results from agent status
         cleaning_result = {}
         if cleaner_agents:
             # Get the most recent Data Cleaner agent
             cleaner_agent = cleaner_agents[-1]
+            logger.info(f"[DATA-CLEANER] Latest cleaner agent: {cleaner_agent.get('name')}, status: {cleaner_agent.get('status')}")
             
             # Look for cleaningResult or any similar property
+            agent_data_keys = list(cleaner_agent.keys())
+            logger.info(f"[DATA-CLEANER] Agent data keys: {agent_data_keys}")
+            
             for key in cleaner_agent:
                 if key.lower() == 'cleaningresult':
                     cleaning_result = cleaner_agent[key]
-                    logger.info(f"[DATA-CLEANER] Found cleaning results in agent status: {cleaning_result}")
+                    logger.info(f"[DATA-CLEANER] Found cleaning results in agent status with keys: {list(cleaning_result.keys()) if isinstance(cleaning_result, dict) else 'not a dict'}")
                     break
                     
         # If we don't have results from status, try to regenerate them if possible
@@ -1226,48 +1238,70 @@ async def get_data_cleaner_results(request: Request):
             not cleaning_result.get("operations") or 
             not cleaning_result.get("cleaning_stats")):
             
+            logger.info(f"[DATA-CLEANER] No complete cleaning results found in agent status, trying to regenerate")
+            
             # Let's check if we have data in memory from the file upload
-            from backend.core.memory import memory
-            if memory.df is not None and not memory.df.empty:
-                logger.info(f"[DATA-CLEANER] Regenerating results from memory DataFrame: {memory.df.shape}")
+            try:
+                from backend.core.session_memory import memory
                 
-                # Create a new cleaner instance and clean the data
-                try:
-                    cleaner = DataCleanerAgent(memory.df)
-                    result = cleaner._execute("", memory.df)
+                memory_has_data = memory.df is not None and not memory.df.empty
+                logger.info(f"[DATA-CLEANER] Memory check: has_data={memory_has_data}, " + 
+                           f"filename={memory.filename}, " + 
+                           f"shape={memory.df.shape if memory_has_data else 'None'}")
+                
+                if memory_has_data:
+                    logger.info(f"[DATA-CLEANER] Regenerating results from memory DataFrame with shape: {memory.df.shape}")
                     
-                    # Format cleaning results for the frontend including detailed results
-                    cleaning_result = {
-                        "operations": result["operations"],
-                        "cleaning_stats": result["cleaning_stats"],
-                        "detailed_results": result.get("detailed_results", {})
-                    }
-                    
-                    # Log detailed information about what was performed
-                    logger.info(f"[DATA-CLEANER] Cleaning operations performed: {len(result['operations'])}")
-                    for op_type, count in result['cleaning_stats'].get('operations_by_type', {}).items():
-                        logger.info(f"[DATA-CLEANER] {op_type}: {count} operations")
+                    # Create a new cleaner instance and clean the data
+                    try:
+                        cleaner = DataCleanerAgent(memory.df)
+                        logger.info(f"[DATA-CLEANER] Created DataCleanerAgent instance")
                         
-                    if 'operation_details' in result['cleaning_stats']:
-                        for op_type, details in result['cleaning_stats']['operation_details'].items():
-                            logger.info(f"[DATA-CLEANER] {op_type} details: {details}")
-                    
-                    # Update the agent status with the enhanced results
-                    from backend.core.agent_status import update_agent_status
-                    update_agent_status(
-                        session_id=session_id,
-                        agent_name="Data Cleaner",
-                        status="complete",
-                        agent_type="cleaner",
-                        message="Data cleaning completed with detailed results",
-                        additional_data={"cleaningResult": cleaning_result}
-                    )
-                    
-                    logger.info(f"[DATA-CLEANER] Generated enhanced cleaning results")
-                except Exception as cleaner_error:
-                    logger.error(f"[DATA-CLEANER] Error generating cleaning results: {cleaner_error}")
-                    traceback.print_exc()
-            else:
+                        result = cleaner._execute("", memory.df)
+                        logger.info(f"[DATA-CLEANER] Executed cleaner with result keys: {list(result.keys())}")
+                        
+                        # Format cleaning results for the frontend including detailed results
+                        cleaning_result = {
+                            "operations": result["operations"],
+                            "cleaning_stats": result["cleaning_stats"],
+                            "detailed_results": result.get("detailed_results", {})
+                        }
+                        
+                        logger.info(f"[DATA-CLEANER] Regenerated cleaning_result with {len(result['operations'])} operations, " + 
+                                   f"{len(result['cleaning_stats'])} stats entries, and " + 
+                                   f"detailed_results={True if result.get('detailed_results') else False}")
+                        
+                        # Log detailed information about what was performed
+                        logger.info(f"[DATA-CLEANER] Cleaning operations performed: {len(result['operations'])}")
+                        for op_type, count in result['cleaning_stats'].get('operations_by_type', {}).items():
+                            logger.info(f"[DATA-CLEANER] {op_type}: {count} operations")
+                            
+                        if 'operation_details' in result['cleaning_stats']:
+                            for op_type, details in result['cleaning_stats']['operation_details'].items():
+                                logger.info(f"[DATA-CLEANER] {op_type} details: {details}")
+                                
+                            # Update the agent status with the enhanced results
+                            from backend.core.agent_status import update_agent_status
+                            update_agent_status(
+                                session_id=session_id,
+                                agent_name="Data Cleaner",
+                                status="complete",
+                                agent_type="cleaner",
+                                message="Data cleaning completed with detailed results",
+                                additional_data={"cleaningResult": cleaning_result}
+                            )
+                            
+                            logger.info(f"[DATA-CLEANER] Generated enhanced cleaning results")
+                    except Exception as cleaner_error:
+                        logger.error(f"[DATA-CLEANER] Error generating cleaning results: {cleaner_error}")
+                        logger.error(traceback.format_exc())
+            except ImportError as e:
+                logger.error(f"[DATA-CLEANER] Import error accessing memory: {e}")
+                logger.error(traceback.format_exc())
+                memory_has_data = False
+                
+            # Check if memory has data outside of the try-except blocks
+            if not memory_has_data:
                 logger.warning("[DATA-CLEANER] No data available in memory to clean")
         
         # If still no results, create minimal structure with detailed results placeholders

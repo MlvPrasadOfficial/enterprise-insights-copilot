@@ -204,6 +204,10 @@ export default function DataCleanerResults({ cleaningResult }: DataCleanerResult
         <div className="glass-card-3d p-4 bg-gradient-to-br from-purple-600/10 to-fuchsia-600/10">
           <h3 className="text-white text-lg font-medium mb-4">Cleaning Results</h3>
           <p className="text-white/70">No detailed cleaning results available. The data may not have required cleaning.</p>
+          <div className="mt-2 text-xs text-white/50">
+            <p>Received data: {JSON.stringify(cleaningResult || {}, null, 2)}</p>
+            <p>Please upload a CSV file to see real cleaning results.</p>
+          </div>
         </div>
       </div>
     );
@@ -212,12 +216,33 @@ export default function DataCleanerResults({ cleaningResult }: DataCleanerResult
   const { operations, cleaning_stats, detailed_results } = cleaningResult;
   
   // Log the actual operations and detailed results for debugging
-  console.log("Rendering DataCleanerResults with operations:", operations);
-  console.log("Cleaning stats:", cleaning_stats);
+  console.log("Rendering DataCleanerResults with operations:", operations);  console.log("Cleaning stats:", cleaning_stats);
   console.log("Detailed results:", detailed_results);
+  
+  // Enhanced debug information in console
+  console.log("DataCleanerResults: Rendering with props:", {
+    hasData: !!cleaningResult,
+    isRealData: cleaningResult?.isRealData,
+    operationsCount: cleaningResult?.operations?.length || 0,
+    hasDetailedResults: !!cleaningResult?.detailed_results,
+    detailedResultsKeys: cleaningResult?.detailed_results ? Object.keys(cleaningResult.detailed_results) : [],
+    unitConversions: cleaningResult?.detailed_results?.units_normalized?.length || 0,
+    numericConversions: cleaningResult?.detailed_results?.numeric_conversions?.length || 0,
+    dateConversions: cleaningResult?.detailed_results?.date_conversions?.length || 0,
+  });
   
   return (
     <div className="space-y-6">
+      {/* Debug info visible in the UI */}
+      <div className="glass-card-3d p-2 mb-3 text-xs bg-gray-800/50 rounded">
+        <p>Debug: {cleaningResult?.isRealData ? 'Real Data' : 'Placeholder'}</p>
+        <p>Operations: {cleaningResult?.operations?.length || 0}</p>
+        <p>Detailed Results: {cleaningResult?.detailed_results ? 'Yes' : 'No'}</p>
+        <p>Unit Converts: {cleaningResult?.detailed_results?.units_normalized?.length || 0}</p>
+        <p>Numeric Converts: {cleaningResult?.detailed_results?.numeric_conversions?.length || 0}</p>
+        <p>Date Converts: {cleaningResult?.detailed_results?.date_conversions?.length || 0}</p>
+      </div>
+      
       {/* Summary Statistics */}
       <div className="glass-card-3d p-4 bg-gradient-to-br from-purple-600/10 to-fuchsia-600/10">
         <h3 className="text-white text-lg font-medium mb-4">Cleaning Summary</h3>

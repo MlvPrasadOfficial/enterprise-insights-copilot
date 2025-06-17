@@ -4,7 +4,11 @@ import React from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-export default function UploadFixed() {
+interface UploadFixedProps {
+  onUploadComplete?: () => void;
+}
+
+export default function UploadFixed({ onUploadComplete }: UploadFixedProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState("");
@@ -35,6 +39,11 @@ export default function UploadFixed() {
             columns: data.preview.columns || [],
             rows: data.preview.rows || []
           });
+        }
+        
+        // Call onUploadComplete callback if provided
+        if (onUploadComplete) {
+          onUploadComplete();
         }
       } else {
         throw new Error('Upload failed');

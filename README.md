@@ -5,28 +5,29 @@
 [![CI](https://github.com/MlvPrasadOfficial/enterprise-insights-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/MlvPrasadOfficial/enterprise-insights-copilot/actions/workflows/ci.yml)
 ![GenAI BI](https://img.shields.io/badge/GenAI-BI-blueviolet?style=for-the-badge)
 ![FastAPI Backend](https://img.shields.io/badge/FastAPI-Backend-green?style=for-the-badge)
-![Streamlit Frontend](https://img.shields.io/badge/Streamlit-Frontend-orange?style=for-the-badge)
-![Pinecone RAG](https://img.shields.io/badge/Pinecone-RAG-9cf?style=for-the-badge)
+![Next.js Frontend](https://img.shields.io/badge/Next.js-Frontend-orange?style=for-the-badge)
 ![LangGraph](https://img.shields.io/badge/LangGraph-MultiAgent-blue?style=for-the-badge)
-![CrewAI](https://img.shields.io/badge/CrewAI-Orchestration-yellow?style=for-the-badge)
+![React UI](https://img.shields.io/badge/React-UI-9cf?style=for-the-badge)
+![TypeScript](https://img.shields.io/badge/TypeScript-Code-yellow?style=for-the-badge)
 
-> **Conversational BI with LLMs, RAG, multi-agent orchestration, and instant analytics for everyone.**
+> **Enterprise-grade conversational BI platform with LLMs, RAG, multi-agent orchestration, and dynamic visualization for data-driven insights.**
 
 ---
 
 ## 🚀 Features
 
-- 📁 **Upload CSVs** directly from the UI
-- 💬 **Ask natural language questions** (e.g., "Show sales trend by region")
-- 🧠 **Retrieval-Augmented Generation (RAG)** using OpenAI + Pinecone
-- 📊 **Auto-generate charts** via Altair (line, bar, scatter, histogram)
-- 🧾 **Natural Language → SQL → Result** using DuckDB + GPT-4
-- 📌 **Auto-insights summary**: KPIs, anomalies, trends
-- 🧱 **Modular multi-agent architecture** (DataAgent, QueryAgent, ChartAgent, SQLAgent, InsightAgent)
-- 🤖 **Multi-agent workflows**: LangGraph, CrewAI, Debate Mode
-- 🧩 **Robust error handling, actionable user-facing errors**
-- 🧪 **Comprehensive test suite and CI integration**
-- 🔎 **LangSmith/LangChain tracing** for observability
+- 📁 **Modern UI with CSV Upload** featuring elegant glassmorphic design
+- 💬 **Natural Language Processing** for intuitive data querying
+- 🧠 **Advanced Multi-Agent System** with specialized AI agents
+- 📊 **Dynamic Data Visualization** with real-time chart generation
+- 🧾 **Natural Language → SQL → Result** pipeline for non-technical users
+- 📌 **Auto-insights Generation** for KPIs, anomalies, and trends
+- 🧱 **Modular Architecture** with DataAgent, QueryAgent, ChartAgent, SQLAgent, InsightAgent
+- 🖥️ **Responsive React/Next.js Frontend** with TypeScript
+- 🤖 **Real-time Agent Feedback** with detailed progress tracking
+- 🧩 **Comprehensive Error Handling** with actionable user messaging
+- 🌐 **FastAPI Backend** with efficient Python processing
+- 🔎 **Advanced Observability** with logging and tracing
 
 ---
 
@@ -34,20 +35,21 @@
 
 📋 **[View Complete System Architecture](./docs/SYSTEM_ARCHITECTURE.md)** - Comprehensive flowchart covering frontend, backend, agents, data flow, orchestration, and CI/CD pipeline.
 
-**Quick Architecture Overview:**
+**Updated Architecture Overview:**
 ```mermaid
 flowchart TD
-    A[👤 User Interface] --> B[🌐 FastAPI Backend]
+    A[👤 Modern UI Layer] --> B[🌐 FastAPI Backend]
     B --> C[🎯 Agent Orchestrator]
     C --> D1[🧠 Planning Agent]
     D1 --> E1[💡 Insight Agent]
     D1 --> E2[🔍 SQL Agent]
     D1 --> E3[📊 Chart Agent]
+    D1 --> E4[📝 Narrative Agent]
+    D1 --> E5[📋 Report Agent]
     C --> F[🗄️ Data Store]
     C --> G[🤖 LLM API]
-    E1 --> H[💻 Frontend UI]
-    E2 --> H
-    E3 --> H
+    E1 & E2 & E3 & E4 & E5 --> H[💻 React/Next.js UI]
+    H --> I[🖌️ Glassmorphic Design System]
 ```
 
 ---
@@ -57,13 +59,14 @@ flowchart TD
 | Layer          | Stack                                |
 |----------------|---------------------------------------|
 | LLM Core       | GPT-4 via OpenAI API                  |
-| RAG Retrieval  | Pinecone vector DB                    |
 | SQL Engine     | DuckDB                                |
-| Frontend       | Streamlit                             |
-| Backend        | FastAPI                               |
-| Charting       | Altair                                |
-| Multi-Agent    | LangGraph, CrewAI                     |
-| Tracing        | LangSmith/LangChain                   |
+| Frontend       | Next.js + React + TypeScript          |
+| Backend        | FastAPI + Python 3.10+                |
+| UI Design      | Tailwind CSS + Glassmorphic UI        |
+| Charting       | React Visualization Libraries         |
+| Multi-Agent    | LangGraph, Agent Orchestration        |
+| State Management| React Context + Custom Hooks          |
+| Build Tools    | npm/Node.js                           |
 
 ---
 
@@ -73,21 +76,29 @@ flowchart TD
 enterprise_insights_copilot/
 ├── backend/           # FastAPI, Agents, Core logic
 │   ├── agents/        # QueryAgent, ChartAgent, InsightAgent, etc.
-│   ├── agentic/       # Multi-agent: planner, retriever, analyst, critic, debate, graph_flow, crews
-│   ├── core/          # LLM, Pinecone integration, loader, utils
-│   ├── api/           # (reserved for future API modules)
+│   ├── agentic/       # Multi-agent orchestration system
+│   ├── core/          # LLM integration, utilities
+│   ├── api/           # API routes and endpoints
 │   └── main.py        # FastAPI entrypoint
 ├── config/            # .env, settings, constants, prompts
-│   ├── prompts/       # Prompt templates
-├── frontend/          # Streamlit UI
-│   └── app.py         # Streamlit entrypoint
+│   ├── prompts/       # LLM prompt templates
+│   └── agent_config.yaml # Agent configuration
+├── frontend/          # Next.js + React UI
+│   ├── app/           # Next.js app directory
+│   ├── components/    # React components
+│   ├── utils/         # Frontend utilities and API helpers
+│   ├── hooks/         # React custom hooks
+│   └── public/        # Static assets
 ├── data/              # Sample/test data
+├── docs/              # Documentation and architecture
 ├── tests/             # Pytest-based tests (unit + e2e)
+├── package.json       # Frontend dependencies
 ├── requirements.txt   # Backend requirements
 ├── setup.bat / .sh    # Quickstart scripts (Windows/Linux)
 ├── render.yaml        # Render.com deployment config
-├── .env               # Environment variables (see below)
-├── README.md
+├── Dockerfile         # Container configuration
+├── .env               # Environment variables
+└── README.md
 ```
 
 ---
@@ -99,24 +110,40 @@ enterprise_insights_copilot/
 git clone https://github.com/your-name/enterprise-insights-copilot.git
 cd enterprise_insights_copilot
 
-# 2. Setup virtual environment
+# 2. Setup backend environment
 python -m venv venv
 .\venv\Scripts\activate
 
-# 3. Install requirements
+# 3. Install backend requirements
 pip install -r requirements.txt
 
 # 4. Set up environment variables
-copy .env.example .env  # Or create .env and fill in required keys (see below)
+copy .env.example .env  # Or create .env and fill in required keys
 
 # 5. Run backend
 cd backend
 uvicorn main:app --reload --port 8000
 
-# 6. Run frontend (in a new terminal)
-cd ../frontend
-streamlit run app.py
+# 6. Setup frontend dependencies (in a new terminal)
+cd frontend
+npm install
+
+# 7. Run frontend development server
+npm run dev
+
+# 8. Access the application
+# Open browser at http://localhost:3000
 ```
+
+### Using VS Code Tasks
+
+The project includes tasks.json configurations for VS Code:
+
+1. Open the project in VS Code
+2. Press `Ctrl+Shift+P` and select "Tasks: Run Task"
+3. Choose "Start Frontend" to run the Next.js development server
+
+You can also create your own tasks for combined backend/frontend startup.
 
 ---
 
@@ -147,15 +174,17 @@ pytest tests/
 
 ---
 
-## 🧪 Example Prompts
+## 💬 Example Prompts
 
 ```text
-Compare average profit across categories
-What is the sales trend by month?
-Show me outliers in recovery time by hospital
-Summarize this dataset's key patterns
-Which gender has the highest salary?
-Which city has the highest salary?
+Compare sales performance across product categories
+What is the revenue trend by quarter for our top products?
+Show me the relationship between price and sales volume
+Identify outliers in our customer acquisition costs
+Which region has the highest profit margin?
+Create a visualization of product sales by category
+Generate insights about our best performing products
+Analyze the correlation between marketing spend and sales
 ```
 
 ---
@@ -178,22 +207,26 @@ Which city has the highest salary?
 
 ---
 
-## 🤖 Multi-Agent Workflows
+## 🤖 Agent System Architecture
 
-### LangGraph
-- Orchestrates planner, retriever, analyst, critic, and debate agents in a directed graph.
-- See `backend/agentic/graph_flow.py` for the workflow definition.
-- Run via `/api/v1/langgraph` endpoint.
+### Core Agents
+- **Data Agent**: Processes and analyzes uploaded files, providing dataset statistics and structure information
+- **Planning Agent**: Analyzes queries and creates execution plans for other agents
+- **Query Agent**: Processes natural language queries and extracts key parameters
+- **Retrieval Agent**: Searches for relevant context and information from knowledge bases
+- **SQL Agent**: Generates and executes SQL queries against the data
+- **Insight Agent**: Analyzes data patterns and generates meaningful business insights
+- **Chart Agent**: Creates appropriate data visualizations based on data and query
+- **Critique Agent**: Evaluates the quality and accuracy of generated insights
+- **Debate Agent**: Provides multiple perspectives on data interpretation
+- **Narrative Agent**: Creates coherent stories from data insights
+- **Report Agent**: Compiles insights into comprehensive reports
 
-### CrewAI
-- Assigns specialized agents to tasks and coordinates their collaboration.
-- See `backend/agentic/crews.py` for crew/task setup.
-- Run via `/api/v1/crewai` endpoint.
-
-### Debate Mode
-- Two LLM agents debate a question, a judge agent summarizes the best answer.
-- See `backend/agentic/debate_mode.py`.
-- Run via `/api/v1/debate` endpoint.
+### Agent Orchestration
+- Agents work in parallel and sequence based on query requirements
+- Specialized agents are activated based on query complexity and intent
+- Dynamic feedback loop allows agents to improve outputs based on user interaction
+- See `backend/agentic/` for the orchestration implementation details
 
 ---
 
@@ -216,7 +249,16 @@ Which city has the highest salary?
 
 ---
 
-## 📄 License eee
+## � Recent Updates
+
+### June 2025 Updates
+- **UI Enhancement**: Improved agent output displays with dynamic content based on queries
+- **Agent System Optimization**: Removed Data Cleaner agent to streamline the agent workflow
+- **Frontend Modernization**: Enhanced React components with real-time data integration
+- **Performance Improvements**: Optimized agent response rendering and data flow
+- **Documentation**: Updated documentation to reflect current system architecture
+
+## 📄 License
 
 MIT License
 
@@ -251,36 +293,53 @@ uvicorn backend.main:app --host 0.0.0.0 --port $PORT
 ### **🔗 Key Architecture Components**
 | Component | Description | Documentation |
 |-----------|-------------|---------------|
-| 🤖 **Multi-Agent System** | LangGraph orchestrated agents for specialized tasks | [Agent Workflows](./docs/agentic_workflows.md) |
-| 🌐 **FastAPI Backend** | Python 3.12 + Pydantic with REST API endpoints | [Backend Guide](./backend/README.md) |
-| ⚛️ **Next.js Frontend** | React 19 + TypeScript with glassmorphic design | [Frontend Guide](./frontend/README.md) |
-| 🗄️ **Data Pipeline** | Pandas + Pinecone for data processing and RAG | [Data Flow](./docs/SYSTEM_ARCHITECTURE.md#data-flow-process) |
+| 🤖 **Optimized Agent System** | Streamlined agents with improved specialization | [Agent Workflows](./docs/agentic_workflows.md) |
+| 🌐 **FastAPI Backend** | Python 3.10+ + Pydantic with REST API endpoints | [Backend Guide](./backend/README.md) |
+| ⚛️ **Next.js Frontend** | React + TypeScript with modern glassmorphic design | [Frontend Guide](./frontend/README.md) |
+| 🗄️ **Data Processing** | Efficient data handling with CSV upload capabilities | [Data Flow](./docs/SYSTEM_ARCHITECTURE.md#data-flow-process) |
+| 💬 **Natural Language Processing** | Intelligent query understanding and parameter extraction | [NLP System](./docs/nlp_system.md) |
+| 📊 **Dynamic Visualization** | Real-time chart generation with interactive features | [Visualization](./docs/visualization.md) |
 | 🔄 **CI/CD Pipeline** | GitHub Actions + Docker for automated deployment | [Deployment](./render.yaml) |
 
-### **🚀 Quick Architecture Overview**
+### **🚀 Current Architecture Overview**
 ```mermaid
 flowchart TD
-    A[👤 User Interface] --> B[🌐 FastAPI Backend]
+    A[👤 Modern React UI] --> B[🌐 FastAPI Backend]
     B --> C[🎯 Agent Orchestrator]
-    C --> D1[🧠 Planning Agent]
-    D1 --> E1[💡 Insight Agent]
-    D1 --> E2[🔍 SQL Agent]
-    D1 --> E3[📊 Chart Agent]
+    C --> D1[📁 Data Agent]
+    C --> D2[🧠 Planning Agent]
+    D2 --> E1[💡 Insight Agent]
+    D2 --> E2[🔍 SQL Agent]
+    D2 --> E3[📊 Chart Agent]
+    D2 --> E4[📝 Narrative Agent]
+    D2 --> E5[🔍 Query Agent]
+    D2 --> E6[📚 Retrieval Agent]
     C --> F[🗄️ Data Store]
     C --> G[🤖 LLM API]
-    E1 --> H[💻 Frontend UI]
-    E2 --> H
-    E3 --> H
+    E1 & E2 & E3 & E4 & E5 & E6 --> H[⚛️ Next.js Frontend]
+    H --> I[👁️ User View]
 ```
 
 ---
 
-## 🎨 Portfolio Ready
+## 🎨 UI & User Experience
 
-- Modular, production-grade codebase
-- Actionable errors and robust test coverage
-- Multi-agent orchestration (LangGraph, CrewAI, Debate)
-- CI/CD ready for professional deployment
+- **Glassmorphic Design**: Modern, elegant UI with depth and transparency effects
+- **Real-time Agent Feedback**: Visual indicators of agent activity and progress
+- **Dynamic Content Generation**: Agent outputs adapt based on query context and data structure
+- **Responsive Layout**: Optimized for both desktop and tablet viewing experiences
+- **Interactive Components**: Expandable panels, tooltips, and contextual information
+- **Error Handling**: User-friendly error messages with actionable guidance
+- **Data Visualization**: Clean, informative charts with consistent styling
+
+## 💼 Enterprise Ready
+
+- Modular, production-grade codebase with clean architecture
+- Comprehensive error handling and logging
+- Optimized agent system with specialized AI capabilities
+- Responsive UI suitable for professional environments
+- CI/CD ready with containerization support
+- Extensive documentation and architecture diagrams
 
 ---
 

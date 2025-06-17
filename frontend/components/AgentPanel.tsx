@@ -24,20 +24,21 @@ interface AgentPanelProps {
   fileUploaded: boolean;
   agentOutputs?: AgentOutput[];
   agentCapabilities?: AgentCapability[];
+  customOutputContent?: React.ReactNode; // Add support for custom output content
 }
 
 export default function AgentPanel({ 
   agent, 
   fileUploaded,
   agentOutputs = [],
-  agentCapabilities = []
+  agentCapabilities = [],
+  customOutputContent = null
 }: AgentPanelProps) {
   const [expanded, setExpanded] = useState(false);
   const [showOutputs, setShowOutputs] = useState(false);
   const [showCapabilities, setShowCapabilities] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-  
-  // Animation effect when agent appears or changes status
+    // Animation effect when agent appears or changes status
   useEffect(() => {
     if (agent && fileUploaded) {
       // Delay visibility to create staggered appearance animation
@@ -49,11 +50,16 @@ export default function AgentPanel({
                    
       const timer = setTimeout(() => {
         setIsVisible(true);
+        
+        // Automatically show outputs when custom content is provided
+        if (customOutputContent && agent.type === 'cleaner') {
+          setShowOutputs(true);
+        }
       }, delay);
       
       return () => clearTimeout(timer);
     }
-  }, [agent, fileUploaded]);
+  }, [agent, fileUploaded, customOutputContent]);
     
   // Don't render if not uploaded or agent not available
   if (!fileUploaded || !agent) return null;
@@ -189,9 +195,13 @@ export default function AgentPanel({
               </svg>
               Agent Outputs
             </h4>
-            
-            <div className="space-y-2">
-              {agentOutputs.length > 0 ? (
+              <div className="space-y-2">
+              {customOutputContent ? (
+                // If custom output content is provided, render it
+                <div className="bg-indigo-900/30 rounded p-3">
+                  {customOutputContent}
+                </div>
+              ) : agentOutputs.length > 0 ? (
                 agentOutputs.map((output, index) => (
                   <div key={index} className="bg-indigo-900/30 rounded p-3">
                     <div className="text-white/90 text-sm font-medium">{output.title}</div>

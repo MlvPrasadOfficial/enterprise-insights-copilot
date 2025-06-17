@@ -13,9 +13,8 @@ const FileUploadAgentsPanel:React.FC<FileUploadAgentsPanelProps> = ({
   enhancedAgents, 
   renderAgentPanel,
   fileUploaded = false
-}) => {
-  // First Data Agent, then Data Cleaner Agent
-  const fileUploadAgentTypes = ['data', 'cleaner'];
+}) => {  // Only Data Agent (Data Cleaner agent has been removed)
+  const fileUploadAgentTypes = ['data'];
   const fileUploadAgents = fileUploadAgentTypes
     .map(type => enhancedAgents.find(agent => agent.type === type))
     .filter(agent => agent !== undefined) as any[];

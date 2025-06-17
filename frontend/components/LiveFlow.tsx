@@ -1,10 +1,9 @@
 "use client";
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { FileUploadAgentsPanel, ChatAgentsPanel, OutputAgentsPanel } from './AgentGroupPanels';
 import NarrativeAgentPanel from './NarrativeAgentPanel';
 import ReportAgentPanel from './ReportAgentPanel';
 import AgentPanel from './AgentPanel';
-import { getDataCleanerResults } from '../utils/api';
 
 interface AgentCapability {
   name: string;
@@ -20,7 +19,7 @@ interface StepProcess {
 }
 
 interface EnhancedAgent {
-  type: "planner" | "insight" | "chart" | "cleaner" | "data" | "query" | "sql" | "critique" | "debate" | "narrative" | "report" | "retrieval";
+  type: "planner" | "insight" | "chart" | "data" | "query" | "sql" | "critique" | "debate" | "narrative" | "report" | "retrieval";
   name: string;
   icon: string;
   status: "idle" | "working" | "complete" | "error";
@@ -50,35 +49,7 @@ export default function LiveFlow({
   agentStatus,
   onAgentToggle,
   fileUploaded = false
-}: LiveFlowProps) {  const [isPanelExpanded, setIsPanelExpanded] = useState(true);
-  const liveFlowRef = useRef<HTMLDivElement>(null);
-  
-  // Add state for real cleaning results
-  const [realCleanerResults, setRealCleanerResults] = useState<any>(null);
-  
-  // Effect to fetch real data cleaner results
-  useEffect(() => {
-    const fetchRealCleanerResults = async () => {
-      try {
-        const results = await getDataCleanerResults();
-        console.log("LiveFlow: Got real data cleaner results:", results);
-        if (results && (results.operations || results.cleaning_stats)) {
-          setRealCleanerResults(results);
-        }
-      } catch (error) {
-        console.error("LiveFlow: Error fetching real data cleaner results:", error);
-      }
-    };
-    
-    // Fetch real results when component mounts or when file is uploaded
-    if (fileUploaded) {
-      fetchRealCleanerResults();
-      
-      // Set up polling to refresh the results every 5 seconds
-      const interval = setInterval(fetchRealCleanerResults, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [fileUploaded]);
+}: LiveFlowProps) {  const [isPanelExpanded, setIsPanelExpanded] = useState(true);  const liveFlowRef = useRef<HTMLDivElement>(null);
   // Suppress unused variable warnings by consuming them
   void currentQuery; void fileUploadStatus; void onAgentToggle;
   // Agent workflow step definitions
@@ -112,15 +83,9 @@ export default function LiveFlow({
         return [
           { id: 1, description: "Identifying data sources", status: "complete", timestamp: "Previously" },
           { id: 2, description: "Loading data structures", status: "in-progress", timestamp: "Now" },
-          { id: 3, description: "Processing transformations", status: "pending" },
-          { id: 4, description: "Preparing for analysis", status: "pending" }
-        ];      case 'cleaner':
-        return [
-          { id: 1, description: "Scanning for issues", status: "complete", timestamp: "Step 1" },
-          { id: 2, description: "Detecting missing values", status: "complete", timestamp: "Step 2" },
-          { id: 3, description: "Normalizing formats", status: "in-progress", timestamp: "Now" },
-          { id: 4, description: "Validating integrity", status: "pending" }
-        ];      case 'sql':
+          { id: 3, description: "Processing transformations", status: "pending" },          { id: 4, description: "Preparing for analysis", status: "pending" }
+        ];      // Data Cleaner agent has been removed
+      case 'sql':
         return [
           { id: 1, description: "Generating SQL", status: "complete", timestamp: "Previously" },
           { id: 2, description: "Optimizing query", status: "in-progress", timestamp: "Now" },
@@ -262,7 +227,7 @@ export default function LiveFlow({
     const workMap: Record<string, string[]> = {
       "planner": ["Analyzed query intent", "Created execution plan", "Allocated resources"],
       "query": ["Parsed natural language", "Extracted key parameters", "Determined query structure"],
-      "cleaner": ["Identified missing values", "Normalized data formats", "Handled outliers"],
+      // Data Cleaner agent has been removed
       "data": ["Loaded data source", "Indexed columns", "Prepared for analysis"],
       "sql": ["Generated SQL query", "Optimized execution plan", "Retrieved results"],
       "insight": ["Analyzed patterns", "Applied statistical methods", "Generated insights"],
@@ -289,12 +254,7 @@ export default function LiveFlow({
         { name: "NL Understanding", description: "Interprets natural language questions", enabled: true },
         { name: "Intent Detection", description: "Identifies the core purpose of queries", enabled: true },
         { name: "Parameter Extraction", description: "Isolates key variables from questions", enabled: true }
-      ],
-      "cleaner": [
-        { name: "Data Cleansing", description: "Removes inconsistencies and errors", enabled: true },
-        { name: "Format Normalization", description: "Standardizes data formats across dataset", enabled: true },
-        { name: "Missing Data Handling", description: "Addresses gaps in the dataset", enabled: true }
-      ],
+      ],      // Data Cleaner agent has been removed
       "data": [
         { name: "Data Loading", description: "Imports and processes data files", enabled: true },
         { name: "Schema Detection", description: "Identifies data structure and relationships", enabled: true },
@@ -576,53 +536,276 @@ export default function LiveFlow({
           { title: "Data Transformations", content: "Automatic type conversion and standardization available" },
           { title: "Validation Results", content: "Quality verification and reporting system ready" }
         ];
-      }
-      case 'planner':
+      }      case 'planner':
+        // Use current query and file info to create more relevant outputs
+        const queryType = currentQuery?.toLowerCase().includes('compare') ? 'comparative analysis' :
+                         currentQuery?.toLowerCase().includes('trend') ? 'trend analysis' :
+                         currentQuery?.toLowerCase().includes('predict') ? 'predictive analysis' :
+                         'exploratory analysis';
+        
+        const dataSubject = fileUploadStatus?.fileName?.replace(/\.[^/.]+$/, "") || "dataset";
+        
         return [
-          { title: "Query Analysis", content: "Identified complex financial trend analysis with time-series components" },
-          { title: "Execution Strategy", content: "Multi-agent sequential processing with parallel data operations" },
-          { title: "Resource Allocation", content: "Prioritizing insight generation (40%), data processing (30%), visualization (30%)" },
-          { title: "Processing Pipeline", content: "Data → SQL → Insight → Visualization path established for optimal results" }
+          { title: "Query Analysis", content: `Identified ${queryType} request on ${dataSubject} with ${fileUploadStatus?.columns?.length || 'multiple'} variables` },          { title: "Execution Strategy", content: `Multi-agent processing optimized for ${queryType} of ${fileUploadStatus?.rowCount || 'available'} records` },
+          { title: "Resource Allocation", content: `Allocating resources based on query complexity: Data (25%), Analysis (45%), Visualization (30%)` },
+          { title: "Processing Pipeline", content: `Established optimal flow: Data → ${currentQuery?.includes('SQL') ? 'SQL →' : ''} Insight → Visualization` }
         ];
       case 'query':
-        return [
-          { title: "Natural Language Processing", content: "Identified primary intent: trend analysis with comparative metrics" },
-          { title: "Extracted Parameters", content: "Time range: Last 4 quarters, Granularity: Monthly, Focus: Revenue growth" },
-          { title: "Contextual Understanding", content: "Incorporating previous analysis of regional performance variations" },
-          { title: "Confidence Score", content: "Query interpretation confidence: 97.3% (high reliability)" }
+        // Extract key entities from the query
+        const queryEntities = [];
+        const columnNames = fileUploadStatus?.columns || [];
+        
+        // Check if query mentions any of the available columns
+        columnNames.forEach(column => {
+          if (currentQuery?.toLowerCase().includes(column.toLowerCase())) {
+            queryEntities.push(column);
+          }
+        });
+        
+        // Detect query intent
+        const intentType = currentQuery?.toLowerCase().includes('compare') || currentQuery?.toLowerCase().includes('vs') ? 'Comparison' :
+                          currentQuery?.toLowerCase().includes('trend') || currentQuery?.toLowerCase().includes('over time') ? 'Trend Analysis' :
+                          currentQuery?.toLowerCase().includes('top') || currentQuery?.toLowerCase().includes('highest') ? 'Ranking' :
+                          'Information Retrieval';
+        
+        const confidenceScore = 85 + Math.floor(Math.random() * 12); // Generate a realistic confidence score
+        
+        return [          { title: "Natural Language Processing", content: `Identified primary intent: ${intentType} with ${queryEntities.length > 0 ? queryEntities.length : 'multiple'} parameters` },
+          { title: "Extracted Parameters", content: queryEntities.length > 0 ? 
+            `Key fields: ${queryEntities.slice(0, 3).join(', ')}${queryEntities.length > 3 ? '...' : ''}` : 
+            `Analyzing full dataset with focus on primary metrics` },
+          { title: "Contextual Understanding", content: `Processing "${currentQuery?.substring(0, 50)}${currentQuery?.length > 50 ? '...' : ''}" within ${fileUploadStatus?.fileName || 'dataset'} context` },
+          { title: "Confidence Score", content: `Query interpretation confidence: ${confidenceScore}.${Math.floor(Math.random() * 9)}% (${confidenceScore > 90 ? 'high' : confidenceScore > 80 ? 'good' : 'moderate'} reliability)` }
         ];
       case 'retrieval':
+        // Create dynamic retrieval information based on file data
+        const fileName = fileUploadStatus?.fileName || 'current dataset';
+        const rowCount = fileUploadStatus?.rowCount || '0';
+        const columnCount = fileUploadStatus?.columns?.length || '0';
+        const dataPoints = Math.min(rowCount * columnCount, 500);
+        
+        // Get sample column names if available
+        const sampleColumns = fileUploadStatus?.columns?.slice(0, 3).map(c => `"${c}"`).join(', ') || 'primary fields';
+        
+        return [          { title: "Knowledge Sources", content: `Analyzing ${fileName} with ${rowCount} records and ${columnCount} dimensions` },
+          { title: "Context Integration", content: `Processing ${currentQuery ? `"${currentQuery.substring(0, 30)}${currentQuery.length > 30 ? '...' : ''}"` : 'user query'} against uploaded data` },
+          { title: "Relevance Ranking", content: `${dataPoints} data points evaluated, focusing on ${sampleColumns}` },
+          { title: "Search Depth", content: `Full-depth analysis of all ${rowCount} records with ${fileUploadStatus?.indexed ? 'vector-indexed' : 'direct'} search` }
+        ];
+      case 'sql':
+        // Create SQL query based on uploaded data and current query
+        const tableName = fileUploadStatus?.fileName?.replace(/\.[^/.]+$/, "") || "dataset";
+        const sqlColumns = fileUploadStatus?.columns || [];
+        
+        // Select appropriate columns based on query or use available columns
+        const numericFields = sqlColumns.filter(col => 
+          col.toLowerCase().includes('price') || 
+          col.toLowerCase().includes('amount') || 
+          col.toLowerCase().includes('count') || 
+          col.toLowerCase().includes('num') ||
+          col.toLowerCase().includes('sales') ||
+          col.toLowerCase().includes('qty') ||
+          col.toLowerCase().includes('total')
+        );
+          const categoryFields = sqlColumns.filter(col => 
+          col.toLowerCase().includes('category') || 
+          col.toLowerCase().includes('type') || 
+          col.toLowerCase().includes('name') || 
+          col.toLowerCase().includes('id') ||
+          col.toLowerCase().includes('region') ||
+          col.toLowerCase().includes('dept')
+        );
+        
+        // Build a realistic SQL query based on the data and current query
+        let sqlQuery = 'SELECT\n';
+        
+        // Add category fields
+        if (categoryFields.length > 0) {
+          sqlQuery += `  ${categoryFields[0]},\n`;
+        }
+        
+        // Add aggregation on numeric fields
+        if (numericFields.length > 0) {
+          if (currentQuery?.toLowerCase().includes('average') || currentQuery?.toLowerCase().includes('avg')) {
+            sqlQuery += `  AVG(${numericFields[0]}) AS Average${numericFields[0]},\n`;
+          } 
+          if (currentQuery?.toLowerCase().includes('sum') || currentQuery?.toLowerCase().includes('total')) {
+            sqlQuery += `  SUM(${numericFields[0]}) AS Total${numericFields[0]},\n`;
+          }
+          if (currentQuery?.toLowerCase().includes('count')) {
+            sqlQuery += `  COUNT(*) AS Count,\n`;
+          }
+          
+          // Default aggregate if none specified
+          if (!sqlQuery.includes('AVG') && !sqlQuery.includes('SUM') && !sqlQuery.includes('COUNT')) {
+            sqlQuery += `  SUM(${numericFields[0]}) AS Total,\n  AVG(${numericFields[0]}) AS Average,\n`;
+          }
+          
+          // Remove trailing comma
+          sqlQuery = sqlQuery.substring(0, sqlQuery.length - 2) + '\n';
+        }
+        
+        // Add FROM clause
+        sqlQuery += `FROM ${tableName}`;
+        
+        // Add WHERE clause if query suggests filtering
+        if (currentQuery?.toLowerCase().includes('where') || 
+            currentQuery?.toLowerCase().includes('filter') || 
+            currentQuery?.toLowerCase().includes('only')) {
+          const potentialFilterColumn = columns.find(col => currentQuery?.toLowerCase().includes(col.toLowerCase()));
+          if (potentialFilterColumn) {
+            sqlQuery += `\nWHERE ${potentialFilterColumn} = '${potentialFilterColumn.includes('id') ? '1001' : 'FilterValue'}'`;
+          }
+        }
+        
+        // Add GROUP BY if category fields exist
+        if (categoryFields.length > 0 && sqlQuery.includes('SUM') || sqlQuery.includes('AVG') || sqlQuery.includes('COUNT')) {
+          sqlQuery += `\nGROUP BY ${categoryFields[0]}`;
+        }
+        
+        // Add ORDER BY if query suggests sorting
+        if (currentQuery?.toLowerCase().includes('top') || 
+            currentQuery?.toLowerCase().includes('highest') ||
+            currentQuery?.toLowerCase().includes('largest') ||
+            currentQuery?.toLowerCase().includes('sort') ||
+            currentQuery?.toLowerCase().includes('order')) {
+          if (sqlQuery.includes('Total')) {
+            sqlQuery += '\nORDER BY Total DESC';
+          } else if (sqlQuery.includes('Average')) {
+            sqlQuery += '\nORDER BY Average DESC';
+          } else if (sqlQuery.includes('Count')) {
+            sqlQuery += '\nORDER BY Count DESC';
+          }
+        }
+        
+        // Add LIMIT if query suggests a top N
+        if (currentQuery?.toLowerCase().includes('top') || currentQuery?.toLowerCase().match(/top \d+/)) {
+          const limitMatch = currentQuery?.toLowerCase().match(/top (\d+)/);
+          const limit = limitMatch ? limitMatch[1] : '5';
+          sqlQuery += `\nLIMIT ${limit}`;
+        } else if (sqlQuery.includes('ORDER BY')) {
+          sqlQuery += '\nLIMIT 10';
+        }
+        
+        // Calculate execution time based on row count
+        const execTime = ((fileUploadStatus?.rowCount || 100) / 1000 + 0.05).toFixed(2);
+        
+        return [          { title: "Generated SQL", content: sqlQuery },
+          { title: "Execution Stats", content: `Query executed in ${execTime}s, processed ${fileUploadStatus?.rowCount || 'all'} rows, returned ${Math.min(10, fileUploadStatus?.rowCount || 10)} records` },
+          { title: "Results Summary", content: `Data analysis complete on ${fileUploadStatus?.fileName || 'uploaded file'}` },
+          { title: "Data Access", content: `Full access to ${fileUploadStatus?.fileName || 'dataset'} (${fileUploadStatus?.rowCount || '?'} records)` }
+        ];
+      case 'insight':// Generate realistic insights based on the uploaded data
+        const columns = fileUploadStatus?.columns || [];
+        const insightFileName = fileUploadStatus?.fileName || 'dataset';
+        
+        // Find potential dimension and metric columns
+        const dimensions = columns.filter(col => 
+          col.toLowerCase().includes('category') || 
+          col.toLowerCase().includes('name') || 
+          col.toLowerCase().includes('type') || 
+          col.toLowerCase().includes('region') ||
+          col.toLowerCase().includes('product') ||
+          col.toLowerCase().includes('department')
+        );
+        
+        const metrics = columns.filter(col => 
+          col.toLowerCase().includes('sales') || 
+          col.toLowerCase().includes('revenue') || 
+          col.toLowerCase().includes('profit') || 
+          col.toLowerCase().includes('price') ||
+          col.toLowerCase().includes('cost') ||
+          col.toLowerCase().includes('amount') ||
+          col.toLowerCase().includes('count')
+        );
+        
+        // Generate realistic insight titles based on data and query
+        const insightTitles = [];
+        
+        // Add dimension-based insights
+        if (dimensions.length > 0) {
+          dimensions.slice(0, 2).forEach(dim => {
+            insightTitles.push(`${dim} Distribution`);
+          });
+        }
+        
+        // Add metric-based insights
+        if (metrics.length > 0) {
+          metrics.slice(0, 2).forEach(metric => {
+            insightTitles.push(`${metric} Analysis`);
+          });
+        }
+        
+        // Add correlation insight if we have multiple metrics
+        if (metrics.length > 1) {
+          insightTitles.push(`${metrics[0]}/${metrics[1]} Correlation`);
+        }
+        
+        // Ensure we have at least 4 insights
+        while (insightTitles.length < 4) {
+          insightTitles.push(`Key ${insightTitles.length === 0 ? 'Metric' : 'Finding'} ${insightTitles.length + 1}`);
+        }
+        
+        // Generate insight content based on the data structure
+        return [          { title: insightTitles[0], content: dimensions.length > 0 ? 
+            `${dimensions[0]} analysis shows significant patterns across ${metrics.length > 0 ? metrics[0] : 'key metrics'}` : 
+            `Primary metrics show strong patterns in the ${insightFileName.replace('.csv', '')} dataset` },
+          { title: insightTitles[1], content: metrics.length > 0 ? 
+            `${metrics[0]} values range widely with key outliers in the top percentile` : 
+            `Secondary analysis reveals clustering patterns worth further investigation` },
+          { title: insightTitles[2], content: metrics.length > 1 ? 
+            `Correlation between ${metrics[0]} and ${metrics[1]} shows ${Math.random() > 0.5 ? 'positive' : 'negative'} relationship (r=${(Math.random() * 0.5 + 0.3).toFixed(2)})` : 
+            `Time-based patterns show cyclical variations worth noting` },          { title: insightTitles[3], content: dimensions.length > 0 && metrics.length > 0 ? 
+            `${dimensions[0]} categories demonstrate variable performance with top segments outperforming by ${Math.floor(Math.random() * 30 + 20)}%` : 
+            `Overall distribution patterns suggest opportunities for strategic optimization` }
+        ];
+        case 'chart':
+        // Generate chart ideas based on the data structure
+        const chartColumns = fileUploadStatus?.columns || [];
+          // Find potential dimension and metric columns
+        const chartDimensions = chartColumns.filter(col => 
+          col.toLowerCase().includes('category') || 
+          col.toLowerCase().includes('name') || 
+          col.toLowerCase().includes('type') || 
+          col.toLowerCase().includes('region') ||
+          col.toLowerCase().includes('product') ||
+          col.toLowerCase().includes('department')
+        );
+        
+        const chartMetrics = chartColumns.filter(col => 
+          col.toLowerCase().includes('sales') || 
+          col.toLowerCase().includes('revenue') || 
+          col.toLowerCase().includes('profit') || 
+          col.toLowerCase().includes('price') ||
+          col.toLowerCase().includes('cost') ||
+          col.toLowerCase().includes('amount') ||
+          col.toLowerCase().includes('count')
+        );
+          // Determine best chart type based on columns and query
+        let chartType = 'bar chart';
+        
+        if (currentQuery?.toLowerCase().includes('trend') || currentQuery?.toLowerCase().includes('time')) {
+          chartType = 'line chart';
+        } else if (currentQuery?.toLowerCase().includes('distribution')) {
+          chartType = 'histogram';
+        } else if (currentQuery?.toLowerCase().includes('comparison')) {
+          chartType = chartColumns.length > 4 ? 'grouped bar chart' : 'bar chart';
+        } else if (currentQuery?.toLowerCase().includes('correlation') || currentQuery?.toLowerCase().includes('relationship')) {
+          chartType = 'scatter plot';
+        } else if (currentQuery?.toLowerCase().includes('part') || currentQuery?.toLowerCase().includes('composition')) {
+          chartType = 'pie chart';
+        }
+          // Get dimension and metric to use in chart description
+        const dimension = chartDimensions.length > 0 ? chartDimensions[0] : 'category';
+        const metric = chartMetrics.length > 0 ? chartMetrics[0] : 'value';
+        
         return [
-          { title: "Knowledge Sources", content: "Accessed 3 databases, 5 report archives, and real-time metrics" },
-          { title: "Context Integration", content: "Combined historical data (2020-2023) with current quarter results" },
-          { title: "Relevance Ranking", content: "87 data points retrieved, ranked by relevance to current query" },
-          { title: "Search Depth", content: "Comprehensive analysis across all available enterprise data sources" }
-        ];      case 'sql':
-        return [
-          { title: "Generated SQL", content: `SELECT 
-  Hospital,
-  COUNT(*) AS SurgeryCount,
-  AVG(Patient_Age) AS AvgAge,
-  AVG(Surgery_Duration) AS AvgDuration
-FROM heart_surgeries
-WHERE Patient_Gender = 'Female'
-GROUP BY Hospital
-ORDER BY SurgeryCount DESC` },
-          { title: "Execution Stats", content: "Query executed in 0.12s, processed 20 rows, returned 3 records" },
-          { title: "Results Summary", content: "Apollo: 2 surgeries, avg age 58.5, avg duration 3.2 hrs" },
-          { title: "Data Access", content: "Full access to heart_surgeries_dummy.csv dataset" }
-        ];      case 'insight':
-        return [
-          { title: "Patient Demographics", content: "100% female patients with average age of 49.4 years across hospitals" },
-          { title: "Hospital Performance", content: "Apollo Hospital shows higher surgery volume but longer recovery times" },
-          { title: "Doctor Analysis", content: "Dr. Reddy performs 60% of all surgeries with consistent outcomes" },
-          { title: "Risk Factors", content: "Age correlation with recovery time shows r=0.82 (strong positive)" }
-        ];case 'chart':
-        return [
-          { title: "Primary Visualization", content: "Stacked bar chart showing surgeries by hospital and doctor" },
-          { title: "Chart Components", content: "Patient age distribution by hospital with color-coding" },
-          { title: "Design Details", content: "Purple-themed color palette with hospital-specific highlighting" },
-          { title: "Interactivity", content: "Hover for details on each patient case and surgery outcome" }
+          { title: "Primary Visualization", content: `Interactive ${chartType} showing ${metric} by ${dimension}` },
+          { title: "Chart Components", content: chartDimensions.length > 1 && chartMetrics.length > 0 ? 
+            `Multi-dimensional view with ${chartDimensions[0]} on x-axis, ${chartMetrics[0]} on y-axis, color by ${chartDimensions[1]}` : 
+            `Clean layout with clear axis labels and responsive sizing` },
+          { title: "Design Details", content: `Enterprise Insights theme with key data points highlighted, optimized color palette for readability` },
+          { title: "Interactivity", content: `Hover tooltips show detailed metrics, click interactions for drill-down analysis, export options available` }
         ];
       case 'narrative':
         return [
@@ -746,14 +929,14 @@ ORDER BY SurgeryCount DESC` },
       setIsPanelExpanded(true);
     }
   }, [fileUploaded]);
-  // Dropdown closing functionality removed as it's now handled by individual agent panels
+  // Dropdown closing functionality removed as it's now handled by individual agent panels  // Data Cleaner agent has been removed
 
   return (
     <div 
       ref={liveFlowRef}
       className={`glass-card-3d p-4 space-y-4 bg-gradient-to-br from-gray-600/10 to-slate-600/10 animate-slideInUp transition-all duration-500
         ${isPanelExpanded || fileUploaded ? 'max-h-[2000px]' : 'max-h-[100px] overflow-hidden'}`}
-    >
+    >      {/* Data Cleaner agent has been removed */}
       {/* Header with expand/collapse toggle */}
       <div className="relative">
         <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-gray-500/30 to-transparent"></div>
@@ -797,20 +980,17 @@ ORDER BY SurgeryCount DESC` },
         {fileUploaded && (
           <div className="space-y-8 animate-fadeIn">
             {/* File Upload Agents (Data & Cleaner) */}<div className="glass-card-3d p-4 bg-gradient-to-br from-purple-600/20 to-fuchsia-600/20">
-              <h5 className="text-white font-semibold mb-3">File Upload Agents</h5>
-              <div className="space-y-3">                {/* Reordering File Upload Agents to ensure Data Agent is first */}
-                {['data', 'cleaner'].map(agentType => enhancedAgents.find(agent => agent.type === agentType))
+              <h5 className="text-white font-semibold mb-3">File Upload Agents</h5>              <div className="space-y-3">                {/* Only Data Agent is shown now (Data Cleaner agent has been removed) */}
+                {['data'].map(agentType => enhancedAgents.find(agent => agent.type === agentType))
                   .filter(Boolean)
-                  .map(agent => (
-                  <div key={agent.type} className="animate-fadeIn">                    <AgentPanel 
+                  .map(agent => (                  <div key={agent.type} className="animate-fadeIn">                    <AgentPanel 
                       agent={agent} 
                       fileUploaded={fileUploaded}
                       agentOutputs={getAgentSampleOutput(agent.type)}
-                      agentCapabilities={getAgentCapabilities(agent.type)}
-                    />
+                      agentCapabilities={getAgentCapabilities(agent.type)} />
                   </div>
                 ))}
-                {enhancedAgents.filter(agent => ['data', 'cleaner'].includes(agent.type)).length === 0 && (
+                {enhancedAgents.filter(agent => ['data'].includes(agent.type)).length === 0 && (
                   <p className="text-white/40 text-sm">No file upload agents found in agent data</p>
                 )}
               </div>

@@ -44,17 +44,184 @@ class DataCleanerAgent(BaseAgent):
             self.df = data.copy()
             self.original_df = data.copy()
             
-        # Initialize detailed results
+        # Initialize detailed results structure
         self.detailed_results = {
             "units_normalized": [],
             "numeric_conversions": [],
             "date_conversions": [],
             "outliers_fixed": [],
             "duplicates_removed": 0,
-            "missing_values_handled": {}
+            "duplicate_details": {
+                "total_duplicates": 0,
+                "percentage_of_data": 0.0,
+                "potential_duplicate_columns": [],
+                "sample_rows": []
+            },
+            "missing_values_handled": {
+                "total_filled": 0,
+                "strategies": {},
+                "columns": []
+            }
         }
+        
+        # Only continue if we have data to work with
+        if self.df is None or self.df.empty:
+            logger.warning(f"[{self.name}] No data provided for cleaning")
+            return {
+                "operations": [],
+                "cleaning_stats": {
+                    "operations_count": 0,
+                    "operations_by_type": {},
+                    "columns_modified": [],
+                    "rows_before": 0,
+                    "rows_after": 0,
+                    "row_count_change": 0,
+                    "missing_values_before": 0,
+                    "missing_values_after": 0,
+                    "missing_values_change": 0
+                },
+                "detailed_results": self.detailed_results
+            }            # Analyze and generate real cleaning results based on actual data
+        try:
+            logger.info(f"[{self.name}] Analyzing DataFrame of shape {self.df.shape} for data-driven cleaning results")
+            # Log some information about the dataframe for debugging
+            logger.info(f"[{self.name}] DataFrame info: {self.df.dtypes}")
+            logger.info(f"[{self.name}] DataFrame head: {self.df.head(2).to_dict()}")
             
-        # Determine what cleaning to perform based on the query
+            # Extract columns from the dataframe
+            columns = self.df.columns.tolist()
+            logger.info(f"[{self.name}] Found columns: {columns}")
+            
+            # Detect and populate numeric conversions
+            for column in columns:
+                # Check if column contains numeric values
+                if self.df[column].dtype == 'object':  # If column is string/object
+                    # Try to convert to numeric
+                    numeric_series = pd.to_numeric(self.df[column], errors='coerce')
+                    na_before = self.df[column].isna().sum()
+                    na_after = numeric_series.isna().sum()
+                    
+                    # If conversion is possible (at least some values convert successfully)
+                    if na_after < len(self.df):
+                        success_count = len(self.df) - na_after
+                        success_rate = (success_count / len(self.df)) * 100
+                        
+                        if success_rate > 50:  # If more than 50% can be converted
+                            examples = []
+                            # Get example conversions
+                            for i in range(min(2, len(self.df))):
+                                if not pd.isna(numeric_series.iloc[i]):
+                                    examples.append({
+                                        "from": str(self.df[column].iloc[i]),
+                                        "to": float(numeric_series.iloc[i]),
+                                        "index": i
+                                    })
+                            
+                            # Add to numeric_conversions
+                            self.detailed_results["numeric_conversions"].append({
+                                "column": column,
+                                "from_type": "string",
+                                "to_type": "float" if "." in str(self.df[column].iloc[0]) else "int",
+                                "success_rate": round(success_rate, 1),
+                                "values_converted": success_count,
+                                "total_values": len(self.df),
+                                "na_before": int(na_before),
+                                "na_after": int(na_after),
+                                "examples": examples,
+                                "min_value": float(numeric_series.min()),
+                                "max_value": float(numeric_series.max())
+                            })
+            
+            # Detect and populate date conversions
+            for column in columns:
+                if self.df[column].dtype == 'object':  # If column is string/object
+                    # Try to convert to datetime
+                    try:
+                        date_series = pd.to_datetime(self.df[column], errors='coerce')
+                        na_before = self.df[column].isna().sum()
+                        na_after = date_series.isna().sum()
+                        
+                        # If conversion is possible (at least some values convert successfully)
+                        if na_after < len(self.df):
+                            success_count = len(self.df) - na_after
+                            success_rate = (success_count / len(self.df)) * 100
+                            
+                            if success_rate > 50:  # If more than 50% can be converted
+                                # Detect format
+                                sample_val = str(self.df[column].iloc[0])
+                                format_detected = None
+                                
+                                if "-" in sample_val:
+                                    if sample_val.count("-") == 2:
+                                        if sample_val[4] == "-":  # YYYY-MM-DD
+                                            format_detected = "%Y-%m-%d"
+                                        else:  # DD-MM-YYYY or MM-DD-YYYY
+                                            format_detected = "%d-%m-%Y"
+                                elif "/" in sample_val:
+                                    format_detected = "%m/%d/%Y"
+                                
+                                # Check if time components exist
+                                has_time = ":" in sample_val
+                                
+                                examples = []
+                                # Get example conversions
+                                for i in range(min(2, len(self.df))):
+                                    if not pd.isna(date_series.iloc[i]):
+                                        examples.append({
+                                            "from": str(self.df[column].iloc[i]),
+                                            "to": date_series.iloc[i].strftime("%Y-%m-%d"),
+                                            "index": i
+                                        })
+                                
+                                # Add to date_conversions
+                                self.detailed_results["date_conversions"].append({
+                                    "column": column,
+                                    "from_type": "string",
+                                    "to_type": "datetime",
+                                    "success_rate": round(success_rate, 1),
+                                    "values_converted": success_count,
+                                    "format_detected": format_detected or "auto-detected",
+                                    "date_range": {
+                                        "min": date_series.min().strftime("%Y-%m-%d") if not pd.isna(date_series.min()) else "",
+                                        "max": date_series.max().strftime("%Y-%m-%d") if not pd.isna(date_series.max()) else ""
+                                    },
+                                    "examples": examples,
+                                    "na_before": int(na_before),
+                                    "na_after": int(na_after),
+                                    "time_components": has_time
+                                })
+                    except Exception as e:
+                        logger.warning(f"[{self.name}] Error detecting date format for column {column}: {e}")
+            
+            # Check for duplicates
+            duplicate_count = self.df.duplicated().sum()
+            if duplicate_count > 0:
+                self.detailed_results["duplicates_removed"] = int(duplicate_count)
+                self.detailed_results["duplicate_details"] = {
+                    "total_duplicates": int(duplicate_count),
+                    "percentage_of_data": round((duplicate_count / len(self.df)) * 100, 1),
+                    "potential_duplicate_columns": [],
+                    "sample_rows": self.df[self.df.duplicated(keep='first')].iloc[0:1].to_dict('records')
+                }
+                
+                # Identify columns that might be causing duplicates
+                for column in columns:
+                    value_counts = self.df[column].value_counts()
+                    if value_counts.max() > 1:
+                        most_common_val = value_counts.idxmax()
+                        count = value_counts.max()
+                        self.detailed_results["duplicate_details"]["potential_duplicate_columns"].append({
+                            "column": column,
+                            "dominant_value": str(most_common_val),
+                            "occurrence_count": int(count),
+                            "percentage": round((count / len(self.df)) * 100, 1)
+                        })
+                        
+            logger.info(f"[{self.name}] Generated real data-based detailed results")
+        except Exception as e:
+            logger.error(f"[{self.name}] Error generating data-driven cleaning results: {e}")
+            logger.error(f"[{self.name}] {traceback.format_exc()}")
+            # If analysis fails, leave detailed_results as initialized empty structure            # Determine what cleaning to perform based on the query
         query_lower = query.lower()
         
         if "normalize" in query_lower or "units" in query_lower:
@@ -75,10 +242,53 @@ class DataCleanerAgent(BaseAgent):
         else:
             # Default to full cleaning
             result_df = self.clean()
-            
+        
+        # Add real operations based on the detailed_results we generated
+        operations = []
+        
+        # Add numeric conversion operations
+        for conversion in self.detailed_results["numeric_conversions"]:
+            operations.append({
+                "operation": "convert_numeric",
+                "column": conversion["column"],
+                "from_type": conversion["from_type"],
+                "to_type": conversion["to_type"],
+                "success_rate": f"{conversion['success_rate']}%",
+                "values_converted": conversion["values_converted"]
+            })
+        
+        # Add date conversion operations
+        for conversion in self.detailed_results["date_conversions"]:
+            operations.append({
+                "operation": "convert_datetime",
+                "column": conversion["column"],
+                "format_detected": conversion["format_detected"],
+                "date_range": f"{conversion['date_range']['min']} to {conversion['date_range']['max']}"
+            })
+        
+        # Add duplicate removal operation
+        if self.detailed_results["duplicates_removed"] > 0:
+            operations.append({
+                "operation": "remove_duplicates",
+                "count_removed": self.detailed_results["duplicates_removed"],
+                "original_count": len(self.original_df),
+                "new_count": len(self.df),
+                "percentage_removed": f"{round((self.detailed_results['duplicates_removed'] / len(self.original_df)) * 100, 1)}%"
+            })
+        
+        # Store operations
+        self.cleaning_operations = operations
+        
         # Calculate cleaning impact statistics
         stats = self._calculate_cleaning_stats()
-            
+        
+        # Log the detailed results structure to confirm it's being used
+        logger.info(f"[{self.name}] _execute returning data with {len(self.cleaning_operations)} operations")
+        logger.info(f"[{self.name}] detailed_results has keys: {list(self.detailed_results.keys())}")
+        logger.info(f"[{self.name}] units_normalized size: {len(self.detailed_results.get('units_normalized', []))}")
+        logger.info(f"[{self.name}] numeric_conversions size: {len(self.detailed_results.get('numeric_conversions', []))}")
+        logger.info(f"[{self.name}] date_conversions size: {len(self.detailed_results.get('date_conversions', []))}")
+        
         return {
             "cleaned_data": result_df,
             "operations": self.cleaning_operations,
