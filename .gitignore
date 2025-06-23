@@ -17,6 +17,22 @@ logs/
 # VSCode
 .vscode/
 
+# Node.js / Frontend
+node_modules/
+frontend/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+*.tsbuildinfo
+
+# Next.js
+.next/
+out/
+frontend/.next/
+frontend/out/
+
 # OS Files
 .DS_Store
 Thumbs.db
@@ -28,3 +44,10 @@ helper.txt
 AA BOOKS AI/
 enterprise_insights_copilot/data/*.pdf
 enterprise_insights_copilot/data/*.txt
+
+# Large files that should not be committed
+*.node
+*.dll
+*.exe
+*.zip
+*.tar.gz
