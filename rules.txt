@@ -1,7 +1,3 @@
-Rule 1 : in agent mode,you are using && to run commands in the terminal use ; instead for no error in copilot terminal
-Rule 2 : Always check whether there is error in terminal after you are run your query and always resolve it before ending the response
-Rule 3 : Dont use 'cd c:\SAFEVERSION ; .\start_frontend.bat' ,use 'cd c:\SAFEVERSION\enterprise_insights_copilot ; start_frontend.bat'
-Rule 4 : Dont use 'cd c:\SAFEVERSION ; .\start_backend.bat' ,use  'cd c:\SAFEVERSION\enterprise_insights_copilot ; start_backend.bat'
 
 # command to start backend (using only Llama 3.1 via Ollama - no OpenAI dependencies)
 conda activate aiproject
@@ -16,23 +12,7 @@ cd C:\SAFEVERSION\enterprise_insights_copilot\frontend
 npm run dev
 
 
-# eg syntax to upload csv file 
-conda activate aiproject ; cd C:\SAFEVERSION\enterprise_insights_copilot; python upload_csv.py
-conda activate aiproject ; cd C:\SAFEVERSION\enterprise_insights_copilot; python send_query.py
-
-
-always check whether there is error in terminal after you are run your query and always resolve it before ending the response
-
 # kill backend command
 taskkill /f /im python.exe
 
-
-# test agent workflow
-cd C:\SAFEVERSION\enterprise_insights_copilot ;
-conda activate aiproject ; 
-python test_agent_workflow.py
-
-# Note: This project now uses only Llama 3.1 (via Ollama) for all LLM operations
-# OpenAI GPT-4 dependencies have been completely removed
-# Ensure Ollama service is running with llama3.1 model before starting the backend
 
