@@ -11,6 +11,9 @@ python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
 
 
 # command to start frontend
+conda activate aiproject
+cd C:\SAFEVERSION\enterprise_insights_copilot\frontend
+npm run dev
 
 
 # eg syntax to upload csv file 

@@ -4,7 +4,7 @@ import CSVUpload from "../components/CSVUpload";
 import EnhancedSmartSuggestions from "../components/EnhancedSmartSuggestions";
 import MultiFileUpload from "../components/MultiFileUpload";
 import LiveFlow from "../components/LiveFlow";
-import TroubleshootAgentFlow from "../components/TroubleshootAgentFlow";
+import AgentWorkflowDisplay from "../components/AgentWorkflowDisplay";
 
 // Define types for better type safety
 type AgentStatusType = "idle" | "working" | "complete" | "error" | "running" | "success";
@@ -1126,21 +1126,20 @@ export default function HomePage() {  // Main state
               {/* Agent Troubleshooting Panel */}
               <div className="glass-card-3d rounded-2xl p-4 relative overflow-hidden border border-white/15 shadow-lg">
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent"></div>
-                <div className="flex items-center gap-3 mb-4 relative z-10">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500/60 via-blue-500/40 to-violet-600/60 rounded-xl flex items-center justify-center shadow-xl border border-white/20 relative overflow-hidden">
+                <div className="flex items-center gap-3 mb-4 relative z-10">                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500/60 via-blue-500/40 to-violet-600/60 rounded-xl flex items-center justify-center shadow-xl border border-white/20 relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-xl"></div>
-                    <span className="text-xl relative z-10">🔧</span>
+                    <span className="text-xl relative z-10">🤖</span>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-white font-bold text-base mb-0.5">Agent Troubleshooting</h3>
-                    <p className="text-purple-200 text-xs">Monitor agent status and diagnose issues</p>
+                    <h3 className="text-white font-bold text-base mb-0.5">Agent Workflow Display</h3>
+                    <p className="text-purple-200 text-xs">Live monitoring of all agents with glassmorphic design</p>
                   </div>
                 </div>
                 
-                <TroubleshootAgentFlow 
+                <AgentWorkflowDisplay 
                   agents={agentData.activeAgents}
-                  fileUploaded={fileUploaded}
-                  agentStatus={agentStatus}
+                  currentQuery={query}
+                  isLoading={isLoading}
                 />
               </div>
             </div>            {/* Right Column - Enhanced Features */}
